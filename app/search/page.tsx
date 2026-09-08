@@ -82,7 +82,7 @@ export const metadata: Metadata = {
     description: 'Ly sứ cao cấp',
     priceRange: { maxVariantPrice: { amount: '180000', currencyCode: 'VND' } },
     featuredImage: {
-      url: 'https://res.cloudinary.com/dpsejpp2/image/upload/v1786594570/34ee35a00001815fd810.jpg',
+      url: 'https://res.cloudinary.com/dpsejpp2/image/upload/v1788776944/607ab6bab5f535ab6ce4.jpg',
       altText: 'Mug 2'
     }
   }

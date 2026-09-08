@@ -3,29 +3,38 @@
 import { useCart } from 'context/CartContext';
 import React, { use, useState } from 'react';
 
-// Mảng mockProducts đồng bộ chính xác với trang main của bạn
+// 1. Cập nhật mảng mockProducts thêm danh sách nhiều ảnh (images)
 const mockProducts = [
   {
     id: '1',
     handle: 'leather-bag',
     title: 'Túi đeo da',
-    description: 'Túi da phong cách',
+    description: 'Túi da phong cách cao cấp, thiết kế gọn nhẹ thích hợp đi chơi, đi làm.',
     priceRange: { maxVariantPrice: { amount: '360000', currencyCode: 'VND' } },
     featuredImage: {
-      url: 'https://res.cloudinary.com/dpsejpp2/image/upload/v1786590887/samples/ecommerce/leather-bag-gray.jpg', // Dùng link ảnh sạch
-      altText: 'Bag'
-    }
+      url: 'https://res.cloudinary.com/dpsejpp2/image/upload/v1786590887/samples/ecommerce/leather-bag-gray.jpg',
+      altText: 'Túi đeo da chính'
+    },
+    // Thêm mảng danh sách nhiều ảnh cho sản phẩm
+    images: [
+      'https://res.cloudinary.com/dpsejpp2/image/upload/v1786590887/samples/ecommerce/leather-bag-gray.jpg',
+      'https://res.cloudinary.com/dpsejpp2/image/upload/v1788775893/e9baf3cee88168df3190.jpg'
+    ]
   },
   {
     id: '2',
     handle: 'acme-circles-t-shirt',
     title: 'Giày thể thao',
-    description: 'Giày họa tiết',
+    description: 'Giày họa tiết cá tính',
     priceRange: { maxVariantPrice: { amount: '220000', currencyCode: 'VND' } },
     featuredImage: {
       url: 'https://res.cloudinary.com/dpsejpp2/image/upload/v1786590885/samples/ecommerce/shoes.png',
       altText: 'T-Shoes'
-    }
+    },
+    images: [
+      'https://res.cloudinary.com/dpsejpp2/image/upload/v1786590885/samples/ecommerce/shoes.png',
+      'https://res.cloudinary.com/dpsejpp2/image/upload/v1786590897/cld-sample-5.jpg'
+    ]
   },
   {
     id: '3',
@@ -36,46 +45,59 @@ const mockProducts = [
     featuredImage: {
       url: 'https://res.cloudinary.com/dpsejpp2/image/upload/v1786590894/samples/cup-on-a-table.jpg',
       altText: 'Cup'
-    }
+    },
+    images: [
+      'https://res.cloudinary.com/dpsejpp2/image/upload/v1786590894/samples/cup-on-a-table.jpg'
+    ]
   },
-  // --- DÒNG 2 ---
   {
     id: '4',
     handle: 'acme-tshirt',
     title: 'Giày Crocks Tím',
-    description: 'Áo thun thời trang',
+    description: 'Giày nhựa thời trang',
     priceRange: { maxVariantPrice: { amount: '250000', currencyCode: 'VND' } },
     featuredImage: {
       url: 'https://res.cloudinary.com/dpsejpp2/image/upload/v1786594570/766aa432919310cd4982.jpg',
       altText: 'T-Shirt'
-    }
+    },
+    images: [
+      'https://res.cloudinary.com/dpsejpp2/image/upload/v1786594570/766aa432919310cd4982.jpg',
+      'https://res.cloudinary.com/dpsejpp2/image/upload/v1786594570/34ee35a00001815fd810.jpg'
+    ]
   },
   {
     id: '5',
     handle: 'acme-hat-2',
     title: 'Dép Crocks xỏ ngón',
-    description: 'Mũ len ấm áp',
+    description: 'Dép xỏ ngón đi biển',
     priceRange: { maxVariantPrice: { amount: '170000', currencyCode: 'VND' } },
     featuredImage: {
       url: 'https://res.cloudinary.com/dpsejpp2/image/upload/v1786594570/b5c5d1d2e473652d3c62.jpg',
       altText: 'Hat 2'
-    }
+    },
+    images: [
+      'https://res.cloudinary.com/dpsejpp2/image/upload/v1786594570/b5c5d1d2e473652d3c62.jpg'
+    ]
   },
   {
     id: '6',
     handle: 'acme-mug-2',
     title: 'Giày Crocks Mickey',
-    description: 'Ly sứ cao cấp',
+    description: 'Dép hoạt hình',
     priceRange: { maxVariantPrice: { amount: '180000', currencyCode: 'VND' } },
     featuredImage: {
-      url: 'https://res.cloudinary.com/dpsejpp2/image/upload/v1786594570/34ee35a00001815fd810.jpg',
+      url: 'https://res.cloudinary.com/dpsejpp2/image/upload/v1788776928/9854fe94fddb7d8524ca.jpg',
       altText: 'Mug 2'
-    }
+    },
+    images: [
+      'https://res.cloudinary.com/dpsejpp2/image/upload/v1788776928/9854fe94fddb7d8524ca.jpg',
+      'https://res.cloudinary.com/dpsejpp2/image/upload/v1788776944/607ab6bab5f535ab6ce4.jpg',
+      'https://res.cloudinary.com/dpsejpp2/image/upload/v1788776938/17f5e735e47a64243d6b.jpg'
+    ]
   }
 ];
 
 export default function ProductPage({ params }: { params: Promise<{ handle: string }> }) {
-  // 2. Unwrap params bằng React.use()
   const resolvedParams = use(params);
   const { addToCart, setIsCartOpen } = useCart();
 
@@ -83,11 +105,18 @@ export default function ProductPage({ params }: { params: Promise<{ handle: stri
   const [style, setStyle] = useState('Straight-cut');
   const [size, setSize] = useState('X-Large');
 
-  // Tìm sản phẩm có handle khớp với URL, nếu không tìm thấy sẽ lấy sản phẩm đầu tiên làm mặc định
   const product = mockProducts.find((p) => p.handle === resolvedParams.handle) || mockProducts[0]!;
 
+  // 2. Tạo danh sách mảng ảnh chuẩn (fallback nếu không có mảng images thì dùng ảnh featured)
+  const productImages = product.images && product.images.length > 0 
+    ? product.images 
+    : [product.featuredImage.url];
+
+  // 3. State quản lý ảnh đang được chọn để hiển thị ở khung to
+  const [selectedImage, setSelectedImage] = useState(productImages[0] || product.featuredImage.url);
+
   if (!product) return null;
-  // 3. Hàm xử lý Thêm vào giỏ hàng thật
+
   const handleAddToCart = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -96,7 +125,7 @@ export default function ProductPage({ params }: { params: Promise<{ handle: stri
       handle: product.handle,
       title: product.title,
       price: parseFloat(product.priceRange.maxVariantPrice.amount),
-      imageUrl: product.featuredImage.url,
+      imageUrl: selectedImage, // Lấy ảnh người dùng đang chọn
       style,
       size,
       quantity,
@@ -113,15 +142,40 @@ export default function ProductPage({ params }: { params: Promise<{ handle: stri
       </div>
 
       <div className="grid grid-cols-1 gap-12 md:grid-cols-2">
-        {/* BÊN TRÁI: HÌNH ẢNH */}
+        {/* BÊN TRÁI: KHUNG GALLERY HÌNH ẢNH */}
         <div className="space-y-4">
+          {/* 1. KHUNG ẢNH CHÍNH */}
           <div className="flex justify-center bg-neutral-100 dark:bg-neutral-900 rounded-lg p-6 border border-neutral-200 dark:border-neutral-800">
             <img 
-              src={product.featuredImage.url} 
+              src={selectedImage} 
               alt={product.featuredImage.altText || product.title} 
-              className="max-h-[450px] object-contain rounded"
+              className="max-h-[450px] w-full object-contain rounded transition-all duration-300"
             />
           </div>
+
+          {/* 2. DANH SÁCH THUMBNAIL ẢNH NHỎ NẰM BÊN DƯỚI */}
+          {productImages.length > 1 && (
+            <div className="flex gap-3 overflow-x-auto pb-2">
+              {productImages.map((imgUrl, index) => (
+                <button
+                  key={index}
+                  type="button"
+                  onClick={() => setSelectedImage(imgUrl)}
+                  className={`relative flex-shrink-0 w-20 h-20 rounded-lg border-2 p-1 bg-neutral-100 dark:bg-neutral-900 overflow-hidden transition-all ${
+                    selectedImage === imgUrl 
+                      ? 'border-blue-600 scale-105' 
+                      : 'border-neutral-200 dark:border-neutral-800 opacity-60 hover:opacity-100'
+                  }`}
+                >
+                  <img
+                    src={imgUrl}
+                    alt={`${product.title} ${index + 1}`}
+                    className="w-full h-full object-cover rounded"
+                  />
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* BÊN PHẢI: THÔNG TIN & FORM MUA HÀNG */}
@@ -129,7 +183,6 @@ export default function ProductPage({ params }: { params: Promise<{ handle: stri
           <h1 className="text-4xl font-bold tracking-tight">{product.title}</h1>
           
           <div className="text-2xl font-semibold text-neutral-700 dark:text-neutral-300">
-            {/* Format số có dấu phẩy phân cách hàng nghìn và thêm chữ 'đ' phía sau */}
             {Number(product.priceRange.maxVariantPrice.amount).toLocaleString('en-US')} đ
           </div>
           
@@ -189,7 +242,7 @@ export default function ProductPage({ params }: { params: Promise<{ handle: stri
 
           <hr className="border-neutral-200 dark:border-neutral-800" />
 
-          {/* Phần mô tả */}
+          {/* Mô tả */}
           <div className="text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed space-y-2">
             <p className="font-medium text-black dark:text-white">Mô tả sản phẩm:</p>
             <p>{product.description}</p>
