@@ -1,106 +1,66 @@
-"use client";
+'use client';
 
-import clsx from "clsx";
-import { ProductOption, ProductVariant } from "lib/shopify/types";
-import { useRouter, useSearchParams } from "next/navigation";
+import { ProductOption, ProductVariant } from 'app/product/products';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
-type Combination = {
-  id: string;
-  availableForSale: boolean;
-  [key: string]: string | boolean;
-};
+interface VariantSelectorProps {
+  options?: ProductOption[];
+  variants?: ProductVariant[];
+}
 
-export function VariantSelector({
-  options,
-  variants,
-}: {
-  options: ProductOption[];
-  variants: ProductVariant[];
-}) {
+export function VariantSelector({ options, variants }: VariantSelectorProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
-  const hasNoOptionsOrJustOneOption =
-    !options.length ||
-    (options.length === 1 && options[0]?.values.length === 1);
 
-  if (hasNoOptionsOrJustOneOption) {
+  // Kiểm tra an toàn: Nếu sản phẩm không có options/variants thì không render gì cả
+  if (!options || options.length === 0) {
     return null;
   }
 
-  const combinations: Combination[] = variants.map((variant) => ({
-    id: variant.id,
-    availableForSale: variant.availableForSale,
-    ...variant.selectedOptions.reduce(
-      (accumulator, option) => ({
-        ...accumulator,
-        [option.name.toLowerCase()]: option.value,
-      }),
-      {},
-    ),
-  }));
-
-  const updateOption = (name: string, value: string) => {
+  const handleSelect = (optionName: string, value: string) => {
     const params = new URLSearchParams(searchParams.toString());
-    params.set(name, value);
-    router.replace(`?${params.toString()}`, { scroll: false });
+    params.set(optionName.toLowerCase(), value);
+    
+    // Cập nhật URL mà không reload lại trang
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
-  return options.map((option) => (
-    <form key={option.id}>
-      <dl className="mb-8">
-        <dt className="mb-4 text-sm uppercase tracking-wide">{option.name}</dt>
-        <dd className="flex flex-wrap gap-3">
-          {option.values.map((value) => {
-            const optionNameLowerCase = option.name.toLowerCase();
+  return (
+    <div className="flex flex-col gap-4 my-4">
+      {options.map((option) => {
+        const optionKey = option.name.toLowerCase();
+        const currentValue = searchParams.get(optionKey) || option.values[0];
 
-            // Base option params on current searchParams so we can preserve any other param state.
-            const optionParams: Record<string, string> = {};
-            searchParams.forEach((v, k) => (optionParams[k] = v));
-            optionParams[optionNameLowerCase] = value;
-
-            // Filter out invalid options and check if the option combination is available for sale.
-            const filtered = Object.entries(optionParams).filter(
-              ([key, value]) =>
-                options.find(
-                  (option) =>
-                    option.name.toLowerCase() === key &&
-                    option.values.includes(value),
-                ),
-            );
-            const isAvailableForSale = combinations.find((combination) =>
-              filtered.every(
-                ([key, value]) =>
-                  combination[key] === value && combination.availableForSale,
-              ),
-            );
-
-            // The option is active if it's in the selected options.
-            const isActive = searchParams.get(optionNameLowerCase) === value;
-
-            return (
-              <button
-                formAction={() => updateOption(optionNameLowerCase, value)}
-                key={value}
-                aria-disabled={!isAvailableForSale}
-                disabled={!isAvailableForSale}
-                title={`${option.name} ${value}${!isAvailableForSale ? " (Out of Stock)" : ""}`}
-                className={clsx(
-                  "flex min-w-[48px] items-center justify-center rounded-full border bg-neutral-100 px-2 py-1 text-sm dark:border-neutral-800 dark:bg-neutral-900",
-                  {
-                    "cursor-default ring-2 ring-blue-600": isActive,
-                    "ring-1 ring-transparent transition duration-300 ease-in-out hover:ring-blue-600":
-                      !isActive && isAvailableForSale,
-                    "relative z-10 cursor-not-allowed overflow-hidden bg-neutral-100 text-neutral-500 ring-1 ring-neutral-300 before:absolute before:inset-x-0 before:-z-10 before:h-px before:-rotate-45 before:bg-neutral-300 before:transition-transform dark:bg-neutral-900 dark:text-neutral-400 dark:ring-neutral-700 dark:before:bg-neutral-700":
-                      !isAvailableForSale,
-                  },
-                )}
+        return (
+          <div key={option.id} className="flex flex-col gap-2">
+            <label className="text-xs font-semibold uppercase tracking-wide text-neutral-400">
+              {option.name}
+            </label>
+            
+            <div className="relative w-full max-w-xs">
+              <select
+                className="w-full appearance-none rounded-lg border border-neutral-700 bg-neutral-900 px-4 py-2.5 text-sm text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
+                onChange={(e) => handleSelect(option.name, e.target.value)}
+                value={currentValue}
               >
-                {value}
-              </button>
-            );
-          })}
-        </dd>
-      </dl>
-    </form>
-  ));
+                {option.values.map((value: string) => (
+                  <option key={value} value={value} className="bg-neutral-900 text-white py-1">
+                    {value}
+                  </option>
+                ))}
+              </select>
+              
+              {/* Mũi tên góc phải dropdown */}
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-neutral-400">
+                <svg className="h-4 w-4 fill-current" viewBox="0 0 20 20">
+                  <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+                </svg>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
 }

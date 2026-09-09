@@ -1,133 +1,111 @@
 "use client";
 
+import { mockProducts, ProductOption, ProductVariant } from 'app/product/products';
 import { useCart } from 'context/CartContext';
-import React, { use, useState } from 'react';
-
-// 1. Cập nhật mảng mockProducts thêm danh sách nhiều ảnh (images)
-const mockProducts = [
-  {
-    id: '1',
-    handle: 'leather-bag',
-    title: 'Túi đeo da',
-    description: 'Túi da phong cách cao cấp, thiết kế gọn nhẹ thích hợp đi chơi, đi làm.',
-    priceRange: { maxVariantPrice: { amount: '360000', currencyCode: 'VND' } },
-    featuredImage: {
-      url: 'https://res.cloudinary.com/dpsejpp2/image/upload/v1786590887/samples/ecommerce/leather-bag-gray.jpg',
-      altText: 'Túi đeo da chính'
-    },
-    // Thêm mảng danh sách nhiều ảnh cho sản phẩm
-    images: [
-      'https://res.cloudinary.com/dpsejpp2/image/upload/v1786590887/samples/ecommerce/leather-bag-gray.jpg',
-      'https://res.cloudinary.com/dpsejpp2/image/upload/v1788775893/e9baf3cee88168df3190.jpg'
-    ]
-  },
-  {
-    id: '2',
-    handle: 'acme-circles-t-shirt',
-    title: 'Giày thể thao',
-    description: 'Giày họa tiết cá tính',
-    priceRange: { maxVariantPrice: { amount: '220000', currencyCode: 'VND' } },
-    featuredImage: {
-      url: 'https://res.cloudinary.com/dpsejpp2/image/upload/v1786590885/samples/ecommerce/shoes.png',
-      altText: 'T-Shoes'
-    },
-    images: [
-      'https://res.cloudinary.com/dpsejpp2/image/upload/v1786590885/samples/ecommerce/shoes.png',
-      'https://res.cloudinary.com/dpsejpp2/image/upload/v1786590897/cld-sample-5.jpg'
-    ]
-  },
-  {
-    id: '3',
-    handle: 'acme-mug',
-    title: 'Ly sứ',
-    description: 'Ly sứ giữ nhiệt',
-    priceRange: { maxVariantPrice: { amount: '85000', currencyCode: 'VND' } },
-    featuredImage: {
-      url: 'https://res.cloudinary.com/dpsejpp2/image/upload/v1786590894/samples/cup-on-a-table.jpg',
-      altText: 'Cup'
-    },
-    images: [
-      'https://res.cloudinary.com/dpsejpp2/image/upload/v1786590894/samples/cup-on-a-table.jpg'
-    ]
-  },
-  {
-    id: '4',
-    handle: 'acme-tshirt',
-    title: 'Giày Crocks Tím',
-    description: 'Giày nhựa thời trang',
-    priceRange: { maxVariantPrice: { amount: '250000', currencyCode: 'VND' } },
-    featuredImage: {
-      url: 'https://res.cloudinary.com/dpsejpp2/image/upload/v1786594570/766aa432919310cd4982.jpg',
-      altText: 'T-Shirt'
-    },
-    images: [
-      'https://res.cloudinary.com/dpsejpp2/image/upload/v1786594570/766aa432919310cd4982.jpg',
-      'https://res.cloudinary.com/dpsejpp2/image/upload/v1786594570/34ee35a00001815fd810.jpg'
-    ]
-  },
-  {
-    id: '5',
-    handle: 'acme-hat-2',
-    title: 'Dép Crocks xỏ ngón',
-    description: 'Dép xỏ ngón đi biển',
-    priceRange: { maxVariantPrice: { amount: '170000', currencyCode: 'VND' } },
-    featuredImage: {
-      url: 'https://res.cloudinary.com/dpsejpp2/image/upload/v1786594570/b5c5d1d2e473652d3c62.jpg',
-      altText: 'Hat 2'
-    },
-    images: [
-      'https://res.cloudinary.com/dpsejpp2/image/upload/v1786594570/b5c5d1d2e473652d3c62.jpg'
-    ]
-  },
-  {
-    id: '6',
-    handle: 'acme-mug-2',
-    title: 'Giày Crocks Mickey',
-    description: 'Dép hoạt hình',
-    priceRange: { maxVariantPrice: { amount: '180000', currencyCode: 'VND' } },
-    featuredImage: {
-      url: 'https://res.cloudinary.com/dpsejpp2/image/upload/v1788776928/9854fe94fddb7d8524ca.jpg',
-      altText: 'Mug 2'
-    },
-    images: [
-      'https://res.cloudinary.com/dpsejpp2/image/upload/v1788776928/9854fe94fddb7d8524ca.jpg',
-      'https://res.cloudinary.com/dpsejpp2/image/upload/v1788776944/607ab6bab5f535ab6ce4.jpg',
-      'https://res.cloudinary.com/dpsejpp2/image/upload/v1788776938/17f5e735e47a64243d6b.jpg'
-    ]
-  }
-];
+import React, { use, useEffect, useState } from 'react';
 
 export default function ProductPage({ params }: { params: Promise<{ handle: string }> }) {
   const resolvedParams = use(params);
   const { addToCart, setIsCartOpen } = useCart();
 
   const [quantity, setQuantity] = useState(1);
-  const [style, setStyle] = useState('Straight-cut');
-  const [size, setSize] = useState('X-Large');
 
+  // 1. Tìm sản phẩm
   const product = mockProducts.find((p) => p.handle === resolvedParams.handle) || mockProducts[0]!;
 
-  // 2. Tạo danh sách mảng ảnh chuẩn (fallback nếu không có mảng images thì dùng ảnh featured)
+  // 2. Quản lý trạng thái Option người dùng chọn
+  const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>(() => {
+    const initial: Record<string, string> = {};
+    if (product.options && product.options.length > 0) {
+      product.options.forEach((opt: ProductOption) => {
+        initial[opt.name] = opt.values[0] || '';
+      });
+    }
+    return initial;
+  });
+
+  // 3. Tìm Variant khớp với Option đang được chọn
+  const selectedVariant = product.variants?.find((variant: ProductVariant) =>
+    variant.selectedOptions.every(
+      (sel) => selectedOptions[sel.name] === sel.value
+    )
+  ) || product.variants?.[0];
+
+  // 4. Quản lý ảnh
   const productImages = product.images && product.images.length > 0 
     ? product.images 
     : [product.featuredImage.url];
 
-  // 3. State quản lý ảnh đang được chọn để hiển thị ở khung to
   const [selectedImage, setSelectedImage] = useState(productImages[0] || product.featuredImage.url);
 
+  // Cập nhật lại ảnh & options khi chuyển sản phẩm
+  useEffect(() => {
+    if (product) {
+      setSelectedImage(productImages[0] || product.featuredImage.url);
+      if (product.options) {
+        const initial: Record<string, string> = {};
+        
+        // Khởi tạo Phân loại trước
+        const categoryOpt = product.options.find((opt) => opt.name === 'Phân loại');
+        const defaultCategory = categoryOpt ? categoryOpt.values[0] : '';
+
+        product.options.forEach((opt: ProductOption) => {
+          if (opt.name === 'Size' && defaultCategory && product.variants) {
+            // Lấy size đầu tiên khớp với phân loại mặc định
+            const firstValidSize = product.variants.find((v) =>
+              v.selectedOptions.some((so) => so.name === 'Phân loại' && so.value === defaultCategory)
+            )?.selectedOptions.find((so) => so.name === 'Size')?.value;
+
+            initial[opt.name] = firstValidSize || opt.values[0] || '';
+          } else {
+            initial[opt.name] = opt.values[0] || '';
+          }
+        });
+
+        setSelectedOptions(initial);
+      }
+    }
+  }, [product.handle]);
+
   if (!product) return null;
+
+  // Tính toán giá hiển thị thực tế
+  const currentPrice = selectedVariant
+    ? parseFloat(selectedVariant.price)
+    : parseFloat(product.priceRange.minVariantPrice?.amount || product.priceRange.maxVariantPrice.amount);
+
+  // Xử lý thay đổi Option
+  const handleOptionChange = (optionName: string, value: string) => {
+    if (optionName === 'Phân loại') {
+      // Tìm size đầu tiên khớp với phân loại vừa chọn
+      const firstValidSize = product.variants?.find((v) =>
+        v.selectedOptions.some((so) => so.name === 'Phân loại' && so.value === value)
+      )?.selectedOptions.find((so) => so.name === 'Size')?.value;
+
+      setSelectedOptions((prev) => ({
+        ...prev,
+        'Phân loại': value,
+        'Size': firstValidSize || prev['Size'] || ''
+      }));
+    } else {
+      setSelectedOptions((prev) => ({
+        ...prev,
+        [optionName]: value,
+      }));
+    }
+  };
 
   const handleAddToCart = (e: React.FormEvent) => {
     e.preventDefault();
     
     addToCart({
-      id: product.id,
+      id: selectedVariant ? `${product.id}-${selectedVariant.id}` : product.id,
       handle: product.handle,
-      title: product.title,
-      price: parseFloat(product.priceRange.maxVariantPrice.amount),
-      imageUrl: selectedImage, // Lấy ảnh người dùng đang chọn
-      style,
-      size,
+      title: `${product.title} ${selectedVariant ? `(${selectedVariant.title})` : ''}`,
+      price: currentPrice,
+      imageUrl: selectedImage,
+      size: selectedOptions['Size'] || 'Mặc định',
+      style: selectedOptions['Style'] || 'Mặc định',
       quantity,
     });
 
@@ -144,7 +122,6 @@ export default function ProductPage({ params }: { params: Promise<{ handle: stri
       <div className="grid grid-cols-1 gap-12 md:grid-cols-2">
         {/* BÊN TRÁI: KHUNG GALLERY HÌNH ẢNH */}
         <div className="space-y-4">
-          {/* 1. KHUNG ẢNH CHÍNH */}
           <div className="flex justify-center bg-neutral-100 dark:bg-neutral-900 rounded-lg p-6 border border-neutral-200 dark:border-neutral-800">
             <img 
               src={selectedImage} 
@@ -153,7 +130,7 @@ export default function ProductPage({ params }: { params: Promise<{ handle: stri
             />
           </div>
 
-          {/* 2. DANH SÁCH THUMBNAIL ẢNH NHỎ NẰM BÊN DƯỚI */}
+          {/* DANH SÁCH THUMBNAIL */}
           {productImages.length > 1 && (
             <div className="flex gap-3 overflow-x-auto pb-2">
               {productImages.map((imgUrl, index) => (
@@ -178,60 +155,71 @@ export default function ProductPage({ params }: { params: Promise<{ handle: stri
           )}
         </div>
 
-        {/* BÊN PHẢI: THÔNG TIN & FORM MUA HÀNG */}
+        {/* BÊN PHẢI: THÔNG TIN & MUA HÀNG */}
         <div className="flex flex-col justify-start space-y-6">
           <h1 className="text-4xl font-bold tracking-tight">{product.title}</h1>
           
-          <div className="text-2xl font-semibold text-neutral-700 dark:text-neutral-300">
-            {Number(product.priceRange.maxVariantPrice.amount).toLocaleString('en-US')} đ
+          {/* HIỂN THỊ GIÁ ĐỘNG THEO VARIANT */}
+          <div className="text-2xl font-bold text-blue-600 dark:text-blue-500">
+            {currentPrice.toLocaleString('vi-VN')} đ
           </div>
           
           <hr className="border-neutral-200 dark:border-neutral-800" />
 
           <form onSubmit={handleAddToCart} className="space-y-6">
-            <div className="grid grid-cols-3 gap-4">
-              {/* Style Dropdown */}
-              <div>
-                <label className="block text-xs font-medium text-neutral-400 mb-2">Style</label>
-                <select 
-                  value={style}
-                  onChange={(e) => setStyle(e.target.value)}
-                  className="w-full bg-transparent border border-neutral-300 dark:border-neutral-700 rounded p-2.5 text-sm focus:outline-none focus:border-blue-500"
-                >
-                  <option value="Straight-cut" className="dark:bg-neutral-900">Straight-cut</option>
-                  <option value="Slim-fit" className="dark:bg-neutral-900">Slim-fit</option>
-                </select>
-              </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* DỰNG DROPDOWN TỰ ĐỘNG CÓ RÀNG BUỘC PHÂN LOẠI & SIZE */}
+              {product.options && product.options.length > 0 ? (
+                product.options.map((option: ProductOption) => {
+                  let availableValues = option.values;
 
-              {/* Size Dropdown */}
-              <div>
-                <label className="block text-xs font-medium text-neutral-400 mb-2">Size</label>
-                <select 
-                  value={size}
-                  onChange={(e) => setSize(e.target.value)}
-                  className="w-full bg-transparent border border-neutral-300 dark:border-neutral-700 rounded p-2.5 text-sm focus:outline-none focus:border-blue-500"
-                >
-                  <option value="X-Large" className="dark:bg-neutral-900">X-Large</option>
-                  <option value="Large" className="dark:bg-neutral-900">Large</option>
-                  <option value="Medium" className="dark:bg-neutral-900">Medium</option>
-                  <option value="Small" className="dark:bg-neutral-900">Small</option>
-                </select>
-              </div>
+                  // Lọc danh sách Size hiển thị dựa theo Phân loại đang chọn
+                  if (option.name === 'Size' && selectedOptions['Phân loại'] && product.variants) {
+                    const currentCategory = selectedOptions['Phân loại'];
+                    availableValues = option.values.filter((sizeValue) =>
+                      product.variants?.some((variant) =>
+                        variant.selectedOptions.some((so) => so.name === 'Phân loại' && so.value === currentCategory) &&
+                        variant.selectedOptions.some((so) => so.name === 'Size' && so.value === sizeValue)
+                      )
+                    );
+                  }
 
-              {/* Quantity Input */}
+                  return (
+                    <div key={option.id}>
+                      <label className="block text-xs font-medium text-neutral-400 mb-2 uppercase tracking-wider">
+                        {option.name}
+                      </label>
+                      <select 
+                        value={selectedOptions[option.name] || ''}
+                        onChange={(e) => handleOptionChange(option.name, e.target.value)}
+                        className="w-full bg-transparent border border-neutral-300 dark:border-neutral-700 rounded p-2.5 text-sm focus:outline-none focus:border-blue-500 dark:bg-neutral-900"
+                      >
+                        {availableValues.map((val: string) => (
+                          <option key={val} value={val} className="dark:bg-neutral-900">
+                            {val}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  );
+                })
+              ) : null}
+
+              {/* SỐ LƯỢNG */}
               <div>
-                <label className="block text-xs font-medium text-neutral-400 mb-2">Quantity</label>
+                <label className="block text-xs font-medium text-neutral-400 mb-2 uppercase tracking-wider">
+                  Số lượng
+                </label>
                 <input 
                   type="number" 
                   min="1" 
                   value={quantity} 
-                  onChange={(e) => setQuantity(Number(e.target.value))}
+                  onChange={(e) => setQuantity(Math.max(1, Number(e.target.value)))}
                   className="w-full bg-transparent border border-neutral-300 dark:border-neutral-700 rounded p-2 text-center text-sm h-[42px] focus:outline-none focus:border-blue-500"
                 />
               </div>
             </div>
 
-            {/* NÚT ADD TO CART */}
             <button 
               type="submit"
               className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded transition-colors text-center block"
@@ -242,11 +230,10 @@ export default function ProductPage({ params }: { params: Promise<{ handle: stri
 
           <hr className="border-neutral-200 dark:border-neutral-800" />
 
-          {/* Mô tả */}
-          <div className="text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed space-y-2">
+          {/* ƯU TIÊN MÔ TẢ THEO VARIANT NẾU CÓ */}
+          <div className="text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed space-y-2 whitespace-pre-line">
             <p className="font-medium text-black dark:text-white">Mô tả sản phẩm:</p>
-            <p>{product.description}</p>
-            <p>• Hệ thống dữ liệu hoạt động mượt mà ở chế độ Giả lập (Mock mode).</p>
+            <p>{selectedVariant?.description || product.description}</p>
           </div>
         </div>
       </div>

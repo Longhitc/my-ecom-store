@@ -1,5 +1,5 @@
 import CartDrawer from "components/cart/CartDrawer";
-import { Navbar } from "components/layout/navbar";
+import Navbar from "components/layout/navbar";
 import { WelcomeToast } from "components/welcome-toast";
 import { CartProvider } from 'context/CartContext';
 import { GeistSans } from "geist/font/sans";
