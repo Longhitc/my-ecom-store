@@ -69,9 +69,9 @@ export default function ProductPage({ params }: { params: Promise<{ handle: stri
 
   if (!product) return null;
 
-  // Tính toán giá hiển thị thực tế
+  // Tính toán giá hiển thị thực tế (Lấy .amount từ object price)
   const currentPrice = selectedVariant
-    ? parseFloat(selectedVariant.price)
+    ? parseFloat(selectedVariant.price.amount)
     : parseFloat(product.priceRange.minVariantPrice?.amount || product.priceRange.maxVariantPrice.amount);
 
   // Xử lý thay đổi Option
