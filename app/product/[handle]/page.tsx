@@ -69,9 +69,20 @@ export default function ProductPage({ params }: { params: Promise<{ handle: stri
 
   if (!product) return null;
 
-  // Tính toán giá hiển thị thực tế (Lấy .amount từ object price)
+  // Tính toán giá hiển thị thực tế an toàn
+  const getVariantPrice = (variant: any) => {
+    if (!variant || !variant.price) return 0;
+    if (typeof variant.price === 'object' && variant.price.amount) {
+      return parseFloat(variant.price.amount);
+    }
+    if (typeof variant.price === 'string') {
+      return parseFloat(variant.price);
+    }
+    return 0;
+  };
+
   const currentPrice = selectedVariant
-    ? parseFloat(selectedVariant.price.amount)
+    ? getVariantPrice(selectedVariant)
     : parseFloat(product.priceRange.minVariantPrice?.amount || product.priceRange.maxVariantPrice.amount);
 
   // Xử lý thay đổi Option
