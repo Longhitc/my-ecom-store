@@ -3,10 +3,21 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
+interface SubChildNode {
+  title: string;
+  path: string;
+}
+
+interface ChildNode {
+  title: string;
+  path: string;
+  children?: SubChildNode[];
+}
+
 interface CategoryNode {
   title: string;
   path: string;
-  children?: { title: string; path: string }[];
+  children?: ChildNode[];
 }
 
 const ALL_CATEGORIES: CategoryNode[] = [
@@ -16,7 +27,16 @@ const ALL_CATEGORIES: CategoryNode[] = [
     children: [
       { title: 'Thời Trang Nam Nữ', path: '/search/tt-namnu' },
       { title: 'Thời Trang Trẻ Em', path: '/search/tt-te' },
-      { title: 'Giày Dép Crocks', path: '/search/gd-crocs' },
+      {
+        title: 'Giày Dép Crocks',
+        path: '/search/gd-crocs',
+        children: [
+          { title: 'Crocs Nam', path: '/search/crocs-nam' },
+          { title: 'Crocs Nữ', path: '/search/crocs-nu' },
+          { title: 'Crocs Trẻ Em', path: '/search/crocs-tre-em' },
+          { title: 'Crocs Unisex', path: '/search/crocs-unisex' },
+        ],
+      },
       { title: 'Phụ Kiện', path: '/search/pk' },
     ],
   },
@@ -26,6 +46,7 @@ const ALL_CATEGORIES: CategoryNode[] = [
     children: [
       { title: 'Váy Nữ', path: '/search/vay-nu' },
       { title: 'Áo Nữ', path: '/search/ao-nu' },
+      { title: 'Set & Bộ', path: '/search/set-bo' },
     ],
   },
 ];
@@ -47,14 +68,25 @@ export default function CategoryTree() {
   }
 
   // 2. TRƯỜNG HỢP VÀO DANH MỤC CỤ THỂ
-  // Sử dụng Optional Chaining (?.) an toàn tuyệt đối với TypeScript
-  const activeGroup = ALL_CATEGORIES.find((group) =>
-    group.path === pathname || group.children?.some((child) => child.path === pathname)
-  );
+  // Tim nhóm cha cấp 1 (Hàng Có Sẵn / Hàng Order)
+  const activeGroup = ALL_CATEGORIES.find((group) => {
+    if (group.path === pathname) return true;
+    return group.children?.some((child) => {
+      if (child.path === pathname) return true;
+      return child.children?.some((sub) => sub.path === pathname);
+    });
+  });
 
   if (!activeGroup) return null;
 
-  const activeChild = activeGroup.children?.find((child) => child.path === pathname);
+  // Tìm danh mục cấp 2 (Giày Dép Crocks, Thời Trang...)
+  const activeChild = activeGroup.children?.find((child) => {
+    if (child.path === pathname) return true;
+    return child.children?.some((sub) => sub.path === pathname);
+  });
+
+  // Tìm danh mục cấp 3 (Crocs Nam, Crocs Nữ...)
+  const activeSubChild = activeChild?.children?.find((sub) => sub.path === pathname);
 
   return (
     <div className="order-first w-full flex-none md:w-[200px]">
@@ -63,18 +95,44 @@ export default function CategoryTree() {
           Danh mục đang xem
         </h3>
         <div className="space-y-2 text-sm">
-          <span className="block text-base font-bold text-white">
+          {/* Cấp 1 */}
+          <Link href={activeGroup.path} className="block text-base font-bold text-white hover:text-blue-400">
             {activeGroup.title}
-          </span>
+          </Link>
+
+          {/* Cấp 2 */}
           {activeChild && (
             <ul className="ml-2 space-y-2 border-l-2 border-neutral-800 pl-3 pt-2">
               <li>
                 <Link
                   href={activeChild.path}
-                  className="block text-xs font-bold text-blue-500 transition-colors"
+                  className={`block text-xs font-bold transition-colors ${
+                    activeChild.path === pathname && !activeSubChild ? 'text-blue-500' : 'text-neutral-300 hover:text-white'
+                  }`}
                 >
                   ▸ {activeChild.title}
                 </Link>
+
+                {/* Cấp 3 (Crocs Nam / Crocs Nữ...) */}
+                {activeChild.children && (
+                  <ul className="ml-2 mt-2 space-y-1.5 border-l border-neutral-700 pl-2.5">
+                    {activeChild.children.map((sub) => {
+                      const isSubActive = sub.path === pathname;
+                      return (
+                        <li key={sub.path}>
+                          <Link
+                            href={sub.path}
+                            className={`block text-[11px] font-medium transition-colors ${
+                              isSubActive ? 'text-blue-400 font-bold' : 'text-neutral-400 hover:text-neutral-200'
+                            }`}
+                          >
+                            • {sub.title}
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
               </li>
             </ul>
           )}
