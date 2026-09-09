@@ -1,6 +1,6 @@
 'use client';
 
-import { ProductOption, ProductVariant } from 'app/product/products';
+import { ProductOption, ProductVariant } from 'lib/shopify/types';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 interface VariantSelectorProps {
