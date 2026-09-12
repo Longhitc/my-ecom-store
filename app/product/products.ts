@@ -7,8 +7,13 @@ export interface ProductOption {
 export interface ProductVariant {
   id: string;
   title: string;
-  price: string;
+  price: {
+    amount: string;
+    currencyCode: string;
+  };
   description?: string;
+  availableForSale?: boolean;
+  quantityAvailable?: number;
   selectedOptions: {
     name: string;
     value: string;
@@ -41,28 +46,92 @@ export interface Product {
   images: string[];
 }
 
-// Danh sách toàn bộ size (bao gồm cả trẻ em và người lớn)
-const ALL_SIZES = [
-  'C7 (23-24 / 14-14.5cm)',
-  'C8 (25-26 / 15cm)',
-  'C9 (26-27 / 15.5cm)',
-  'C10 (27-28 / 16.5cm)',
-  'C11 (28-29 / 17.5cm)',
-  'C12 (29-30 / 18cm)',
-  'C13 (30-31 / 19cm)',
-  'J1 (32 / 20cm)',
-  'J2 (33 / 20.5cm)',
-  'J3 (34 / 21.5cm)',
-  'J4 (35 / 22.5cm)',
-  'M4/W6 (36-37 / 22.5-23cm)',
-  'M5/W7 (37-38 / 23.5-24cm)',
-  'M6/W8 (38-39 / 24.5-25cm)',
-  'M7/W9 (39-40 / 25.5-26cm)',
-  'M8/W10 (41-42 / 26.5-27cm)',
-  'M9/W11 (43-44 / 27.5-28cm)'
+// --- Dữ liệu bổ sung cho Sản phẩm ID 10 ---
+const SUPER_BAE_COLORS = ['Kem', 'Xanh'];
+const SUPER_BAE_SIZES = ['W5', 'W6', 'W7', 'W8', 'W9'];
+
+const SUPER_BAE_DESCRIPTION = `🔥 HOT TREND CỦA MÙA HÈ - SỤC SUPER BAE DÂY MÓC 🔥
+Nhà em gia nhập đường đua sục hott trend hè 
+📌 From đẹp - đế cao - đi êm
+📌 Charm gắn sẵn full như hình
+Size: w5-w9 (35 đến 40/41)
+Chỉ có: 590 xu quá hạt dẻ
+Hình nhà em là thật rùi các nàng đừng kêu em chụp nữa ạ.. nhà em chỉ chọn loại xịn xò rip 1.1 thôi.`;
+
+// Bảng tính tồn kho theo Màu & Size: (Cửa Hàng + Kho)
+const SUPER_BAE_INVENTORY: Record<string, Record<string, number>> = {
+  'Kem': {
+    'W5': 4 + 25,  // 29
+    'W6': 3 + 8,   // 11
+    'W7': 4 + 25,  // 29
+    'W8': 3 + 7,   // 10
+    'W9': 0        // 0
+  },
+  'Xanh': {
+    'W5': 2 + 27,  // 29
+    'W6': 1 + 8,   // 9
+    'W7': 3 + 25,  // 28
+    'W8': 2 + 6,   // 8
+    'W9': 4 + 0    // 4
+  }
+};
+
+// Danh sách Size đã bỏ phần mở ngoặc ghi cm
+const ALL_SIZES_CLEAN = [
+  'C7',
+  'C8',
+  'C9',
+  'C10',
+  'C11',
+  'C12',
+  'C13',
+  'J1',
+  'J2',
+  'J3',
+  'J4',
+  'M4/W6',
+  'M5/W7',
+  'M6/W8',
+  'M7/W9',
+  'M8/W10',
+  'M9/W11'
 ];
 
-// Mô tả chung duy nhất cho sản phẩm Sục Cầu Vồng Hello Kitty
+// Danh sách 2 Loại cho sản phẩm ID 8
+const KITTY_TYPES = ['Mặt kitty', 'Cầu vồng'];
+
+// Bảng mapping dữ liệu tồn kho theo 2 Loại & Size đã rút gọn (Tổng = Cửa hàng + Kho)
+const KITTY_INVENTORY: Record<string, Record<string, number>> = {
+  'Mặt kitty': {
+    'C7': 3 + 15 // 18
+  },
+  'Cầu vồng': {
+    'C8': 3 + 6,   // 9
+    'C9': 3 + 7,   // 10
+    'C10': 3 + 9,  // 12
+    'C11': 2 + 2,  // 4
+    'C12': 2 + 3,  // 5
+    'C13': 1 + 0   // 1
+  }
+};
+
+const LITERIDE_COLORS = ['Đen', 'Xám', 'Đỏ'];
+const LITERIDE_SIZES = [
+  'M4/W6',
+  'M5/W7',
+  'M6/W8',
+  'M7/W9',
+  'M8/W10',
+  'M9/W11',
+  'M10/W12',
+  'M11'
+];
+
+const LITERIDE_DESCRIPTION = `Nhà em về thêm đủ sz mẫu mới toanh luôn
+Sục Literide Inmotion nhà em về đủ 3 màu: Đen, Xám, Đỏ ạ!
+Size: m4-m11 (36 đến 45)
+Chỉ có 355 xu / 1 đôi chỉ bằng 1/3 của store ạ`;
+
 const PRODUCT_DESCRIPTION = `THÔNG TIN GIỚI THIỆU SẢN PHẨM
 
 ✔️Siêu phẩm dép sục cho bé (hàng xuất dư chuẩn, ảnh shop tự chụp 100%)
@@ -78,39 +147,25 @@ const PRODUCT_DESCRIPTION = `THÔNG TIN GIỚI THIỆU SẢN PHẨM
  b -  BẢNG SIZE :
 
 C7- Chiều dài bàn chân 14~14.5cm - size giày 23-24
-
 C8- Chiều dài bàn chân ~15cm – size giày 25-26
-
 C9- Chiều dài bàn chân ~15.5cm – size giày 26-27
-
 C10-Chiều dài bàn chân ~16.5cm – size giày 27-28
-
 C11 - Chiều dài bàn chân ~17.5cm – size giày 28-29
-
 C12- Chiều dài bàn chân ~18cm – size giày 29-30
-
 C13- Chiều dài bàn chân ~19cm – size giày 30-31
-
 J1- Chiều dài bàn chân ~20cm – size giày 32
-
 J2 - Chiều dài bàn chân ~20.5cm – size giày 33
-
 J3 - Chiều dài bàn chân ~21.5cm – size giày 34
-
 J4 - Chiều dài bàn chân ~22.5cm – size giày 35
 
 (Ba mẹ nên chọn đúng size cho bé, không cần trừ hao ạ)
 
+📌Size M4/W6 (Tương đương size 35 - 36)
 📌Size M4/W6 (Tương đương size 36 - 37): Chiều dài chân 22.5cm - 23cm
-
 📌Size M5/W7 (Tương đương size 37 - 38): Chiều dài chân 23.5cm - 24cm
-
 📌Size M6/W8 (Tương đương size 38 - 39): Chiều dài chân 24.5cm - 25cm
-
 📌Size M7/W9 (Tương đương size 39 - 40): Chiều dài chân 25.5cm - 26cm
-
 📌Size M8/W10 (Tương đương size 41 - 42): Chiều dài chân 26.5cm - 27cm
-
 📌Size M9/W11 (Tương đương size 43 - 44): Chiều dài chân 27.5cm - 28cm
 
 (Lưu ý: Nếu phom chân dày hoặc muốn đi thoải mái với tất/vớ, quý khách nên tăng 1 size).`;
@@ -241,7 +296,7 @@ export const mockProducts: Product[] = [
     title: 'Set cotton hè',
     description: 'Set cotton mẫu mới toanh nhà e về sẵn rồi ạ, size xs, s, m, l, xl (39kg đến 68kg)',
     type: 'co-san',
-    category: 'tt-namnu',
+    category: 'set-bo',
     priceRange: { 
       minVariantPrice: { amount: '175000', currencyCode: 'VND' },
       maxVariantPrice: { amount: '175000', currencyCode: 'VND' } 
@@ -262,31 +317,45 @@ export const mockProducts: Product[] = [
     title: 'Sục Cầu Vồng Hello Kitty Kèm Full Charm',
     description: PRODUCT_DESCRIPTION,
     type: 'co-san',
-    category: 'gd-crocs',
+    category: 'crocs-tre-em',
     priceRange: {
       minVariantPrice: { amount: '290000', currencyCode: 'VND' },
       maxVariantPrice: { amount: '310000', currencyCode: 'VND' }
     },
     options: [
       {
-        id: 'opt-size',
+        id: 'opt-type-kitty',
+        name: 'Loại',
+        values: KITTY_TYPES
+      },
+      {
+        id: 'opt-size-kitty',
         name: 'Size',
-        values: ALL_SIZES
+        values: ALL_SIZES_CLEAN
       }
     ],
-    variants: ALL_SIZES.map((size, idx) => {
-      // Phân biệt giá cho các size trẻ em (C7->J4) vs người lớn (M4/W6->M9/W11)
-      const isAdultSize = size.startsWith('M');
-      return {
-        id: `var-size-${idx + 1}`,
-        title: size,
-        price: isAdultSize ? '310000' : '290000',
-        description: PRODUCT_DESCRIPTION,
-        selectedOptions: [
-          { name: 'Size', value: size }
-        ]
-      };
-    }),
+    variants: KITTY_TYPES.flatMap((type, typeIdx) =>
+      ALL_SIZES_CLEAN.map((size, sizeIdx) => {
+        const isAdultSize = size.startsWith('M');
+        const stock = KITTY_INVENTORY[type]?.[size] ?? 0;
+
+        return {
+          id: `var-kitty-${typeIdx}-${sizeIdx}`,
+          title: `${type} / ${size}`,
+          price: {
+            amount: isAdultSize ? '310000' : '290000',
+            currencyCode: 'VND'
+          },
+          availableForSale: stock > 0,
+          quantityAvailable: stock,
+          description: PRODUCT_DESCRIPTION,
+          selectedOptions: [
+            { name: 'Loại', value: type },
+            { name: 'Size', value: size }
+          ]
+        };
+      })
+    ),
     featuredImage: {
       url: 'https://res.cloudinary.com/dpsejpp2/image/upload/v1788948441/799149959_4646281895601183_6549771293743544267_n.jpg',
       altText: 'Sục Cầu Vồng Hello Kitty'
@@ -297,6 +366,111 @@ export const mockProducts: Product[] = [
       'https://res.cloudinary.com/dpsejpp2/image/upload/v1788948441/798119404_4646282002267839_6990374870986859252_n.jpg',
       'https://res.cloudinary.com/dpsejpp2/image/upload/v1788948441/798800568_4646281885601184_5610180519922697930_n.jpg',
       'https://res.cloudinary.com/dpsejpp2/image/upload/v1788948441/798222224_4646282035601169_4307402522969396159_n.jpg'
+    ]
+  },
+  {
+    id: '9',
+    handle: 'suc-literide-inmotion',
+    title: 'Sục Literide Inmotion 360',
+    description: LITERIDE_DESCRIPTION,
+    type: 'co-san',
+    category: 'crocs-unisex',
+    priceRange: {
+      minVariantPrice: { amount: '355000', currencyCode: 'VND' },
+      maxVariantPrice: { amount: '355000', currencyCode: 'VND' }
+    },
+    options: [
+      {
+        id: 'opt-color-literide',
+        name: 'Màu sắc',
+        values: LITERIDE_COLORS
+      },
+      {
+        id: 'opt-size-literide',
+        name: 'Size',
+        values: LITERIDE_SIZES
+      }
+    ],
+    variants: LITERIDE_COLORS.flatMap((color, colorIdx) =>
+      LITERIDE_SIZES.map((size, sizeIdx) => ({
+        id: `var-literide-${colorIdx}-${sizeIdx}`,
+        title: `${color} / ${size}`,
+        price: {
+          amount: '355000',
+          currencyCode: 'VND'
+        },
+        description: LITERIDE_DESCRIPTION,
+        selectedOptions: [
+          { name: 'Màu sắc', value: color },
+          { name: 'Size', value: size }
+        ]
+      }))
+    ),
+    featuredImage: {
+      url: 'https://res.cloudinary.com/dpsejpp2/image/upload/v1789010450/801045966_4648637412032298_3458888062436261448_n.jpg',
+      altText: 'Sục Literide Inmotion 360'
+    },
+    images: [
+      'https://res.cloudinary.com/dpsejpp2/image/upload/v1789010450/801045966_4648637412032298_3458888062436261448_n.jpg',
+      'https://res.cloudinary.com/dpsejpp2/image/upload/v1789010450/799859008_4648637682032271_2125085716624523166_n.jpg',
+      'https://res.cloudinary.com/dpsejpp2/image/upload/v1789010450/799859027_4648637628698943_864122210124162983_n.jpg',
+      'https://res.cloudinary.com/dpsejpp2/image/upload/v1789010450/801870071_4648637675365605_2049975737533579377_n.jpg',
+      'https://res.cloudinary.com/dpsejpp2/image/upload/v1789010449/799414938_4648637605365612_6246133479037152333_n.jpg'
+    ]
+  },
+  {
+    id: '10',
+    handle: 'suc-super-bae-xich',
+    title: 'Sục Super Bae Dây Móc (Xích)',
+    description: SUPER_BAE_DESCRIPTION,
+    type: 'co-san',
+    category: 'crocs-nu',
+    priceRange: {
+      minVariantPrice: { amount: '590000', currencyCode: 'VND' },
+      maxVariantPrice: { amount: '590000', currencyCode: 'VND' }
+    },
+    options: [
+      {
+        id: 'opt-color-superbae',
+        name: 'Màu sắc',
+        values: SUPER_BAE_COLORS
+      },
+      {
+        id: 'opt-size-superbae',
+        name: 'Size',
+        values: SUPER_BAE_SIZES
+      }
+    ],
+    variants: SUPER_BAE_COLORS.flatMap((color, colorIdx) =>
+      SUPER_BAE_SIZES.map((size, sizeIdx) => {
+        const stock = SUPER_BAE_INVENTORY[color]?.[size] ?? 0;
+
+        return {
+          id: `var-superbae-${colorIdx}-${sizeIdx}`,
+          title: `${color} / ${size}`,
+          price: {
+            amount: '590000',
+            currencyCode: 'VND'
+          },
+          availableForSale: stock > 0,
+          quantityAvailable: stock,
+          description: SUPER_BAE_DESCRIPTION,
+          selectedOptions: [
+            { name: 'Màu sắc', value: color },
+            { name: 'Size', value: size }
+          ]
+        };
+      })
+    ),
+    featuredImage: {
+      url: 'https://res.cloudinary.com/dpsejpp2/image/upload/v1789186787/753150770_4590337111195662_2327807593718723329_n.jpg',
+      altText: 'Sục Super Bae Dây Móc'
+    },
+    images: [
+      'https://res.cloudinary.com/dpsejpp2/image/upload/v1789186787/753150770_4590337111195662_2327807593718723329_n.jpg',
+      'https://res.cloudinary.com/dpsejpp2/image/upload/v1789186786/752169304_4590337851195588_4610764517927117299_n.jpg',
+      'https://res.cloudinary.com/dpsejpp2/image/upload/v1789186785/751136200_4590337747862265_5808733747748062410_n.jpg',
+      'https://res.cloudinary.com/dpsejpp2/image/upload/v1789186773/750721820_4590336887862351_7085382392396555134_n.jpg'
     ]
   }
 ];

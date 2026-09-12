@@ -2,18 +2,24 @@
 
 import { mockProducts, ProductOption, ProductVariant } from 'app/product/products';
 import { useCart } from 'context/CartContext';
+import { notFound } from 'next/navigation';
 import React, { use, useEffect, useState } from 'react';
 
 export default function ProductPage({ params }: { params: Promise<{ handle: string }> }) {
+  // Unwrap params đúng chuẩn Next.js 15
   const resolvedParams = use(params);
   const { addToCart, setIsCartOpen } = useCart();
-
   const [quantity, setQuantity] = useState(1);
 
-  // 1. Tìm sản phẩm
-  const product = mockProducts.find((p) => p.handle === resolvedParams.handle) || mockProducts[0]!;
+  // 1. Tìm đúng sản phẩm theo handle (Đã bỏ || mockProducts[0]! gây lỗi)
+  const product = mockProducts.find((p) => p.handle === resolvedParams.handle);
 
-  // 2. Quản lý trạng thái Option người dùng chọn
+  // 2. Không tìm thấy sản phẩm thì đẩy về 404
+  if (!product) {
+    notFound();
+  }
+
+  // 3. Quản lý trạng thái Option người dùng chọn (Loại / Màu sắc, Size,...)
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>(() => {
     const initial: Record<string, string> = {};
     if (product.options && product.options.length > 0) {
@@ -24,36 +30,40 @@ export default function ProductPage({ params }: { params: Promise<{ handle: stri
     return initial;
   });
 
-  // 3. Tìm Variant khớp với Option đang được chọn
+  // 4. Tìm Variant khớp chính xác với tất cả Option đang chọn
   const selectedVariant = product.variants?.find((variant: ProductVariant) =>
     variant.selectedOptions.every(
       (sel) => selectedOptions[sel.name] === sel.value
     )
   ) || product.variants?.[0];
 
-  // 4. Quản lý ảnh
+  // 5. Kiểm tra tồn kho thực tế từ selectedVariant
+  const stockQuantity = selectedVariant?.quantityAvailable ?? 0;
+  const isAvailable = (selectedVariant?.availableForSale ?? true) && (selectedVariant?.quantityAvailable === undefined || stockQuantity > 0);
+
+  // 6. Quản lý ảnh
   const productImages = product.images && product.images.length > 0 
     ? product.images 
     : [product.featuredImage.url];
 
   const [selectedImage, setSelectedImage] = useState(productImages[0] || product.featuredImage.url);
 
-  // Cập nhật lại ảnh & options khi chuyển sản phẩm
+  // Reset ảnh & options khi đổi sản phẩm
   useEffect(() => {
     if (product) {
       setSelectedImage(productImages[0] || product.featuredImage.url);
       if (product.options) {
         const initial: Record<string, string> = {};
         
-        // Khởi tạo Phân loại trước
-        const categoryOpt = product.options.find((opt) => opt.name === 'Phân loại');
-        const defaultCategory = categoryOpt ? categoryOpt.values[0] : '';
+        // Nhận diện Option chính (Loại hoặc Màu sắc)
+        const primaryOpt = product.options.find((opt) => opt.name === 'Loại' || opt.name === 'Màu sắc');
+        const defaultPrimaryVal = primaryOpt ? primaryOpt.values[0] : '';
 
         product.options.forEach((opt: ProductOption) => {
-          if (opt.name === 'Size' && defaultCategory && product.variants) {
-            // Lấy size đầu tiên khớp với phân loại mặc định
+          if (opt.name === 'Size' && primaryOpt && defaultPrimaryVal && product.variants) {
+            // Tự chọn size đầu tiên thuộc phân loại/màu sắc mặc định
             const firstValidSize = product.variants.find((v) =>
-              v.selectedOptions.some((so) => so.name === 'Phân loại' && so.value === defaultCategory)
+              v.selectedOptions.some((so) => so.name === primaryOpt.name && so.value === defaultPrimaryVal)
             )?.selectedOptions.find((so) => so.name === 'Size')?.value;
 
             initial[opt.name] = firstValidSize || opt.values[0] || '';
@@ -67,9 +77,7 @@ export default function ProductPage({ params }: { params: Promise<{ handle: stri
     }
   }, [product.handle]);
 
-  if (!product) return null;
-
-  // Tính toán giá hiển thị thực tế an toàn
+  // Tính toán giá hiển thị thực tế
   const getVariantPrice = (variant: any) => {
     if (!variant || !variant.price) return 0;
     if (typeof variant.price === 'object' && variant.price.amount) {
@@ -85,17 +93,17 @@ export default function ProductPage({ params }: { params: Promise<{ handle: stri
     ? getVariantPrice(selectedVariant)
     : parseFloat(product.priceRange.minVariantPrice?.amount || product.priceRange.maxVariantPrice.amount);
 
-  // Xử lý thay đổi Option
+  // Xử lý khi đổi Option (Loại, Màu sắc, Size)
   const handleOptionChange = (optionName: string, value: string) => {
-    if (optionName === 'Phân loại') {
-      // Tìm size đầu tiên khớp với phân loại vừa chọn
+    if (optionName === 'Loại' || optionName === 'Màu sắc') {
+      // Tìm size hợp lệ đầu tiên ứng với Loại/Màu mới chọn
       const firstValidSize = product.variants?.find((v) =>
-        v.selectedOptions.some((so) => so.name === 'Phân loại' && so.value === value)
+        v.selectedOptions.some((so) => so.name === optionName && so.value === value)
       )?.selectedOptions.find((so) => so.name === 'Size')?.value;
 
       setSelectedOptions((prev) => ({
         ...prev,
-        'Phân loại': value,
+        [optionName]: value,
         'Size': firstValidSize || prev['Size'] || ''
       }));
     } else {
@@ -108,6 +116,7 @@ export default function ProductPage({ params }: { params: Promise<{ handle: stri
 
   const handleAddToCart = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isAvailable) return;
     
     addToCart({
       id: selectedVariant ? `${product.id}-${selectedVariant.id}` : product.id,
@@ -116,7 +125,7 @@ export default function ProductPage({ params }: { params: Promise<{ handle: stri
       price: currentPrice,
       imageUrl: selectedImage,
       size: selectedOptions['Size'] || 'Mặc định',
-      style: selectedOptions['Style'] || 'Mặc định',
+      style: selectedOptions['Loại'] || selectedOptions['Màu sắc'] || 'Mặc định',
       quantity,
     });
 
@@ -131,7 +140,7 @@ export default function ProductPage({ params }: { params: Promise<{ handle: stri
       </div>
 
       <div className="grid grid-cols-1 gap-12 md:grid-cols-2">
-        {/* BÊN TRÁI: KHUNG GALLERY HÌNH ẢNH */}
+        {/* BÊN TRÁI: GALLERY HÌNH ẢNH */}
         <div className="space-y-4">
           <div className="flex justify-center bg-neutral-100 dark:bg-neutral-900 rounded-lg p-6 border border-neutral-200 dark:border-neutral-800">
             <img 
@@ -141,7 +150,7 @@ export default function ProductPage({ params }: { params: Promise<{ handle: stri
             />
           </div>
 
-          {/* DANH SÁCH THUMBNAIL */}
+          {/* THUMBNAILS */}
           {productImages.length > 1 && (
             <div className="flex gap-3 overflow-x-auto pb-2">
               {productImages.map((imgUrl, index) => (
@@ -166,11 +175,11 @@ export default function ProductPage({ params }: { params: Promise<{ handle: stri
           )}
         </div>
 
-        {/* BÊN PHẢI: THÔNG TIN & MUA HÀNG */}
+        {/* BÊN PHẢI: THÔNG TIN SẢN PHẨM & TỒN KHO */}
         <div className="flex flex-col justify-start space-y-6">
           <h1 className="text-4xl font-bold tracking-tight">{product.title}</h1>
           
-          {/* HIỂN THỊ GIÁ ĐỘNG THEO VARIANT */}
+          {/* GIÁ SẢN PHẨM */}
           <div className="text-2xl font-bold text-blue-600 dark:text-blue-500">
             {currentPrice.toLocaleString('vi-VN')} đ
           </div>
@@ -179,17 +188,18 @@ export default function ProductPage({ params }: { params: Promise<{ handle: stri
 
           <form onSubmit={handleAddToCart} className="space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* DỰNG DROPDOWN TỰ ĐỘNG CÓ RÀNG BUỘC PHÂN LOẠI & SIZE */}
+              {/* RENDER DROPDOWN OPTIONS (LOẠI / MÀU SẮC / SIZE) */}
               {product.options && product.options.length > 0 ? (
                 product.options.map((option: ProductOption) => {
                   let availableValues = option.values;
 
-                  // Lọc danh sách Size hiển thị dựa theo Phân loại đang chọn
-                  if (option.name === 'Size' && selectedOptions['Phân loại'] && product.variants) {
-                    const currentCategory = selectedOptions['Phân loại'];
+                  // Lọc Size theo Loại / Màu sắc đã chọn
+                  const parentOptName = selectedOptions['Loại'] ? 'Loại' : selectedOptions['Màu sắc'] ? 'Màu sắc' : null;
+                  if (option.name === 'Size' && parentOptName && product.variants) {
+                    const currentParentValue = selectedOptions[parentOptName];
                     availableValues = option.values.filter((sizeValue) =>
                       product.variants?.some((variant) =>
-                        variant.selectedOptions.some((so) => so.name === 'Phân loại' && so.value === currentCategory) &&
+                        variant.selectedOptions.some((so) => so.name === parentOptName && so.value === currentParentValue) &&
                         variant.selectedOptions.some((so) => so.name === 'Size' && so.value === sizeValue)
                       )
                     );
@@ -216,32 +226,56 @@ export default function ProductPage({ params }: { params: Promise<{ handle: stri
                 })
               ) : null}
 
-              {/* SỐ LƯỢNG */}
+              {/* Ô NHẬP SỐ LƯỢNG MUA */}
               <div>
                 <label className="block text-xs font-medium text-neutral-400 mb-2 uppercase tracking-wider">
                   Số lượng
                 </label>
                 <input 
                   type="number" 
-                  min="1" 
+                  min="1"
+                  max={stockQuantity || 1}
                   value={quantity} 
                   onChange={(e) => setQuantity(Math.max(1, Number(e.target.value)))}
-                  className="w-full bg-transparent border border-neutral-300 dark:border-neutral-700 rounded p-2 text-center text-sm h-[42px] focus:outline-none focus:border-blue-500"
+                  disabled={!isAvailable}
+                  className="w-full bg-transparent border border-neutral-300 dark:border-neutral-700 rounded p-2 text-center text-sm h-[42px] focus:outline-none focus:border-blue-500 disabled:opacity-50"
                 />
               </div>
             </div>
 
+            {/* THÔNG BÁO TỒN KHO */}
+            {selectedVariant && selectedVariant.quantityAvailable !== undefined && (
+              <div className="text-sm font-medium">
+                Tình trạng kho:{' '}
+                {isAvailable ? (
+                  <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
+                    Còn {stockQuantity} sản phẩm
+                  </span>
+                ) : (
+                  <span className="text-red-600 dark:text-red-400 font-semibold">
+                    Hết hàng
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* NÚT THÊM VÀO GIỎ HÀNG */}
             <button 
               type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded transition-colors text-center block"
+              disabled={!isAvailable}
+              className={`w-full font-bold py-3 px-8 rounded transition-colors text-center block ${
+                isAvailable
+                  ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                  : 'bg-neutral-400 dark:bg-neutral-800 text-neutral-200 cursor-not-allowed'
+              }`}
             >
-              Add to Cart
+              {isAvailable ? 'Add to Cart' : 'Hết hàng'}
             </button>
           </form>
 
           <hr className="border-neutral-200 dark:border-neutral-800" />
 
-          {/* ƯU TIÊN MÔ TẢ THEO VARIANT NẾU CÓ */}
+          {/* MÔ TẢ SẢN PHẨM */}
           <div className="text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed space-y-2 whitespace-pre-line">
             <p className="font-medium text-black dark:text-white">Mô tả sản phẩm:</p>
             <p>{selectedVariant?.description || product.description}</p>

@@ -25,7 +25,16 @@ const ALL_CATEGORIES: CategoryNode[] = [
     title: 'Hàng Có Sẵn',
     path: '/search/co-san',
     children: [
-      { title: 'Thời Trang Nam Nữ', path: '/search/tt-namnu' },
+      { title: 'Thời Trang Nam', path: '/search/tt-nam' },
+      {
+        title: 'Thời Trang Nữ',
+        path: '/search/tt-nu',
+        children: [
+          { title: 'Váy Nữ', path: '/search/vay-nu' },
+          { title: 'Áo Nữ', path: '/search/ao-nu' },
+          { title: 'Set & Bộ', path: '/search/set-bo' },
+        ],
+      },
       { title: 'Thời Trang Trẻ Em', path: '/search/tt-te' },
       {
         title: 'Giày Dép Crocks',
@@ -43,11 +52,7 @@ const ALL_CATEGORIES: CategoryNode[] = [
   {
     title: 'Hàng Order',
     path: '/search/order',
-    children: [
-      { title: 'Váy Nữ', path: '/search/vay-nu' },
-      { title: 'Áo Nữ', path: '/search/ao-nu' },
-      { title: 'Set & Bộ', path: '/search/set-bo' },
-    ],
+    children: [],
   },
 ];
 
@@ -68,7 +73,7 @@ export default function CategoryTree() {
   }
 
   // 2. TRƯỜNG HỢP VÀO DANH MỤC CỤ THỂ
-  // Tim nhóm cha cấp 1 (Hàng Có Sẵn / Hàng Order)
+  // Tìm nhóm cha cấp 1 (Hàng Có Sẵn / Hàng Order)
   const activeGroup = ALL_CATEGORIES.find((group) => {
     if (group.path === pathname) return true;
     return group.children?.some((child) => {
@@ -79,13 +84,13 @@ export default function CategoryTree() {
 
   if (!activeGroup) return null;
 
-  // Tìm danh mục cấp 2 (Giày Dép Crocks, Thời Trang...)
+  // Tìm danh mục cấp 2 (Thời Trang Nam, Thời Trang Nữ, Giày Dép Crocks...)
   const activeChild = activeGroup.children?.find((child) => {
     if (child.path === pathname) return true;
     return child.children?.some((sub) => sub.path === pathname);
   });
 
-  // Tìm danh mục cấp 3 (Crocs Nam, Crocs Nữ...)
+  // Tìm danh mục cấp 3 (Váy Nữ, Áo Nữ, Crocs Nam...)
   const activeSubChild = activeChild?.children?.find((sub) => sub.path === pathname);
 
   return (
@@ -113,7 +118,7 @@ export default function CategoryTree() {
                   ▸ {activeChild.title}
                 </Link>
 
-                {/* Cấp 3 (Crocs Nam / Crocs Nữ...) */}
+                {/* Cấp 3 (Váy Nữ / Áo Nữ / Crocs Nam...) */}
                 {activeChild.children && (
                   <ul className="ml-2 mt-2 space-y-1.5 border-l border-neutral-700 pl-2.5">
                     {activeChild.children.map((sub) => {
