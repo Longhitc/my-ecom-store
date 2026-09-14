@@ -76,6 +76,66 @@ const SUPER_BAE_INVENTORY: Record<string, Record<string, number>> = {
   }
 };
 
+const BALLET_FLOWER_SIZES = ['W5', 'W6', 'W7', 'W8', 'W9'];
+
+const BALLET_FLOWER_DESCRIPTION = `🔥 Lên cho các mom một em ballet hoá tiết hoa hồng xinh iu, nhanh tay thì còn chậm tay là khuyết size e khum chịu đâu nha 🫡
+Chuẩn xịn đét ạ full túi
+Size: w5-w9
+Giá: 240 xu / tặng kèm charm thường ngẫu nhiên
+Charm như hình; 49 xu / 1 sét`;
+
+const BALLET_FLOWER_INVENTORY: Record<string, number> = {
+  'W5': 0,
+  'W6': 0,
+  'W7': 0,
+  'W8': 0,
+  'W9': 0
+};
+
+// --- Dữ liệu bổ sung cho Sản phẩm ID 12 (Sục Yukon Vista) ---
+const YUKON_COLORS = ['Đen', 'Nâu', 'Bò'];
+const YUKON_SIZES = ['M7', 'M8', 'M9', 'M10'];
+
+const YUKON_DESCRIPTION = `📌 Sục yukon vista nhà em sẵn hàng, khách iu lên đơn em cho kho xuất ngay nhé.
+Hàng chuẩn xịn đét full hộp làm quà tặng cựa sang.
+
+Chất liệu: Nhựa tế bào có thiết kế hình vòm linh hoạt, nhẹ êm và linh hoạt. Vật liệu được đúc hoàn toàn bền và chắc chắn.
+
+Form dép: Thuộc dòng Relaxed Fit form vừa, mang không quá ôm và chiều dài tiêu chuẩn vừa chân, đem lại cảm giác thoải mái khi mang.
+
+Ưu điểm: Dép được làm từ chất liệu nhựa, đế chống trơn trượt
+
+Hướng dẫn chọn size: M7 đến M10 (tương ứng với size vn là 40 đến 44)
+M7 = size 40 ( chân 24,5 - 25 cm).
+M8 = size 41 ( chân 25,5 - 26 cm).
+M9 = size 42 ( chân 26,5 - 27 cm).
+M10 = size 43 ( chân 27,5 - 28 cm).
+M11 = size 44 ( chân 28,5 - 29 cm).
+
+Sz; m7 đến m10`;
+
+// Bảng tính tồn kho theo Màu (Cột B) & Size (Tổng Cột C + Cột D từ file Excel)
+const YUKON_INVENTORY: Record<string, Record<string, number>> = {
+  'Đen': {
+    'M7': 1 + 6,   // 7
+    'M8': 2 + 15,  // 17
+    'M9': 3 + 15,  // 18
+    'M10': 3 + 7   // 10
+  },
+  'Nâu': {
+    'M7': 3 + 5,   // 8
+    'M8': 3 + 12,  // 15
+    'M9': 3 + 15,  // 18
+    'M10': 3 + 6   // 9
+  },
+  'Bò': {
+    'M7': 2 + 5,   // 7
+    'M8': 3 + 15,  // 18
+    'M9': 3 + 15,  // 18
+    'M10': 3 + 7   // 10
+  }
+};
+
 // Danh sách Size đã bỏ phần mở ngoặc ghi cm
 const ALL_SIZES_CLEAN = [
   'C7',
@@ -471,6 +531,114 @@ export const mockProducts: Product[] = [
       'https://res.cloudinary.com/dpsejpp2/image/upload/v1789186786/752169304_4590337851195588_4610764517927117299_n.jpg',
       'https://res.cloudinary.com/dpsejpp2/image/upload/v1789186785/751136200_4590337747862265_5808733747748062410_n.jpg',
       'https://res.cloudinary.com/dpsejpp2/image/upload/v1789186773/750721820_4590336887862351_7085382392396555134_n.jpg'
+    ]
+  },
+  {
+    id: '12',
+    handle: 'suc-yukon-vista',
+    title: 'Sục Yukon Vista',
+    description: YUKON_DESCRIPTION,
+    type: 'co-san',
+    category: 'crocs-nam',
+    priceRange: {
+      minVariantPrice: { amount: '360000', currencyCode: 'VND' },
+      maxVariantPrice: { amount: '360000', currencyCode: 'VND' }
+    },
+    options: [
+      {
+        id: 'opt-color-yukon',
+        name: 'Màu sắc',
+        values: YUKON_COLORS
+      },
+      {
+        id: 'opt-size-yukon',
+        name: 'Size',
+        values: YUKON_SIZES
+      }
+    ],
+    variants: YUKON_COLORS.flatMap((color, colorIdx) =>
+      YUKON_SIZES.map((size, sizeIdx) => {
+        const stock = YUKON_INVENTORY[color]?.[size] ?? 0;
+
+        return {
+          id: `var-yukon-${colorIdx}-${sizeIdx}`,
+          title: `${color} / ${size}`,
+          price: {
+            amount: '360000',
+            currencyCode: 'VND'
+          },
+          availableForSale: stock > 0,
+          quantityAvailable: stock,
+          description: YUKON_DESCRIPTION,
+          selectedOptions: [
+            { name: 'Màu sắc', value: color },
+            { name: 'Size', value: size }
+          ]
+        };
+      })
+    ),
+    featuredImage: {
+      url: 'https://res.cloudinary.com/dpsejpp2/image/upload/v1789188906/786443038_4629788813917158_2869576017246042416_n.jpg', // Bạn có thể thay bằng link ảnh Cloudinary chính xác của Yukon Vista
+      altText: 'Sục Yukon Vista'
+    },
+    images: [
+      'https://res.cloudinary.com/dpsejpp2/image/upload/v1789188906/785980182_4629790920583614_6096739423110358319_n.jpg',
+      'https://res.cloudinary.com/dpsejpp2/image/upload/v1789188904/785946717_4629790850583621_8987625036819882648_n.jpg',
+      'https://res.cloudinary.com/dpsejpp2/image/upload/v1789188904/784734032_4629790817250291_4050555444544626999_n.jpg',
+      'https://res.cloudinary.com/dpsejpp2/image/upload/v1789188904/784389477_4629790897250283_5228277691676290859_n.jpg',
+      'https://res.cloudinary.com/dpsejpp2/image/upload/v1789188904/785780110_4629790927250280_4434883332454340599_n.jpg',
+      'https://res.cloudinary.com/dpsejpp2/image/upload/v1789188904/784734061_4629790767250296_6295477000931762811_n.jpg',
+      'https://res.cloudinary.com/dpsejpp2/image/upload/v1789188903/784252576_4629790890583617_7350237718492449098_n.jpg',
+      'https://res.cloudinary.com/dpsejpp2/image/upload/v1789188903/784252594_4629790867250286_5950895519657646309_n.jpg',
+      'https://res.cloudinary.com/dpsejpp2/image/upload/v1789188903/784233148_4629790823916957_8082349159696873564_n.jpg',
+      'https://res.cloudinary.com/dpsejpp2/image/upload/v1789188904/784430489_4629790777250295_4925784083961105313_n.jpg'
+    ]
+  },
+  {
+    id: '13',
+    handle: 'suc-ballet-hoa-hong',
+    title: 'Sục Ballet Họa Tiết Hoa Hồng',
+    description: BALLET_FLOWER_DESCRIPTION,
+    type: 'co-san',
+    category: 'crocs-nu',
+    priceRange: {
+      minVariantPrice: { amount: '240000', currencyCode: 'VND' },
+      maxVariantPrice: { amount: '240000', currencyCode: 'VND' }
+    },
+    options: [
+      {
+        id: 'opt-size-ballet-flower',
+        name: 'Size',
+        values: BALLET_FLOWER_SIZES
+      }
+    ],
+    variants: BALLET_FLOWER_SIZES.map((size, sizeIdx) => {
+      const stock = BALLET_FLOWER_INVENTORY[size] ?? 0;
+
+      return {
+        id: `var-ballet-flower-${sizeIdx}`,
+        title: size,
+        price: {
+          amount: '240000',
+          currencyCode: 'VND'
+        },
+        availableForSale: stock > 0,
+        quantityAvailable: stock,
+        description: BALLET_FLOWER_DESCRIPTION,
+        selectedOptions: [
+          { name: 'Size', value: size }
+        ]
+      };
+    }),
+    featuredImage: {
+      url: 'https://res.cloudinary.com/dpsejpp2/image/upload/v1789279996/792459533_4641740492721990_5719767593256362431_n.jpg',
+      altText: 'Sục Ballet Họa Tiết Hoa Hồng'
+    },
+    images: [
+      'https://res.cloudinary.com/dpsejpp2/image/upload/v1789279996/792459533_4641740492721990_5719767593256362431_n.jpg',
+      'https://res.cloudinary.com/dpsejpp2/image/upload/v1789279996/792262953_4641740762721963_4756769126454067393_n.jpg',
+      'https://res.cloudinary.com/dpsejpp2/image/upload/v1789279996/794038980_4641740809388625_2572959379147747609_n.jpg',
+      'https://res.cloudinary.com/dpsejpp2/image/upload/v1789279996/790614988_4641740772721962_750378558989976451_n.jpg'
     ]
   }
 ];
