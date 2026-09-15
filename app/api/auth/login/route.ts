@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
-import { db } from '../../../../lib/turso'; // Dùng đúng file turso bạn đã kết nối
+import { db } from '../../../../lib/turso';
 
 export async function POST(request: Request) {
   try {
@@ -14,13 +14,13 @@ export async function POST(request: Request) {
       );
     }
 
-    // 1. Tìm khách hàng trong bảng `customers` theo email
+    // 1. Tìm khách hàng trong bảng customers
     const result = await db.execute({
       sql: 'SELECT id, name, phone, email, password FROM customers WHERE email = ?',
       args: [email],
     });
 
-    if (result.rows.length === 0) {
+    if (!result.rows.length || !result.rows[0]) {
       return NextResponse.json(
         { message: 'Email hoặc mật khẩu không chính xác!' },
         { status: 400 }
@@ -29,10 +29,10 @@ export async function POST(request: Request) {
 
     const customer = result.rows[0];
 
-    // 2. So sánh mật khẩu bằng bcryptjs
+    // 2. So sánh mật khẩu (Sửa customer?.password để tránh lỗi TypeScript)
     const isPasswordMatch = await bcrypt.compare(
       password,
-      customer.password as string
+      (customer?.password as string) || ''
     );
 
     if (!isPasswordMatch) {
@@ -42,21 +42,21 @@ export async function POST(request: Request) {
       );
     }
 
-    // 3. Lấy đúng cột `name` từ bảng `customers` trong Turso
+    // 3. Chuẩn bị dữ liệu trả về
     const customerData = {
       id: customer.id as string,
-      name: customer.name as string, // Lấy đúng tên đăng ký
+      name: customer.name as string,
       email: customer.email as string,
       phone: (customer.phone as string) || '',
     };
 
-    // 4. Set Cookie chứa thông tin vừa query từ Turso
+    // 4. Set Cookie session
     const cookieStore = await cookies();
     cookieStore.set('customer_session', JSON.stringify(customerData), {
       httpOnly: true,
       secure: false,
       sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7, // Lưu session 7 ngày
+      maxAge: 60 * 60 * 24 * 7,
       path: '/',
     });
 
