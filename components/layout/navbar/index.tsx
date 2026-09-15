@@ -1,11 +1,12 @@
+'use client';
+
 import OpenCart from "components/cart/open-cart";
 import LogoSquare from "components/logo-square";
+import { useAuth } from "context/auth-context";
 import Link from "next/link";
 import { Suspense } from "react";
 import MobileMenu from "./mobile-menu";
 import Search, { SearchSkeleton } from "./search";
-
-const { SITE_NAME } = process.env;
 
 interface MenuItem {
   title: string;
@@ -13,13 +14,15 @@ interface MenuItem {
   items?: MenuItem[];
 }
 
-export default async function Navbar() {
+export default function Navbar() {
+  const { customer, logout } = useAuth();
+
   const menu: MenuItem[] = [
     { title: 'Trang Chủ', path: '/search' },
     { title: 'Thời Trang Nam', path: '/search/tt-nam' },
     {
       title: 'Thời Trang Nữ',
-      path: '/search/tt-nu', // Giữ nguyên route chuẩn SEO
+      path: '/search/tt-nu',
       items: [
         { title: 'Váy Nữ', path: '/search/vay-nu' },
         { title: 'Áo Nữ', path: '/search/ao-nu' },
@@ -71,7 +74,6 @@ export default async function Navbar() {
                 return (
                   <li key={item.title} className="relative group py-2">
                     {hasChildren ? (
-                      // Nếu có menu con: Dùng thẻ span để hover/rê chuột hiển thị menu con, không bị chuyển URL
                       <span className="flex cursor-pointer items-center gap-1 whitespace-nowrap text-neutral-500 underline-offset-4 hover:text-black hover:underline dark:text-neutral-400 dark:hover:text-neutral-300">
                         {item.title}
                         <svg
@@ -86,7 +88,6 @@ export default async function Navbar() {
                         </svg>
                       </span>
                     ) : (
-                      // Nếu là menu đơn: Dùng thẻ Link bình thường
                       <Link
                         href={item.path}
                         prefetch={true}
@@ -128,23 +129,39 @@ export default async function Navbar() {
           </Suspense>
         </div>
 
-        {/* 3. KHỐI PHẢI: ĐĂNG KÝ | ĐĂNG NHẬP | GIỎ HÀNG */}
+        {/* 3. KHỐI PHẢI: XỬ LÝ TRẠNG THÁI ĐĂNG NHẬP | GIỎ HÀNG */}
         <div className="flex flex-none items-center justify-end gap-3 text-xs md:text-sm">
-          <Link
-            href="/register"
-            className="whitespace-nowrap text-neutral-600 transition-colors hover:text-black dark:text-neutral-300 dark:hover:text-white"
-          >
-            Đăng ký
-          </Link>
+          {customer ? (
+            <div className="flex items-center gap-3">
+              <span className="whitespace-nowrap text-neutral-700 dark:text-neutral-200">
+                Xin chào, <strong>{customer.name}</strong>
+              </span>
+              <button
+                onClick={logout}
+                className="rounded bg-red-500/10 px-2.5 py-1 text-xs text-red-600 transition-colors hover:bg-red-500/20 dark:bg-red-500/20 dark:text-red-400 dark:hover:bg-red-500/30"
+              >
+                Đăng xuất
+              </button>
+            </div>
+          ) : (
+            <>
+              <Link
+                href="/register"
+                className="whitespace-nowrap text-neutral-600 transition-colors hover:text-black dark:text-neutral-300 dark:hover:text-white"
+              >
+                Đăng ký
+              </Link>
 
-          <span className="text-neutral-300 dark:text-neutral-700">|</span>
+              <span className="text-neutral-300 dark:text-neutral-700">|</span>
 
-          <Link
-            href="/login"
-            className="whitespace-nowrap text-neutral-600 transition-colors hover:text-black dark:text-neutral-300 dark:hover:text-white"
-          >
-            Đăng nhập
-          </Link>
+              <Link
+                href="/login"
+                className="whitespace-nowrap text-neutral-600 transition-colors hover:text-black dark:text-neutral-300 dark:hover:text-white"
+              >
+                Đăng nhập
+              </Link>
+            </>
+          )}
 
           <div className="ml-1 shrink-0">
             <OpenCart />
