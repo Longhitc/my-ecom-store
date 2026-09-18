@@ -133,9 +133,14 @@ export default function Navbar() {
         <div className="flex flex-none items-center justify-end gap-3 text-xs md:text-sm">
           {customer ? (
             <div className="flex items-center gap-3">
-              <span className="whitespace-nowrap text-neutral-700 dark:text-neutral-200">
+              {/* Click vào tên để chuyển tới trang Quản lý tài khoản */}
+              <Link
+                href="/account"
+                className="whitespace-nowrap text-neutral-700 hover:text-blue-600 dark:text-neutral-200 dark:hover:text-blue-400 transition-colors"
+                title="Quản lý tài khoản cá nhân"
+              >
                 Xin chào, <strong>{customer.name}</strong>
-              </span>
+              </Link>
               <button
                 onClick={logout}
                 className="rounded bg-red-500/10 px-2.5 py-1 text-xs text-red-600 transition-colors hover:bg-red-500/20 dark:bg-red-500/20 dark:text-red-400 dark:hover:bg-red-500/30"
@@ -162,6 +167,29 @@ export default function Navbar() {
               </Link>
             </>
           )}
+
+          {/* Icon Chuyển Nhanh Sang Trang Quản Lý Tài Khoản */}
+          <Link
+            href="/account"
+            aria-label="Tài khoản cá nhân"
+            className="flex items-center justify-center rounded-md border border-neutral-200 p-2 text-black transition-colors hover:bg-neutral-100 dark:border-neutral-800 dark:text-white dark:hover:bg-neutral-800"
+            title="Tài khoản cá nhân"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth="1.5"
+              stroke="currentColor"
+              className="h-4 w-4"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"
+              />
+            </svg>
+          </Link>
 
           <div className="ml-1 shrink-0">
             <OpenCart />

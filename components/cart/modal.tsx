@@ -1,7 +1,13 @@
 "use client";
 
-import CartDrawer from 'components/cart/CartDrawer'; // Nếu bạn đã tạo CartDrawer.tsx trong cùng thư mục này
-import { useCart } from '../../context/CartContext';
+import { XMarkIcon } from "@heroicons/react/24/outline";
+import clsx from "clsx";
+import CartDrawer from 'components/cart/CartDrawer';
+import LoadingDots from "components/loading-dots";
+import { useAuth } from "context/auth-context"; // Hoặc đường dẫn context auth của bạn
+import { useRouter } from "next/navigation";
+import { useFormStatus } from "react-dom";
+import { useCart } from "../../context/CartContext";
 
 export default function CartModal() {
   const { totalCount, setIsCartOpen } = useCart();
@@ -31,12 +37,6 @@ export default function CartModal() {
     </>
   );
 }
-
-import { XMarkIcon } from "@heroicons/react/24/outline";
-import clsx from "clsx";
-import LoadingDots from "components/loading-dots";
-import { useFormStatus } from "react-dom";
-//import { useCart } from "./cart-context";
 
 type MerchandiseSearchParams = {
   [key: string]: string;
@@ -262,16 +262,33 @@ function CloseCart({ className }: { className?: string }) {
   );
 }
 
-function CheckoutButton() {
+export function CheckoutButton() {
   const { pending } = useFormStatus();
+  const router = useRouter();
+  const { customer } = useAuth(); // Kiểm tra thông tin người dùng từ context
+  const { setIsCartOpen } = useCart();
+
+  const handleCheckoutClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    setIsCartOpen(false); // Đóng drawer giỏ hàng
+
+    if (!customer) {
+      // Chưa đăng nhập -> Nhảy về trang đăng nhập
+      router.push("/login");
+    } else {
+      // Đã đăng nhập -> Nhảy qua trang checkout / địa chỉ
+      router.push("/checkout");
+    }
+  };
 
   return (
     <button
       className="block w-full rounded-full bg-blue-600 p-3 text-center text-sm font-medium text-white opacity-90 hover:opacity-100"
-      type="submit"
+      type="button"
       disabled={pending}
+      onClick={handleCheckoutClick}
     >
-      {pending ? <LoadingDots className="bg-white" /> : "Proceed to Checkout"}
+      {pending ? <LoadingDots className="bg-white" /> : "Đặt Hàng"}
     </button>
   );
 }

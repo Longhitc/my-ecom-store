@@ -1,12 +1,28 @@
 "use client";
 
-import Link from 'next/link';
+import { useAuth } from "context/auth-context"; // Đổi đường dẫn phù hợp với auth context của bạn
+import { useRouter } from "next/navigation";
 import { useCart } from "../../context/CartContext";
 
 export default function CartDrawer() {
   const { cartItems, isCartOpen, setIsCartOpen, removeFromCart, updateQuantity, totalAmount } = useCart();
+  const { customer } = useAuth(); // Hoặc const { user } = useAuth(); tùy tên biến trong context của bạn
+  const router = useRouter();
 
   if (!isCartOpen) return null;
+
+  // Xử lý logic khi nhấn nút Đặt Hàng
+  const handleCheckout = () => {
+    setIsCartOpen(false); // Đóng Cart Drawer
+
+    if (!customer) {
+      // Chưa đăng nhập -> Nhảy về trang đăng nhập
+      router.push("/login");
+    } else {
+      // Đã đăng nhập -> Nhảy qua trang địa chỉ / thanh toán
+      router.push("/checkout");
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
@@ -88,18 +104,14 @@ export default function CartDrawer() {
                 <span>Tổng tiền:</span>
                 <span>{Number(totalAmount).toLocaleString('en-US')} đ</span>
               </div>
-              {/*<button 
-                onClick={() => alert("Chức năng đặt hàng thành công!")}
+              
+              {/* Nút Đặt hàng với handler kiêm tra đăng nhập */}
+              <button 
+                onClick={handleCheckout}
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded transition-colors text-center block"
               >
                 Đặt Hàng
-              </button>*/}
-              <Link 
-                href="/checkout"
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded transition-colors text-center block"
-              >
-                Đặt Hàng
-              </Link>
+              </button>
             </div>
           )}
 
