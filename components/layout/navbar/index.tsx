@@ -31,7 +31,7 @@ export default function Navbar() {
     },
     { title: 'Thời Trang Trẻ Em', path: '/search/tt-te' },
     {
-      title: 'Giày dép Crocks',
+      title: 'Giày dép Crocs',
       path: '/search/gd-crocs',
       items: [
         { title: 'Crocs Nam', path: '/search/crocs-nam' },

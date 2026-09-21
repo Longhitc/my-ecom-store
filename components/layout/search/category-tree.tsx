@@ -37,7 +37,7 @@ const ALL_CATEGORIES: CategoryNode[] = [
       },
       { title: 'Thời Trang Trẻ Em', path: '/search/tt-te' },
       {
-        title: 'Giày Dép Crocks',
+        title: 'Giày Dép Crocs',
         path: '/search/gd-crocs',
         children: [
           { title: 'Crocs Nam', path: '/search/crocs-nam' },
