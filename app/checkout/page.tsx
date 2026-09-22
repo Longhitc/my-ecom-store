@@ -1,19 +1,21 @@
 'use client';
 
-import { clearCartAction } from 'components/cart/actions';
 import { useAuth } from 'context/auth-context';
+import { useCart } from 'context/CartContext';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 export default function CheckoutPage() {
   const { customer } = useAuth();
+  const { cartItems, clearCart } = useCart(); // Bổ sung clearCart tại đây
   const router = useRouter();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
 
-  // Form State chỉ gồm các trường có trong DB: fullName, phone, addressLine, city
+  // Form State
   const [addressData, setAddressData] = useState({
     fullName: '',
     phone: '',
@@ -21,7 +23,7 @@ export default function CheckoutPage() {
     city: '',
   });
 
-  // 1. Tải thông tin địa chỉ đã lưu từ Turso
+  // 1. Tải thông tin địa chỉ giao hàng
   useEffect(() => {
     if (!customer?.id) {
       router.push('/login');
@@ -30,19 +32,18 @@ export default function CheckoutPage() {
 
     async function fetchAddress() {
       try {
-        const res = await fetch(`/api/address?userId=${customer?.id}`);
-        const data = await res.json();
+        const addressRes = await fetch(`/api/address?userId=${customer?.id}`);
+        const addressDataRes = await addressRes.json();
 
-        if (data.address) {
+        if (addressDataRes.address) {
           setAddressData({
-            fullName: data.address.full_name || '',
-            phone: data.address.phone || '',
-            addressLine: data.address.address_line || '',
-            city: data.address.city || '',
+            fullName: addressDataRes.address.full_name || '',
+            phone: addressDataRes.address.phone || '',
+            addressLine: addressDataRes.address.address_line || '',
+            city: addressDataRes.address.city || '',
           });
           setIsEditing(false);
         } else {
-          // Chưa có địa chỉ -> gợi ý từ tài khoản
           setAddressData((prev) => ({
             ...prev,
             fullName: customer?.name || '',
@@ -61,7 +62,7 @@ export default function CheckoutPage() {
     fetchAddress();
   }, [customer, router]);
 
-  // 2. Lưu thông tin địa chỉ mới vào Turso
+  // 2. Lưu thông tin địa chỉ
   const handleSaveAddress = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!customer?.id) return;
@@ -98,9 +99,45 @@ export default function CheckoutPage() {
       return;
     }
 
-    await clearCartAction();
-    window.location.href = '/checkout/success';
-    router.refresh();
+    // Lấy danh sách sản phẩm từ CartContext
+    if (!cartItems || cartItems.length === 0) {
+      alert('Giỏ hàng của bạn đang trống.');
+      return;
+    }
+
+    setSubmitting(true);
+
+    try {
+      const res = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customerId: customer?.id,
+          fullName: addressData.fullName,
+          phone: addressData.phone,
+          addressLine: addressData.addressLine,
+          city: addressData.city,
+          items: cartItems, // Gửi danh sách sản phẩm từ Context
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Không thể tạo đơn hàng.');
+      }
+
+      // Dọn dẹp giỏ hàng trong Context
+      clearCart();
+
+      router.push(`/checkout/success?orderId=${data.orderId}`);
+      router.refresh();
+    } catch (error: any) {
+      console.error('Lỗi đặt hàng:', error);
+      alert(error.message || 'Đã có lỗi xảy ra trong quá trình đặt hàng. Vui lòng thử lại.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (loading) {
@@ -216,14 +253,14 @@ export default function CheckoutPage() {
       <button
         type="button"
         onClick={handleCheckout}
-        disabled={isEditing}
+        disabled={isEditing || submitting}
         className={`w-full rounded-lg py-3.5 text-center font-bold text-white transition-colors ${
-          isEditing
+          isEditing || submitting
             ? 'bg-neutral-800 text-neutral-500 cursor-not-allowed'
             : 'bg-blue-600 hover:bg-blue-500'
         }`}
       >
-        {isEditing ? 'Vui lòng lưu địa chỉ trước' : 'Xác nhận đặt hàng'}
+        {submitting ? 'Đang xử lý đặt hàng...' : isEditing ? 'Vui lòng lưu địa chỉ trước' : 'Xác nhận đặt hàng'}
       </button>
     </div>
   );

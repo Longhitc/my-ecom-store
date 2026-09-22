@@ -3,25 +3,25 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import AddressSection from './AddressSection';
 
-// Dữ liệu mẫu đơn hàng (bạn có thể fetch từ API DB sau)
-const mockOrders = [
-  {
-    id: 'DH260910-24163',
-    status: 'Hoàn thành',
-    createdAt: '16/09/2026 12:31:44',
-    total: 2225000,
-  },
-];
+type Order = {
+  id: string;
+  status: string;
+  createdAt: string;
+  total: number;
+};
 
 export default function AccountPage() {
   const router = useRouter();
-  const [customer, setCustomer] = useState<{ name: string; email: string; phone?: string } | null>(null);
+  const [customer, setCustomer] = useState<{ id: string; name: string; email: string; phone?: string } | null>(null);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [activeTab, setActiveTab] = useState<'info' | 'address' | 'orders'>('info');
   const [loading, setLoading] = useState(true);
+  const [loadingOrders, setLoadingOrders] = useState(false);
 
+  // 1. Lấy thông tin user đăng nhập
   useEffect(() => {
-    // Lấy thông tin user đăng nhập
     fetch('/api/auth/me')
       .then((res) => res.json())
       .then((data) => {
@@ -34,6 +34,36 @@ export default function AccountPage() {
       .catch(() => router.push('/login'))
       .finally(() => setLoading(false));
   }, [router]);
+
+  // 2. Gọi API lấy danh sách đơn hàng khi chuyển sang Tab "orders"
+  useEffect(() => {
+    if (activeTab === 'orders' && customer?.id) {
+      setLoadingOrders(true);
+      fetch(`/api/orders?customerId=${customer.id}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.orders) {
+            setOrders(data.orders);
+          }
+        })
+        .catch((err) => console.error('Lỗi khi tải đơn hàng:', err))
+        .finally(() => setLoadingOrders(false));
+    }
+  }, [activeTab, customer]);
+
+  // Hàm chuyển đổi nhãn trạng thái sang Tiếng Việt
+  const getStatusBadge = (status: string) => {
+    switch (status?.toLowerCase()) {
+      case 'pending':
+        return <span className="font-medium text-amber-500">Đang xử lý</span>;
+      case 'completed':
+        return <span className="font-medium text-green-500">Hoàn thành</span>;
+      case 'cancelled':
+        return <span className="font-medium text-red-500">Đã hủy</span>;
+      default:
+        return <span className="font-medium text-black dark:text-white">{status}</span>;
+    }
+  };
 
   if (loading) {
     return <div className="p-10 text-center text-neutral-500">Đang tải thông tin...</div>;
@@ -96,13 +126,10 @@ export default function AccountPage() {
             </div>
           )}
 
-          {/* TAB ĐỊA CHỈ */}
+          {/* TAB ĐỊA CHỈ (Đã tích hợp AddressSection) */}
           {activeTab === 'address' && (
             <div>
-              <h1 className="text-2xl font-light tracking-wide pb-4 mb-6 border-b border-neutral-200 dark:border-neutral-800">
-                Địa chỉ nhận hàng
-              </h1>
-              <p className="text-sm text-neutral-500">Chưa có địa chỉ nào được lưu.</p>
+              <AddressSection />
             </div>
           )}
 
@@ -113,13 +140,15 @@ export default function AccountPage() {
                 Đơn hàng
               </h1>
 
-              {mockOrders.length > 0 ? (
+              {loadingOrders ? (
+                <p className="text-sm text-neutral-500">Đang tải danh sách đơn hàng...</p>
+              ) : orders.length > 0 ? (
                 <div className="space-y-6">
-                  {mockOrders.map((order) => (
+                  {orders.map((order) => (
                     <div key={order.id} className="border-b border-neutral-200 dark:border-neutral-800 pb-6">
                       <div className="flex justify-between items-center mb-4">
                         <h3 className="text-lg font-normal text-neutral-800 dark:text-neutral-200">
-                          Mã đơn hàng: <span className="font-semibold">{order.id}</span>
+                          Mã đơn hàng: <span className="font-semibold text-sm">{order.id}</span>
                         </h3>
                         <Link
                           href={`/account/orders/${order.id}`}
@@ -131,15 +160,18 @@ export default function AccountPage() {
 
                       <div className="bg-neutral-50 dark:bg-neutral-900/50 p-4 rounded space-y-2 text-sm text-neutral-600 dark:text-neutral-300">
                         <p>
-                          Trạng thái đơn hàng: <span className="font-medium text-black dark:text-white">{order.status}</span>
+                          Trạng thái đơn hàng: {getStatusBadge(order.status)}
                         </p>
                         <p>
-                          Ngày đặt hàng: <span className="text-black dark:text-white">{order.createdAt}</span>
+                          Ngày đặt hàng:{' '}
+                          <span className="text-black dark:text-white">
+                            {order.createdAt ? new Date(order.createdAt).toLocaleString('vi-VN') : 'Mới đặt'}
+                          </span>
                         </p>
                         <p>
                           Tổng số tiền:{' '}
                           <span className="font-semibold text-black dark:text-white">
-                            {order.total.toLocaleString('vi-VN')} đ
+                            {Number(order.total || 0).toLocaleString('vi-VN')} đ
                           </span>
                         </p>
                       </div>
