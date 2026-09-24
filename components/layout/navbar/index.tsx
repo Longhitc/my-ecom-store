@@ -14,6 +14,47 @@ interface MenuItem {
   items?: MenuItem[];
 }
 
+// COMPONENT HIỂN THỊ MENU CHO ADMIN (ĐÃ SỬA ĐIỀU KIỆN KIỂM TRA CHUẨN)
+function AdminMenu({ user }: { user: any }) {
+  // 1. Kiểm tra bắt buộc phải là Admin (is_admin === true hoặc is_admin === 1)
+  const isAdmin = user?.is_admin === true || Number(user?.is_admin) === 1;
+  
+  if (!isAdmin) return null;
+
+  // 2. Kiểm tra danh sách menu được phép
+  const allowedMenus = user?.admin?.allowed_menus || user?.admin?.allowedMenus || [];
+
+  if (!allowedMenus.length) return null;
+
+  return (
+    <div className="flex w-full items-center justify-between bg-neutral-900 px-4 py-2 text-xs text-white border-b border-neutral-800 lg:px-6">
+      <div className="flex items-center gap-4">
+        <span className="font-bold text-amber-400">
+          🛠 [{user?.admin?.role_name || user?.admin?.roleName || 'Admin'}]
+        </span>
+
+        {allowedMenus.includes('orders') && (
+          <Link href="/admin/orders" className="hover:text-blue-400 transition-colors">
+            Quản lý đơn hàng
+          </Link>
+        )}
+
+        {allowedMenus.includes('products') && (
+          <Link href="/admin/products" className="hover:text-blue-400 transition-colors">
+            Quản lý sản phẩm
+          </Link>
+        )}
+
+        {allowedMenus.includes('customers') && (
+          <Link href="/admin/customers" className="hover:text-blue-400 transition-colors">
+            Quản lý khách hàng
+          </Link>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function Navbar() {
   const { customer, logout } = useAuth();
 
@@ -44,158 +85,161 @@ export default function Navbar() {
   ];
 
   return (
-    <nav className="relative flex items-center justify-between p-4 lg:px-6">
-      {/* Mobile Menu */}
-      <div className="block flex-none md:hidden">
-        <Suspense fallback={null}>
-          <MobileMenu menu={menu as any} />
-        </Suspense>
-      </div>
+    <header className="w-full">
+      {/* 0. THANH HÀNH CHÍNH DÀNH CHO ADMIN */}
+      <AdminMenu user={customer} />
 
-      <div className="flex w-full items-center justify-between gap-4 md:gap-6">
-        {/* 1. KHỐI TRÁI: LOGO + MENU */}
-        <div className="flex flex-none items-center gap-6">
-          <Link
-            href="/"
-            prefetch={true}
-            className="flex items-center justify-center shrink-0"
-          >
-            <LogoSquare />
-            <div className="ml-2 hidden text-sm font-medium uppercase shrink-0 lg:block">
-              Đẹp và Xinh Shop
-            </div>
-          </Link>
-
-          {menu.length ? (
-            <ul className="hidden gap-6 text-sm md:flex md:items-center">
-              {menu.map((item) => {
-                const hasChildren = item.items && item.items.length > 0;
-
-                return (
-                  <li key={item.title} className="relative group py-2">
-                    {hasChildren ? (
-                      <span className="flex cursor-pointer items-center gap-1 whitespace-nowrap text-neutral-500 underline-offset-4 hover:text-black hover:underline dark:text-neutral-400 dark:hover:text-neutral-300">
-                        {item.title}
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          strokeWidth="1.5"
-                          stroke="currentColor"
-                          className="h-3.5 w-3.5 transition-transform group-hover:rotate-180"
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-                        </svg>
-                      </span>
-                    ) : (
-                      <Link
-                        href={item.path}
-                        prefetch={true}
-                        className="flex items-center gap-1 whitespace-nowrap text-neutral-500 underline-offset-4 hover:text-black hover:underline dark:text-neutral-400 dark:hover:text-neutral-300"
-                      >
-                        {item.title}
-                      </Link>
-                    )}
-
-                    {/* MENU XỔ XUỐNG DÀNH CHO CÁC MỤC CÓ CẤP CON */}
-                    {hasChildren && (
-                      <div className="absolute left-0 top-full hidden w-48 rounded-md border border-neutral-200 bg-white p-2 shadow-lg group-hover:block dark:border-neutral-800 dark:bg-neutral-900 z-50">
-                        <ul className="flex flex-col gap-1">
-                          {item.items!.map((subItem) => (
-                            <li key={subItem.title}>
-                              <Link
-                                href={subItem.path}
-                                className="flex items-center gap-2 rounded-md px-3 py-2 text-xs text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-black dark:text-neutral-300 dark:hover:bg-neutral-800 dark:hover:text-white"
-                              >
-                                <span className="h-1.5 w-1.5 bg-neutral-300 dark:bg-neutral-600"></span>
-                                {subItem.title}
-                              </Link>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          ) : null}
-        </div>
-
-        {/* 2. KHỐI GIỮA: Ô SEARCH */}
-        <div className="hidden flex-1 justify-end max-w-md md:flex">
-          <Suspense fallback={<SearchSkeleton />}>
-            <Search />
+      <nav className="relative flex items-center justify-between p-4 lg:px-6">
+        {/* Mobile Menu */}
+        <div className="block flex-none md:hidden">
+          <Suspense fallback={null}>
+            <MobileMenu menu={menu as any} />
           </Suspense>
         </div>
 
-        {/* 3. KHỐI PHẢI: XỬ LÝ TRẠNG THÁI ĐĂNG NHẬP | GIỎ HÀNG */}
-        <div className="flex flex-none items-center justify-end gap-3 text-xs md:text-sm">
-          {customer ? (
-            <div className="flex items-center gap-3">
-              {/* Click vào tên để chuyển tới trang Quản lý tài khoản */}
-              <Link
-                href="/account"
-                className="whitespace-nowrap text-neutral-700 hover:text-blue-600 dark:text-neutral-200 dark:hover:text-blue-400 transition-colors"
-                title="Quản lý tài khoản cá nhân"
-              >
-                Xin chào, <strong>{customer.name}</strong>
-              </Link>
-              <button
-                onClick={logout}
-                className="rounded bg-red-500/10 px-2.5 py-1 text-xs text-red-600 transition-colors hover:bg-red-500/20 dark:bg-red-500/20 dark:text-red-400 dark:hover:bg-red-500/30"
-              >
-                Đăng xuất
-              </button>
-            </div>
-          ) : (
-            <>
-              <Link
-                href="/register"
-                className="whitespace-nowrap text-neutral-600 transition-colors hover:text-black dark:text-neutral-300 dark:hover:text-white"
-              >
-                Đăng ký
-              </Link>
-
-              <span className="text-neutral-300 dark:text-neutral-700">|</span>
-
-              <Link
-                href="/login"
-                className="whitespace-nowrap text-neutral-600 transition-colors hover:text-black dark:text-neutral-300 dark:hover:text-white"
-              >
-                Đăng nhập
-              </Link>
-            </>
-          )}
-
-          {/* Icon Chuyển Nhanh Sang Trang Quản Lý Tài Khoản */}
-          <Link
-            href="/account"
-            aria-label="Tài khoản cá nhân"
-            className="flex items-center justify-center rounded-md border border-neutral-200 p-2 text-black transition-colors hover:bg-neutral-100 dark:border-neutral-800 dark:text-white dark:hover:bg-neutral-800"
-            title="Tài khoản cá nhân"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth="1.5"
-              stroke="currentColor"
-              className="h-4 w-4"
+        <div className="flex w-full items-center justify-between gap-4 md:gap-6">
+          {/* 1. KHỐI TRÁI: LOGO + MENU */}
+          <div className="flex flex-none items-center gap-6">
+            <Link
+              href="/"
+              prefetch={true}
+              className="flex items-center justify-center shrink-0"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"
-              />
-            </svg>
-          </Link>
+              <LogoSquare />
+              <div className="ml-2 hidden text-sm font-medium uppercase shrink-0 lg:block">
+                Đẹp và Xinh Shop
+              </div>
+            </Link>
 
-          <div className="ml-1 shrink-0">
-            <OpenCart />
+            {menu.length ? (
+              <ul className="hidden gap-6 text-sm md:flex md:items-center">
+                {menu.map((item) => {
+                  const hasChildren = item.items && item.items.length > 0;
+
+                  return (
+                    <li key={item.title} className="relative group py-2">
+                      {hasChildren ? (
+                        <span className="flex cursor-pointer items-center gap-1 whitespace-nowrap text-neutral-500 underline-offset-4 hover:text-black hover:underline dark:text-neutral-400 dark:hover:text-neutral-300">
+                          {item.title}
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            strokeWidth="1.5"
+                            stroke="currentColor"
+                            className="h-3.5 w-3.5 transition-transform group-hover:rotate-180"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                          </svg>
+                        </span>
+                      ) : (
+                        <Link
+                          href={item.path}
+                          prefetch={true}
+                          className="flex items-center gap-1 whitespace-nowrap text-neutral-500 underline-offset-4 hover:text-black hover:underline dark:text-neutral-400 dark:hover:text-neutral-300"
+                        >
+                          {item.title}
+                        </Link>
+                      )}
+
+                      {/* MENU XỔ XUỐNG DÀNH CHO CÁC MỤC CÓ CẤP CON */}
+                      {hasChildren && (
+                        <div className="absolute left-0 top-full hidden w-48 rounded-md border border-neutral-200 bg-white p-2 shadow-lg group-hover:block dark:border-neutral-800 dark:bg-neutral-900 z-50">
+                          <ul className="flex flex-col gap-1">
+                            {item.items!.map((subItem) => (
+                              <li key={subItem.title}>
+                                <Link
+                                  href={subItem.path}
+                                  className="flex items-center gap-2 rounded-md px-3 py-2 text-xs text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-black dark:text-neutral-300 dark:hover:bg-neutral-800 dark:hover:text-white"
+                                >
+                                  <span className="h-1.5 w-1.5 bg-neutral-300 dark:bg-neutral-600"></span>
+                                  {subItem.title}
+                                </Link>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : null}
+          </div>
+
+          {/* 2. KHỐI GIỮA: Ô SEARCH */}
+          <div className="hidden flex-1 justify-end max-w-md md:flex">
+            <Suspense fallback={<SearchSkeleton />}>
+              <Search />
+            </Suspense>
+          </div>
+
+          {/* 3. KHỐI PHẢI: XỬ LÝ TRẠNG THÁI ĐĂNG NHẬP | GIỎ HÀNG */}
+          <div className="flex flex-none items-center justify-end gap-3 text-xs md:text-sm">
+            {customer ? (
+              <div className="flex items-center gap-3">
+                <Link
+                  href="/account"
+                  className="whitespace-nowrap text-neutral-700 hover:text-blue-600 dark:text-neutral-200 dark:hover:text-blue-400 transition-colors"
+                  title="Quản lý tài khoản cá nhân"
+                >
+                  Xin chào, <strong>{customer.name}</strong>
+                </Link>
+                <button
+                  onClick={logout}
+                  className="rounded bg-red-500/10 px-2.5 py-1 text-xs text-red-600 transition-colors hover:bg-red-500/20 dark:bg-red-500/20 dark:text-red-400 dark:hover:bg-red-500/30"
+                >
+                  Đăng xuất
+                </button>
+              </div>
+            ) : (
+              <>
+                <Link
+                  href="/register"
+                  className="whitespace-nowrap text-neutral-600 transition-colors hover:text-black dark:text-neutral-300 dark:hover:text-white"
+                >
+                  Đăng ký
+                </Link>
+
+                <span className="text-neutral-300 dark:text-neutral-700">|</span>
+
+                <Link
+                  href="/login"
+                  className="whitespace-nowrap text-neutral-600 transition-colors hover:text-black dark:text-neutral-300 dark:hover:text-white"
+                >
+                  Đăng nhập
+                </Link>
+              </>
+            )}
+
+            <Link
+              href="/account"
+              aria-label="Tài khoản cá nhân"
+              className="flex items-center justify-center rounded-md border border-neutral-200 p-2 text-black transition-colors hover:bg-neutral-100 dark:border-neutral-800 dark:text-white dark:hover:bg-neutral-800"
+              title="Tài khoản cá nhân"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth="1.5"
+                stroke="currentColor"
+                className="h-4 w-4"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"
+                />
+              </svg>
+            </Link>
+
+            <div className="ml-1 shrink-0">
+              <OpenCart />
+            </div>
           </div>
         </div>
-      </div>
-    </nav>
+      </nav>
+    </header>
   );
 }

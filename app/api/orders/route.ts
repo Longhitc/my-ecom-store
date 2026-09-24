@@ -1,88 +1,127 @@
 import { db } from 'lib/turso';
+import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 
-// 1. HAM GET: Lấy danh sách đơn hàng theo customerId
-export async function GET(req: Request) {
+// Kiểm tra quyền Admin
+async function checkAdminAuth() {
+  const cookieStore = await cookies();
+  const sessionCookie = cookieStore.get('customer_session')?.value;
+  if (!sessionCookie) return false;
+
   try {
-    const { searchParams } = new URL(req.url);
-    const customerId = searchParams.get('customerId');
-
-    if (!customerId) {
-      return NextResponse.json({ error: 'Thiếu customerId' }, { status: 400 });
-    }
-
-    const result = await db.execute({
-      sql: `SELECT id, total_price, status, created_at 
-            FROM orders 
-            WHERE customer_id = ? 
-            ORDER BY created_at DESC`,
-      args: [customerId],
-    });
-
-    const orders = result.rows.map((row: any) => ({
-      id: row.id,
-      total: row.total_price,
-      status: row.status,
-      createdAt: row.created_at,
-    }));
-
-    return NextResponse.json({ orders });
-  } catch (error) {
-    console.error('Lỗi lấy danh sách đơn hàng:', error);
-    return NextResponse.json({ error: 'Không thể tải danh sách đơn hàng.' }, { status: 500 });
+    const user = JSON.parse(sessionCookie);
+    return user?.is_admin === true || Number(user?.is_admin) === 1;
+  } catch {
+    return false;
   }
 }
 
-// 2. HAM POST: Tạo đơn hàng mới
-export async function POST(req: Request) {
+// GET: Lấy danh sách đơn hàng cho Admin
+export async function GET() {
+  const isAdmin = await checkAdminAuth();
+  if (!isAdmin) {
+    return NextResponse.json({ message: 'Bạn không có quyền truy cập!' }, { status: 403 });
+  }
+
   try {
-    const body = await req.json();
-    const { customerId, fullName, phone, addressLine, city, items } = body;
+    // 1. Lấy danh sách đơn hàng
+    const ordersResult = await db.execute(`
+      SELECT 
+        id, 
+        customer_id, 
+        total_price, 
+        status, 
+        full_name,
+        phone,
+        address_line,
+        city,
+        created_at
+      FROM orders
+      ORDER BY created_at DESC
+    `);
 
-    if (!customerId || !items || items.length === 0) {
-      return NextResponse.json({ error: 'Thông tin đơn hàng không hợp lệ.' }, { status: 400 });
+    if (ordersResult.rows.length === 0) {
+      return NextResponse.json({ orders: [] });
     }
 
-    if (!fullName || !phone || !addressLine || !city) {
-      return NextResponse.json({ error: 'Vui lòng cung cấp đầy đủ thông tin giao hàng.' }, { status: 400 });
-    }
+    // 2. Lấy danh sách sản phẩm trong các đơn hàng
+    const orderIds = ordersResult.rows.map((r: any) => r.id);
+    const placeholders = orderIds.map(() => '?').join(',');
 
-    // Tính tổng giá trị đơn hàng
-    const totalPrice = items.reduce((acc: number, item: any) => {
-      const price = parseFloat(item.cost?.totalAmount?.amount || item.price || 0);
-      const quantity = item.quantity || 1;
-      return acc + price * quantity;
-    }, 0);
-
-    const orderId = crypto.randomUUID();
-
-    // Insert vào bảng orders
-    await db.execute({
-      sql: `INSERT INTO orders (id, customer_id, total_price, status, full_name, phone, address_line, city)
-            VALUES (?, ?, ?, 'pending', ?, ?, ?, ?)`,
-      args: [orderId, customerId, totalPrice, fullName, phone, addressLine, city],
+    const itemsResult = await db.execute({
+      sql: `
+        SELECT 
+          id,
+          order_id,
+          product_id,
+          product_title,
+          quantity,
+          price,
+          image_url
+        FROM order_items
+        WHERE order_id IN (${placeholders})
+      `,
+      args: orderIds,
     });
 
-    // Insert các mặt hàng vào bảng order_items
-    for (const item of items) {
-      const itemId = crypto.randomUUID();
-      const productTitle = item.merchandise?.product?.title || item.title || 'Sản phẩm';
-      const price = parseFloat(item.cost?.totalAmount?.amount || item.price || 0);
-      const quantity = item.quantity || 1;
-      
-      const imageUrl = item.merchandise?.product?.featuredImage?.url || item.imageUrl || item.image || '';
-      const productId = item.merchandise?.product?.id || item.id || item.productId || '';
-
-      await db.execute({
-        sql: `INSERT INTO order_items (id, order_id, product_id, product_title, price, quantity, image_url)
-              VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        args: [itemId, orderId, productId, productTitle, price, quantity, imageUrl],
+    // Nhóm sản phẩm theo order_id
+    const itemsByOrder: Record<string, any[]> = {};
+    itemsResult.rows.forEach((item: any) => {
+      const orderId = String(item.order_id);
+      if (!itemsByOrder[orderId]) {
+        itemsByOrder[orderId] = [];
+      }
+      itemsByOrder[orderId].push({
+        product_id: item.product_id,
+        title: item.product_title, // Khớp với Frontend item.title
+        price: item.price,
+        quantity: item.quantity,
+        image_url: item.image_url, // Khớp với Frontend item.image_url
       });
+    });
+
+    // Format kết quả trả về khớp 100% với Interface Order ở Frontend
+    const orders = ordersResult.rows.map((order: any) => ({
+      id: order.id,
+      customer_name: order.full_name || 'Khách vãng lai',
+      customer_email: '',
+      customer_phone: order.phone || '',
+      total_price: Number(order.total_price) || 0,
+      status: order.status,
+      shipping_address: [order.address_line, order.city].filter(Boolean).join(', '),
+      created_at: order.created_at,
+      items: itemsByOrder[String(order.id)] || [],
+    }));
+
+    return NextResponse.json({ orders }, { status: 200 });
+  } catch (error) {
+    console.error('Lỗi khi lấy danh sách đơn hàng Admin:', error);
+    return NextResponse.json({ message: 'Lỗi máy chủ khi tải đơn hàng' }, { status: 500 });
+  }
+}
+
+// PATCH: Cập nhật trạng thái đơn hàng
+export async function PATCH(request: Request) {
+  const isAdmin = await checkAdminAuth();
+  if (!isAdmin) {
+    return NextResponse.json({ message: 'Bạn không có quyền truy cập!' }, { status: 403 });
+  }
+
+  try {
+    const { orderId, status } = await request.json();
+
+    if (!orderId || !status) {
+      return NextResponse.json({ message: 'Thiếu thông tin đơn hàng hoặc trạng thái!' }, { status: 400 });
     }
 
-    return NextResponse.json({ success: true, orderId });
+    await db.execute({
+      sql: 'UPDATE orders SET status = ? WHERE id = ?',
+      args: [status, orderId],
+    });
+
+    return NextResponse.json({ message: 'Cập nhật trạng thái thành công!' }, { status: 200 });
   } catch (error) {
-    console.error('Lỗi khi tạo đơn hàng:', error);
-    return NextResponse.json({ error: 'Không thể tạo đơn hàng. Vui lòng thử lại.' }, { status: 500 });
+    console.error('Lỗi khi cập nhật trạng thái đơn hàng:', error);
+    return NextResponse.json({ message: 'Lỗi máy chủ khi cập nhật đơn hàng' }, { status: 500 });
   }
 }

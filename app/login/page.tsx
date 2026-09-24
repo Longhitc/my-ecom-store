@@ -2,11 +2,9 @@
 
 import { useAuth } from 'context/auth-context';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 export default function LoginPage() {
-  const router = useRouter();
   const { setCustomer } = useAuth();
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
@@ -30,20 +28,20 @@ export default function LoginPage() {
 
       const data = await res.json();
 
-      if (!res.ok) {
-        throw new Error(data.message || 'Đăng nhập thất bại!');
-      }
+      if (res.ok) {
+        // 1. Cập nhật ngay state Customer vào AuthContext
+        if (setCustomer && data.customer) {
+          setCustomer(data.customer);
+        }
 
-      // Cập nhật thông tin khách hàng vào Context
-      if (data.customer) {
-        setCustomer(data.customer);
+        // 2. Tải lại toàn bộ trang chủ để hiển thị thanh Admin ngay lập tức
+        window.location.href = '/';
+      } else {
+        setError(data.message || 'Đăng nhập thất bại!');
       }
-
-      // Chuyển hướng về trang chủ và làm mới dữ liệu
-      router.push('/');
-      router.refresh();
     } catch (err: any) {
-      setError(err.message);
+      console.error('Lỗi đăng nhập:', err);
+      setError('Đã xảy ra lỗi hệ thống, vui lòng thử lại sau!');
     } finally {
       setLoading(false);
     }
