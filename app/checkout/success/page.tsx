@@ -1,8 +1,13 @@
-// app/checkout/success/page.tsx
+'use client';
+
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 
 export default function CheckoutSuccessPage() {
-  const orderId = "HD" + Math.floor(100000 + Math.random() * 900000);
+  const searchParams = useSearchParams();
+
+  // Lấy chính xác mã đơn hàng từ query URL (?orderId=DH-...)
+  const orderId = searchParams.get('orderId') || 'Chưa xác định';
 
   return (
     <div className="flex min-h-[calc(100vh-100px)] items-center justify-center px-4 py-12">
@@ -24,7 +29,7 @@ export default function CheckoutSuccessPage() {
         <div className="my-6 rounded-lg border border-neutral-800 bg-black p-4 text-left">
           <div className="flex justify-between text-sm">
             <span className="text-neutral-400">Mã đơn hàng:</span>
-            <span className="font-mono font-bold text-blue-400">#{orderId}</span>
+            <span className="font-mono font-bold text-blue-400">{orderId}</span>
           </div>
           <div className="flex justify-between text-sm mt-2">
             <span className="text-neutral-400">Phương thức:</span>

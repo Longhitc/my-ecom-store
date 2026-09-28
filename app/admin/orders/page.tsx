@@ -63,18 +63,25 @@ export default function AdminOrdersPage() {
       });
 
       if (res.ok) {
+        // Cập nhật trạng thái trong state danh sách
         setOrders((prev) =>
           prev.map((ord) => (ord.id === orderId ? { ...ord, status: newStatus } : ord))
         );
+
+        // Cập nhật trạng thái trong Modal (nếu đang xem)
         if (selectedOrder?.id === orderId) {
           setSelectedOrder((prev) => (prev ? { ...prev, status: newStatus } : null));
         }
+
+        // Báo thông báo thành công trực quan
+        alert('Cập nhật trạng thái đơn hàng thành công!');
       } else {
-        alert('Cập nhật thất bại!');
+        const errorData = await res.json();
+        alert(errorData.error || 'Cập nhật thất bại!');
       }
     } catch (error) {
       console.error(error);
-      alert('Lỗi kết nối!');
+      alert('Lỗi kết nối đến máy chủ!');
     } finally {
       setUpdatingId(null);
     }
@@ -257,7 +264,7 @@ export default function AdminOrdersPage() {
                     disabled={updatingId === selectedOrder.id}
                     value={selectedOrder.status}
                     onChange={(e) => handleStatusChange(selectedOrder.id, e.target.value)}
-                    className="rounded border border-neutral-700 bg-neutral-900 px-3 py-1 text-xs text-white focus:border-amber-500 focus:outline-none"
+                    className="rounded border border-neutral-700 bg-neutral-900 px-3 py-1 text-xs text-white focus:border-amber-500 focus:outline-none disabled:opacity-50"
                   >
                     <option value="pending">Chờ xử lý</option>
                     <option value="processing">Đang xử lý</option>

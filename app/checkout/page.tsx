@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 
 export default function CheckoutPage() {
   const { customer } = useAuth();
-  const { cartItems, clearCart } = useCart(); // Bổ sung clearCart tại đây
+  const { cartItems, clearCart } = useCart();
   const router = useRouter();
 
   const [loading, setLoading] = useState(true);
@@ -33,6 +33,11 @@ export default function CheckoutPage() {
     async function fetchAddress() {
       try {
         const addressRes = await fetch(`/api/address?userId=${customer?.id}`);
+        if (!addressRes.ok) {
+          setIsEditing(true);
+          return;
+        }
+
         const addressDataRes = await addressRes.json();
 
         if (addressDataRes.address) {
@@ -92,14 +97,13 @@ export default function CheckoutPage() {
     }
   };
 
-  // 3. Xử lý Đặt hàng
+  // 3. Xử lý Đặt hàng (Đã sửa logic bắt lỗi JSON)
   const handleCheckout = async () => {
     if (isEditing) {
       alert('Vui lòng lưu địa chỉ giao hàng trước khi xác nhận đặt hàng!');
       return;
     }
 
-    // Lấy danh sách sản phẩm từ CartContext
     if (!cartItems || cartItems.length === 0) {
       alert('Giỏ hàng của bạn đang trống.');
       return;
@@ -117,20 +121,30 @@ export default function CheckoutPage() {
           phone: addressData.phone,
           addressLine: addressData.addressLine,
           city: addressData.city,
-          items: cartItems, // Gửi danh sách sản phẩm từ Context
+          items: cartItems,
         }),
       });
 
-      const data = await res.json();
-
+      // BƯỚC SỬA BẮT LỖI: Kiểm tra res.ok trước
       if (!res.ok) {
-        throw new Error(data.error || 'Không thể tạo đơn hàng.');
+        const errorText = await res.text();
+        let errorMessage = 'Không thể tạo đơn hàng.';
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.error || errorJson.message || errorMessage;
+        } catch {
+          console.error('Lỗi từ Server (HTML/Text):', errorText);
+        }
+        throw new Error(errorMessage);
       }
 
-      // Dọn dẹp giỏ hàng trong Context
+      // Chỉ parse JSON khi res.ok === true
+      const data = await res.json();
+
+      // Dọn dẹp giỏ hàng
       clearCart();
 
-      router.push(`/checkout/success?orderId=${data.orderId}`);
+      router.push(`/checkout/success?orderId=${data.orderId || data.id}`);
       router.refresh();
     } catch (error: any) {
       console.error('Lỗi đặt hàng:', error);
@@ -167,7 +181,6 @@ export default function CheckoutPage() {
           )}
         </div>
 
-        {/* Chế độ Xem: Đã lưu địa chỉ */}
         {!isEditing ? (
           <div className="rounded-lg bg-black p-4 text-sm text-neutral-300 border border-neutral-800">
             <p className="font-bold text-white">
@@ -178,7 +191,6 @@ export default function CheckoutPage() {
             </p>
           </div>
         ) : (
-          /* Chế độ Sửa / Nhập mới địa chỉ */
           <form onSubmit={handleSaveAddress} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
@@ -249,7 +261,6 @@ export default function CheckoutPage() {
         )}
       </div>
 
-      {/* NÚT XÁC NHẬN ĐẶT HÀNG */}
       <button
         type="button"
         onClick={handleCheckout}

@@ -1,38 +1,30 @@
+import { db } from 'lib/turso'; // Import đúng tên 'db' từ file lib/turso.ts của bạn
 import Link from 'next/link';
 
-// Dữ liệu sản phẩm nổi bật
-const featuredProducts = [
-  {
-    id: '1',
-    handle: 'leather-bag',
-    title: 'Túi đeo da',
-    price: '360,000 đ',
-    imageUrl: 'https://res.cloudinary.com/dpsejpp2/image/upload/v1786590887/samples/ecommerce/leather-bag-gray.jpg',
-  },
-  {
-    id: '2',
-    handle: 'acme-circles-t-shirt',
-    title: 'Giày thể thao',
-    price: '220,000 đ',
-    imageUrl: 'https://res.cloudinary.com/dpsejpp2/image/upload/v1786590885/samples/ecommerce/shoes.png',
-  },
-  {
-    id: '3',
-    handle: 'acme-mug',
-    title: 'Ly sứ',
-    price: '85,000 đ',
-    imageUrl: 'https://res.cloudinary.com/dpsejpp2/image/upload/v1786590894/samples/cup-on-a-table.jpg',
-  },
-  {
-    id: '4',
-    handle: 'acme-tshirt',
-    title: 'Giày Crocks Tím',
-    price: '250,000 đ',
-    imageUrl: 'https://res.cloudinary.com/dpsejpp2/image/upload/v1786594570/766aa432919310cd4982.jpg',
-  },
-];
+// Hàm fetch danh sách sản phẩm trực tiếp từ Turso
+async function getFeaturedProducts() {
+  try {
+    const result = await db.execute(
+      `SELECT id, handle, title, min_price, featured_image_url FROM products ORDER BY created_at DESC LIMIT 8`
+    );
 
-export default function HomePage() {
+    return result.rows.map((row) => ({
+      id: String(row.id),
+      handle: String(row.handle),
+      title: String(row.title),
+      // Định dạng giá tiền sang chuẩn VND (ví dụ: 295.000 đ)
+      price: `${Number(row.min_price).toLocaleString('vi-VN')} đ`,
+      imageUrl: String(row.featured_image_url),
+    }));
+  } catch (error) {
+    console.error('Lỗi truy vấn sản phẩm từ Turso:', error);
+    return [];
+  }
+}
+
+export default async function HomePage() {
+  const featuredProducts = await getFeaturedProducts();
+
   return (
     <div className="mx-auto max-w-screen-2xl px-4 py-4 md:px-6">
       
@@ -48,15 +40,15 @@ export default function HomePage() {
             <h2 className="mb-4 text-2xl font-bold text-white transition-transform group-hover:scale-105">
               Hàng Có Sẵn
             </h2>
-            {/* aspect-[4/3] ép khung ảnh luôn theo tỷ lệ 4:3 */}
             <div className="w-1/2 mx-auto">
-            <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg bg-neutral-800">
-              <img
-                src="https://res.cloudinary.com/dpsejpp2/image/upload/v1786934595/H%C3%ACnh_N%E1%BB%81n_Shop_1.jpg"
-                alt="Hàng Có Sẵn"
-                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-              />
-            </div></div>
+              <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg bg-neutral-800">
+                <img
+                  src="https://res.cloudinary.com/dpsejpp2/image/upload/v1786934595/H%C3%ACnh_N%E1%BB%81n_Shop_1.jpg"
+                  alt="Hàng Có Sẵn"
+                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                />
+              </div>
+            </div>
           </Link>
 
           {/* Khung 2: Hàng Order */}
@@ -67,15 +59,15 @@ export default function HomePage() {
             <h2 className="mb-4 text-2xl font-bold text-white transition-transform group-hover:scale-105">
               Hàng Order
             </h2>
-            {/* aspect-[4/3] ép khung ảnh luôn theo tỷ lệ 4:3 */}
             <div className="w-1/2 mx-auto">
-            <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg bg-neutral-800">
-              <img
-                src="https://res.cloudinary.com/dpsejpp2/image/upload/v1786934614/Hinh_Shop_2.png"
-                alt="Hàng Order"
-                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-              />
-            </div></div>
+              <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg bg-neutral-800">
+                <img
+                  src="https://res.cloudinary.com/dpsejpp2/image/upload/v1786934614/Hinh_Shop_2.png"
+                  alt="Hàng Order"
+                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                />
+              </div>
+            </div>
           </Link>
 
         </div>
@@ -87,33 +79,38 @@ export default function HomePage() {
           Sản phẩm nổi bật
         </h2>
 
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {featuredProducts.map((product) => (
-            <Link
-              key={product.id}
-              href={`/product/${product.handle}`}
-              className="group flex flex-col overflow-hidden rounded-lg border border-neutral-800 bg-black transition-all hover:border-blue-600"
-            >
-              <div className="w-3/4 mx-auto">
-              <div className="relative aspect-square overflow-hidden bg-neutral-900">
-                <img
-                  src={product.imageUrl}
-                  alt={product.title}
-                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                />
-              </div></div>
+        {featuredProducts.length === 0 ? (
+          <p className="text-center text-neutral-400">Chưa có sản phẩm nào trong CSDL.</p>
+        ) : (
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {featuredProducts.map((product) => (
+              <Link
+                key={product.id}
+                href={`/product/${product.handle}`}
+                className="group flex flex-col overflow-hidden rounded-lg border border-neutral-800 bg-black transition-all hover:border-blue-600"
+              >
+                <div className="w-3/4 mx-auto">
+                  <div className="relative aspect-square overflow-hidden bg-neutral-900">
+                    <img
+                      src={product.imageUrl}
+                      alt={product.title}
+                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    />
+                  </div>
+                </div>
 
-              <div className="flex items-center justify-between p-4">
-                <span className="text-sm font-medium text-white line-clamp-1">
-                  {product.title}
-                </span>
-                <span className="rounded-full bg-blue-600 px-3 py-1 text-xs font-semibold text-white whitespace-nowrap">
-                  {product.price}
-                </span>
-              </div>
-            </Link>
-          ))}
-        </div>
+                <div className="flex items-center justify-between p-4">
+                  <span className="text-sm font-medium text-white line-clamp-1">
+                    {product.title}
+                  </span>
+                  <span className="rounded-full bg-blue-600 px-3 py-1 text-xs font-semibold text-white whitespace-nowrap">
+                    {product.price}
+                  </span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
       </section>
 
     </div>
