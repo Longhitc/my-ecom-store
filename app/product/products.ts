@@ -576,7 +576,7 @@ export const mockProducts: Product[] = [
   ]
 },{
   id: '3',
-  handle: 'suc-buckle-khuy-sat',
+  handle: 'suc-buckle-khuy-sat-tang-charm',
   title: 'Sục Buckle Khuy Sắt Tặng Charm',
   description: BUCKLE_SLIDE_DESCRIPTION,
   type: 'co-san',
@@ -631,7 +631,7 @@ export const mockProducts: Product[] = [
 },
   {
   id: '4',
-  handle: 'suc-kuromi',
+  handle: 'suc-kuromi-tre-em-nguoi-lon',
   title: 'Sục Kuromi Trẻ Em & Người Lớn',
   description: KUROMI_DESCRIPTION,
   type: 'co-san',

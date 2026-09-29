@@ -5,7 +5,7 @@ import Link from 'next/link';
 async function getFeaturedProducts() {
   try {
     const result = await db.execute(
-      `SELECT id, handle, title, min_price, featured_image_url FROM products ORDER BY created_at DESC LIMIT 8`
+      `SELECT id, handle, title, min_price, featured_image_url FROM products ORDER BY created_at DESC LIMIT 4`
     );
 
     return result.rows.map((row) => ({
