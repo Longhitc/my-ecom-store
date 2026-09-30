@@ -1,5 +1,6 @@
 'use client';
 
+import ProductStatusToggle from 'components/admin/ProductStatusToggle';
 import { useEffect, useState } from 'react';
 
 // Cấu trúc Menu chuẩn của hệ thống
@@ -99,6 +100,7 @@ interface Product {
   category?: string;
   price?: number;
   stock?: number;
+  is_active?: boolean;
   image_url?: string;
   featured_image_url?: string;
   featured_image_alt?: string;
@@ -451,6 +453,7 @@ export default function AdminProductsPage() {
                   <th className="p-4">Danh mục</th>
                   <th className="p-4">Giá bán</th>
                   <th className="p-4">Tồn kho</th>
+                  <th className="p-4 text-center">Trạng thái</th>
                   <th className="p-4 text-right">Thao tác</th>
                 </tr>
               </thead>
@@ -460,6 +463,9 @@ export default function AdminProductsPage() {
                   const categorySlug = normalizeCategorySlug(product.category);
                   const categoryObj = CATEGORY_OPTIONS.find((c) => c.slug === categorySlug);
                   const displayCategoryName = categoryObj ? categoryObj.title : product.category || 'Chưa phân loại';
+                  
+                  // Nhận diện chuẩn boolean hoặc kiểu số 1/0 từ database
+                  const activeStatus = product.is_active === true || (product.is_active as any) === 1;
 
                   return (
                     <tr key={product.id} className="transition hover:bg-neutral-800/50">
@@ -499,6 +505,20 @@ export default function AdminProductsPage() {
                           {(product.stock ?? 0) > 0 ? `Còn hàng (${product.stock})` : 'Hết hàng'}
                         </span>
                       </td>
+
+                      {/* CỘT NÚT BẬT / TẮT TRẠNG THÁI */}
+                      <td className="p-4 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <ProductStatusToggle
+                            productId={product.id}
+                            initialStatus={activeStatus}
+                          />
+                          <span className={`text-xs font-medium ${activeStatus ? 'text-green-400' : 'text-neutral-500'}`}>
+                            {activeStatus ? 'Hiện' : 'Ẩn'}
+                          </span>
+                        </div>
+                      </td>
+
                       <td className="p-4 text-right space-x-2">
                         <button
                           onClick={() => handleOpenEdit(product)}

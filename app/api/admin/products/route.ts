@@ -35,7 +35,7 @@ export async function GET(req: Request) {
     // === TRƯỜNG HỢP 1: LẤY CHI TIẾT 1 SẢN PHẨM THEO ID ===
     if (id) {
       const productRes = await db.execute(
-        'SELECT id, handle, title, description, category, featured_image_url, featured_image_alt FROM products WHERE id = ?',
+        'SELECT id, handle, title, description, category, featured_image_url, featured_image_alt, is_active FROM products WHERE id = ?',
         [id]
       );
 
@@ -90,6 +90,7 @@ export async function GET(req: Request) {
           category: String(p.category || 'Thời Trang Nam'),
           featured_image_url: String(p.featured_image_url || ''),
           featured_image_alt: String(p.featured_image_alt || ''),
+          is_active: p.is_active === 1 || p.is_active === true,
           images: images.length > 0 ? images : [''],
           variants:
             variants.length > 0
@@ -115,6 +116,7 @@ export async function GET(req: Request) {
         p.description, 
         p.featured_image_url, 
         p.category,
+        p.is_active,
         COALESCE(p.min_price, MIN(v.amount), 0) as price,
         COALESCE(SUM(v.quantity_available), 0) as stock
       FROM products p
@@ -127,13 +129,14 @@ export async function GET(req: Request) {
       const r = row as Record<string, any>;
       return {
         id: String(r.id),
-        handle: String(r.handle || ''), // ĐÃ BỔ SUNG THUỘC TÍNH HANDLE
+        handle: String(r.handle || ''),
         title: String(r.title || ''),
         description: String(r.description || ''),
         price: Number(r.price || 0),
         stock: Number(r.stock || 0),
         category: String(r.category || ''),
         image_url: String(r.featured_image_url || ''),
+        is_active: r.is_active === 1 || r.is_active === true,
       };
     });
 
@@ -163,8 +166,8 @@ export async function POST(req: Request) {
     const { minPrice, maxPrice } = calculatePrices(variants);
 
     await db.execute(
-      `INSERT INTO products (id, handle, title, description, category, min_price, max_price, featured_image_url, featured_image_alt) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO products (id, handle, title, description, category, min_price, max_price, featured_image_url, featured_image_alt, is_active) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
       [
         productId,
         handle || `slug-${Date.now()}`,
@@ -297,7 +300,6 @@ export async function DELETE(req: Request) {
     if (!id) {
       return NextResponse.json({ error: 'Thiếu ID sản phẩm cần xóa' }, { status: 400 });
     }
-
     await db.execute(
       'DELETE FROM variant_attributes WHERE variant_id IN (SELECT id FROM product_variants WHERE product_id = ?)',
       [id]
