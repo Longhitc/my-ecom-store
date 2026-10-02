@@ -449,12 +449,13 @@ export default function AdminProductsPage() {
             <table className="w-full text-left text-sm text-neutral-300">
               <thead className="border-b border-neutral-800 bg-neutral-950/50 text-xs uppercase text-neutral-400">
                 <tr>
+                  <th className="p-4">Thao tác</th>
                   <th className="p-4">Sản phẩm</th>
                   <th className="p-4">Danh mục</th>
                   <th className="p-4">Giá bán</th>
                   <th className="p-4">Tồn kho</th>
                   <th className="p-4 text-center">Trạng thái</th>
-                  <th className="p-4 text-right">Thao tác</th>
+                  <th className="p-4 text-right">Xóa bỏ</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-800">
@@ -469,6 +470,14 @@ export default function AdminProductsPage() {
 
                   return (
                     <tr key={product.id} className="transition hover:bg-neutral-800/50">
+                      <td>
+                        <button
+                          onClick={() => handleOpenEdit(product)}
+                          className="rounded bg-blue-500/10 px-3 py-1 text-xs font-semibold text-blue-400 hover:bg-blue-500/20"
+                        >
+                          Sửa Chi Tiết
+                        </button>
+                      </td>
                       <td className="p-4">
                         <div className="flex items-center gap-3">
                           {displayImage ? (
@@ -519,13 +528,7 @@ export default function AdminProductsPage() {
                         </div>
                       </td>
 
-                      <td className="p-4 text-right space-x-2">
-                        <button
-                          onClick={() => handleOpenEdit(product)}
-                          className="rounded bg-blue-500/10 px-3 py-1 text-xs font-semibold text-blue-400 hover:bg-blue-500/20"
-                        >
-                          Sửa Chi Tiết
-                        </button>
+                      <td className="p-4 text-right space-x-2">                       
                         <button
                           onClick={() => handleDelete(product.id)}
                           className="rounded bg-red-500/10 px-3 py-1 text-xs font-semibold text-red-400 hover:bg-red-500/20"
