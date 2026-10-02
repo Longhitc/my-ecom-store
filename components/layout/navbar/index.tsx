@@ -26,21 +26,24 @@ function AdminMenu({ user }: { user: any }) {
   if (!allowedMenus.length) return null;
 
   return (
-    <div className="w-full border-b border-neutral-800 bg-neutral-900 px-3 py-2 text-xs text-white overflow-x-auto">
-      <div className="mx-auto flex max-w-7xl flex-col items-center gap-1.5 sm:flex-row sm:justify-between">
-        <div className="flex items-center gap-1 text-center font-bold text-amber-400 shrink-0">
+    <div className="w-full border-b border-neutral-800 bg-neutral-900 px-2 py-1.5 text-xs text-white">
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-1.5 sm:gap-2">
+        
+        {/* Nhãn Admin */}
+        <div className="flex shrink-0 items-center gap-1 font-bold text-amber-400 text-[11px] sm:text-xs">
           <span>🛠</span>
           <span>[{user?.admin?.role_name || user?.admin?.roleName || 'Admin'}]</span>
         </div>
 
-        <div className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2">
+        {/* Cụm menu: Giữ nguyên đầy đủ chữ "Quản lý...", xếp thẳng hàng từ trái sang phải */}
+        <div className="flex flex-wrap items-center justify-start sm:justify-end gap-1.5">
           {allowedMenus.includes('orders') && (
             <Link 
               href="/admin/orders" 
-              className={`rounded px-2.5 py-1 text-xs font-medium transition-colors whitespace-nowrap ${
+              className={`rounded px-2 py-1 text-[11px] sm:text-xs font-medium transition-colors whitespace-nowrap ${
                 pathname === '/admin/orders'
-                  ? 'bg-neutral-800 font-semibold text-amber-400'
-                  : 'bg-neutral-800/60 text-neutral-300 hover:bg-neutral-800 hover:text-white'
+                  ? 'bg-amber-500 text-black font-semibold'
+                  : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700 hover:text-white'
               }`}
             >
               Quản lý đơn hàng
@@ -50,10 +53,10 @@ function AdminMenu({ user }: { user: any }) {
           {allowedMenus.includes('products') && (
             <Link 
               href="/admin/products" 
-              className={`rounded px-2.5 py-1 text-xs font-medium transition-colors whitespace-nowrap ${
+              className={`rounded px-2 py-1 text-[11px] sm:text-xs font-medium transition-colors whitespace-nowrap ${
                 pathname === '/admin/products'
-                  ? 'bg-neutral-800 font-semibold text-amber-400'
-                  : 'bg-neutral-800/60 text-neutral-300 hover:bg-neutral-800 hover:text-white'
+                  ? 'bg-amber-500 text-black font-semibold'
+                  : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700 hover:text-white'
               }`}
             >
               Quản lý sản phẩm
@@ -63,16 +66,17 @@ function AdminMenu({ user }: { user: any }) {
           {allowedMenus.includes('customers') && (
             <Link 
               href="/admin/customers" 
-              className={`rounded px-2.5 py-1 text-xs font-medium transition-colors whitespace-nowrap ${
+              className={`rounded px-2 py-1 text-[11px] sm:text-xs font-medium transition-colors whitespace-nowrap ${
                 pathname === '/admin/customers'
-                  ? 'bg-neutral-800 font-semibold text-amber-400'
-                  : 'bg-neutral-800/60 text-neutral-300 hover:bg-neutral-800 hover:text-white'
+                  ? 'bg-amber-500 text-black font-semibold'
+                  : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700 hover:text-white'
               }`}
             >
               Quản lý khách hàng
             </Link>
           )}
         </div>
+
       </div>
     </div>
   );
@@ -139,7 +143,7 @@ export default function Navbar() {
 
       <nav className="relative z-[100] flex items-center justify-between bg-white px-3 py-2.5 dark:bg-black sm:px-6">
         
-        {/* 1. KHỐI TRÁI: Menu Hamburger + Logo (shrink-0) */}
+        {/* 1. KHỐI TRÁI: Menu Hamburger + Logo */}
         <div className="flex shrink-0 items-center gap-2 sm:gap-6">
           <div className="block flex-none md:hidden">
             <Suspense fallback={null}>
@@ -242,7 +246,7 @@ export default function Navbar() {
           </div>
         )}
 
-        {/* 3. KHỐI PHẢI: Nút Thoát + Account Icon + Giỏ hàng (shrink-0) */}
+        {/* 3. KHỐI PHẢI: Nút Thoát + Account Icon + Giỏ hàng */}
         <div className="flex shrink-0 items-center justify-end gap-1.5 sm:gap-3 text-xs">
           {customer ? (
             <button
@@ -276,6 +280,7 @@ export default function Navbar() {
             <OpenCart />
           </div>
         </div>
+
       </nav>
     </header>
   );
