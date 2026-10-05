@@ -29,13 +29,13 @@ function AdminMenu({ user }: { user: any }) {
     <div className="w-full border-b border-neutral-800 bg-neutral-900 px-2 py-1.5 text-xs text-white">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-1.5 sm:gap-2">
         
-        {/* Nhãn Admin */}
+        {/* Nhãn Quản trị */}
         <div className="flex shrink-0 items-center gap-1 font-bold text-amber-400 text-[11px] sm:text-xs">
           <span>🛠</span>
-          <span>[{user?.admin?.role_name || user?.admin?.roleName || 'Admin'}]</span>
+          <span>[{user?.admin?.role_name || user?.admin?.roleName || 'Quản trị'}]</span>
         </div>
 
-        {/* Các nút Menu Admin đầy đủ chữ "Quản lý" */}
+        {/* Các nút Menu Quản trị */}
         <div className="flex flex-wrap items-center justify-start sm:justify-end gap-1.5">
           {allowedMenus.includes('orders') && (
             <Link 
@@ -46,7 +46,7 @@ function AdminMenu({ user }: { user: any }) {
                   : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700 hover:text-white'
               }`}
             >
-              Quản lý đơn hàng
+              Đơn hàng
             </Link>
           )}
 
@@ -59,7 +59,7 @@ function AdminMenu({ user }: { user: any }) {
                   : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700 hover:text-white'
               }`}
             >
-              Quản lý sản phẩm
+              Sản phẩm
             </Link>
           )}
 
@@ -72,7 +72,20 @@ function AdminMenu({ user }: { user: any }) {
                   : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700 hover:text-white'
               }`}
             >
-              Quản lý khách hàng
+              Khách hàng
+            </Link>
+          )}
+
+          {allowedMenus.includes('roles') && (
+            <Link 
+              href="/admin/roles" 
+              className={`rounded px-2 py-1 text-[11px] sm:text-xs font-medium transition-colors whitespace-nowrap ${
+                pathname === '/admin/roles'
+                  ? 'bg-amber-500 text-black font-semibold'
+                  : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700 hover:text-white'
+              }`}
+            >
+              Phân quyền
             </Link>
           )}
         </div>
@@ -288,7 +301,6 @@ export default function Navbar() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
             </svg>
           </Link>
-
           <div className="shrink-0">
             <OpenCart />
           </div>
