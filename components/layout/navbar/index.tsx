@@ -35,7 +35,7 @@ function AdminMenu({ user }: { user: any }) {
           <span>[{user?.admin?.role_name || user?.admin?.roleName || 'Admin'}]</span>
         </div>
 
-        {/* Cụm menu: Giữ nguyên đầy đủ chữ "Quản lý...", xếp thẳng hàng từ trái sang phải */}
+        {/* Các nút Menu Admin đầy đủ chữ "Quản lý" */}
         <div className="flex flex-wrap items-center justify-start sm:justify-end gap-1.5">
           {allowedMenus.includes('orders') && (
             <Link 
@@ -143,8 +143,8 @@ export default function Navbar() {
 
       <nav className="relative z-[100] flex items-center justify-between bg-white px-3 py-2.5 dark:bg-black sm:px-6">
         
-        {/* 1. KHỐI TRÁI: Menu Hamburger + Logo */}
-        <div className="flex shrink-0 items-center gap-2 sm:gap-6">
+        {/* 1. KHỐI TRÁI: Menu Hamburger (mobile) + Logo + Menu Links (desktop) */}
+        <div className="flex shrink-0 items-center gap-2 lg:gap-6">
           <div className="block flex-none md:hidden">
             <Suspense fallback={null}>
               <MobileMenu menu={menu as any} />
@@ -157,14 +157,14 @@ export default function Navbar() {
             className="flex shrink-0 items-center justify-center"
           >
             <LogoSquare />
-            <div className="ml-2 hidden shrink-0 text-sm font-medium uppercase text-black dark:text-white lg:block">
+            <div className="ml-2 hidden shrink-0 text-sm font-medium uppercase text-black dark:text-white xl:block">
               Đẹp và Xinh Shop
             </div>
           </Link>
 
           {/* Menu Desktop */}
           {menu.length ? (
-            <ul className="hidden gap-6 text-sm md:flex md:items-center">
+            <ul className="hidden gap-4 text-sm md:flex md:items-center lg:gap-6">
               {menu.map((item) => {
                 const hasChildren = item.items && item.items.length > 0;
                 const isOpen = openMenu === item.title;
@@ -226,14 +226,18 @@ export default function Navbar() {
           ) : null}
         </div>
 
-        {/* Tìm kiếm Desktop */}
-        <div className="hidden max-w-md flex-1 justify-end md:flex">
-          <Suspense fallback={<SearchSkeleton />}>
-            <Search />
-          </Suspense>
+        {/* 2. KHỐI GIỮA: 
+            - Ô tìm kiếm Search trên Desktop (nằm tách biệt, co giãn cân đối)
+            - Tên user trên Mobile
+        */}
+        <div className="hidden md:flex md:flex-1 md:justify-center md:px-4 lg:px-8">
+          <div className="w-full max-w-xs xl:max-w-md">
+            <Suspense fallback={<SearchSkeleton />}>
+              <Search />
+            </Suspense>
+          </div>
         </div>
 
-        {/* 2. KHỐI GIỮA (MOBILE): Tên Hoàng Long nằm chính giữa logo và nút thoát */}
         {customer && (
           <div className="flex flex-1 items-center justify-center px-1 md:hidden">
             <Link
@@ -246,15 +250,24 @@ export default function Navbar() {
           </div>
         )}
 
-        {/* 3. KHỐI PHẢI: Nút Thoát + Account Icon + Giỏ hàng */}
+        {/* 3. KHỐI PHẢI: Tên user (Desktop) + Nút Thoát + Account Icon + Giỏ hàng */}
         <div className="flex shrink-0 items-center justify-end gap-1.5 sm:gap-3 text-xs">
           {customer ? (
-            <button
-              onClick={logout}
-              className="rounded bg-red-500/10 px-2 py-1 text-[11px] font-medium text-red-600 transition-colors hover:bg-red-500/20 dark:bg-red-500/20 dark:text-red-400"
-            >
-              Thoát
-            </button>
+            <div className="flex items-center gap-2">
+              <Link
+                href="/account"
+                className="hidden md:inline-block max-w-[120px] truncate whitespace-nowrap font-medium text-neutral-800 transition-colors hover:text-amber-500 dark:text-neutral-200"
+                title={customer.name}
+              >
+                {customer.name}
+              </Link>
+              <button
+                onClick={logout}
+                className="rounded bg-red-500/10 px-2 py-1 text-[11px] font-medium text-red-600 transition-colors hover:bg-red-500/20 dark:bg-red-500/20 dark:text-red-400"
+              >
+                Thoát
+              </button>
+            </div>
           ) : (
             <>
               <Link href="/register" className="whitespace-nowrap text-neutral-700 hover:text-black dark:text-neutral-300 dark:hover:text-white">
