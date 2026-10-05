@@ -613,23 +613,27 @@ export default function AdminProductsPage() {
           </>
         )}
 
-        {/* Modal Thêm / Sửa Sản Phẩm (Tối Ưu Full Mobile Responsive) */}
+        {/* Modal Thêm / Sửa Sản Phẩm (Tối Ưu Full Mobile Responsive & Đã sửa Z-Index + Header Sticky) */}
         {isModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-2 sm:p-4 backdrop-blur-sm">
-            <div className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-xl border border-neutral-800 bg-neutral-900 p-4 sm:p-6 text-white shadow-2xl">
-              <div className="flex items-center justify-between border-b border-neutral-800 pb-3">
-                <h2 className="text-base sm:text-lg font-bold text-amber-400">
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 p-2 sm:p-4 backdrop-blur-sm">
+            <div className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-xl border border-neutral-800 bg-neutral-900 text-white shadow-2xl">
+              
+              {/* HEADER GỌN GÀNG, STICKY CỐ ĐỊNH Ở ĐỈNH MODAL - KHÔNG CHE KHU VỰC THÔNG TIN */}
+              <div className="sticky top-0 z-20 flex items-center justify-between border-b border-neutral-800 bg-neutral-900/95 px-4 py-3 backdrop-blur">
+                <h2 className="text-base sm:text-lg font-bold text-amber-400 truncate">
                   {editingProduct ? `Sửa sản phẩm #${editingProduct.id}` : 'Thêm sản phẩm mới'}
                 </h2>
                 <button
+                  type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="rounded-lg p-1 text-neutral-400 hover:bg-neutral-800 hover:text-white"
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-neutral-800 text-neutral-400 hover:bg-neutral-700 hover:text-white"
+                  title="Đóng"
                 >
                   ✕
                 </button>
               </div>
 
-              <form onSubmit={handleSubmit} className="my-4 space-y-5 text-sm">
+              <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-5 text-sm">
                 {/* 1. THÔNG TIN CƠ BẢN */}
                 <div className="space-y-3">
                   <h3 className="font-semibold text-amber-500">1. Thông tin cơ bản</h3>
@@ -728,7 +732,7 @@ export default function AdminProductsPage() {
                 </div>
 
                 {/* 2. HÌNH ẢNH PHỤ */}
-                <div className="space-y-3">
+                <div className="space-y-3 border-t border-neutral-800 pt-4">
                   <div className="flex items-center justify-between">
                     <label className="text-sm font-semibold text-amber-400">
                       2. Hình ảnh phụ (Product Images)
