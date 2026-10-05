@@ -613,13 +613,13 @@ export default function AdminProductsPage() {
           </>
         )}
 
-        {/* Modal Thêm / Sửa Sản Phẩm (Tối Ưu Full Mobile Responsive & Đã sửa Z-Index + Header Sticky) */}
+        {/* Modal Thêm / Sửa Sản Phẩm (Tối Ưu Full Mobile & Tránh Thanh URL Trình Duyệt) */}
         {isModalOpen && (
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 p-2 sm:p-4 backdrop-blur-sm">
-            <div className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-xl border border-neutral-800 bg-neutral-900 text-white shadow-2xl">
+          <div className="fixed inset-0 z-[9999] flex items-start sm:items-center justify-center bg-black/80 p-2 sm:p-4 pt-12 sm:pt-4 backdrop-blur-sm">
+            <div className="max-h-[85dvh] sm:max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-xl border border-neutral-800 bg-neutral-900 text-white shadow-2xl">
               
-              {/* HEADER GỌN GÀNG, STICKY CỐ ĐỊNH Ở ĐỈNH MODAL - KHÔNG CHE KHU VỰC THÔNG TIN */}
-              <div className="sticky top-0 z-20 flex items-center justify-between border-b border-neutral-800 bg-neutral-900/95 px-4 py-3 backdrop-blur">
+              {/* HEADER GỌN GÀNG, STICKY CỐ ĐỊNH Ở ĐỈNH MODAL */}
+              <div className="sticky top-0 z-20 flex items-center justify-between border-b border-neutral-800 bg-neutral-900 px-4 py-3 backdrop-blur">
                 <h2 className="text-base sm:text-lg font-bold text-amber-400 truncate">
                   {editingProduct ? `Sửa sản phẩm #${editingProduct.id}` : 'Thêm sản phẩm mới'}
                 </h2>
