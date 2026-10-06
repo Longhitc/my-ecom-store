@@ -770,12 +770,12 @@ export default function AdminProductsPage() {
                       <div className="flex flex-col gap-1.5 flex-1 min-w-0">
                         {uploadingFeatured ? (
                           <div className="flex items-center gap-2 text-xs text-amber-400 font-medium">
-                            <span className="animate-spin">🔄</span> Đang tải ảnh lên Cloud...
+                            <span className="animate-spin">🔄</span> Đang tải ảnh...
                           </div>
                         ) : formData.featured_image_url ? (
                           <div className="flex items-center gap-2">
                             <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-400 border border-emerald-500/20">
-                              ✅ Đã tải lên Cloud
+                              ✅ Đã tải
                             </span>
                           </div>
                         ) : (
@@ -810,7 +810,7 @@ export default function AdminProductsPage() {
                   </div>
                 </div>
 
-                {/* 2. HÌNH ẢNH PHỤ - ĐỒNG BỘ NHÃN "ĐÃ TẢI LÊN CLOUD" */}
+                {/* 2. HÌNH ẢNH PHỤ - ĐỒNG BỘ NHÃN "ĐÃ TẢI" */}
                 <div className="space-y-3 border-t border-neutral-800 pt-4">
                   <div className="flex items-center justify-between">
                     <label className="text-sm font-semibold text-amber-400">
@@ -848,7 +848,7 @@ export default function AdminProductsPage() {
                           </span>
                         ) : imgUrl ? (
                           <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-400 border border-emerald-500/20">
-                            ✅ Đã tải lên Cloud
+                            ✅ Đã tải
                           </span>
                         ) : (
                           <span className="text-xs text-neutral-500">Ảnh phụ #{index + 1}</span>
