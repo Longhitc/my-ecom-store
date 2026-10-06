@@ -142,7 +142,7 @@ export default function AdminProductsPage() {
   const uploadToCloudinary = async (file: File): Promise<string | null> => {
     const data = new FormData();
     data.append('file', file);
-    data.append('upload_preset', 'depvaxinh_preset'); // Upload Preset Unsigned ở Bước 1
+    data.append('upload_preset', 'depvaxinh_preset');
     data.append('cloud_name', 'dpsejpp2');
 
     try {
@@ -751,45 +751,50 @@ export default function AdminProductsPage() {
                     </div>
                   </div>
 
-                  {/* LINK ẢNH ĐẠI DIỆN + UPLOAD TRỰC TIẾP */}
+                  {/* UPLOAD ẢNH ĐẠI DIỆN - ẨN HOÀN TOÀN LINK */}
                   <div>
-                    <label className="mb-1 block text-xs text-neutral-400">Link Ảnh Đại Diện (Featured Image) *</label>
-                    <div className="flex items-center gap-2 sm:gap-3">
-                      <div className="flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-neutral-800 bg-neutral-950">
+                    <label className="mb-1 block text-xs text-neutral-400">Ảnh Đại Diện Sản Phẩm *</label>
+                    <div className="flex items-center gap-3 rounded-lg border border-neutral-800 bg-neutral-950 p-3">
+                      <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-neutral-800 bg-neutral-900">
                         {formData.featured_image_url ? (
                           <img
                             src={formData.featured_image_url}
                             alt="Preview Ảnh chính"
                             className="h-full w-full object-cover"
-                            onError={(e) => {
-                              (e.target as HTMLElement).style.display = 'none';
-                            }}
                           />
                         ) : (
-                          <span className="text-[9px] text-neutral-600">Chưa có</span>
+                          <span className="text-[10px] text-neutral-500 text-center px-1">Chưa chọn ảnh</span>
                         )}
                       </div>
 
-                      {/* Nút Upload trực tiếp lên Cloudinary */}
-                      <label className="cursor-pointer rounded-lg bg-neutral-800 px-3 py-2 text-xs font-semibold text-white transition hover:bg-neutral-700 border border-neutral-700 shrink-0">
-                        {uploadingFeatured ? '⏳ Đang tải...' : '📁 Tải ảnh lên'}
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleFeaturedImageUpload}
-                          disabled={uploadingFeatured}
-                          className="hidden"
-                        />
-                      </label>
+                      <div className="flex flex-col gap-1.5 flex-1 min-w-0">
+                        {uploadingFeatured ? (
+                          <div className="flex items-center gap-2 text-xs text-amber-400 font-medium">
+                            <span className="animate-spin">🔄</span> Đang tải ảnh lên Cloud...
+                          </div>
+                        ) : formData.featured_image_url ? (
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-400 border border-emerald-500/20">
+                              ✅ Đã tải lên Cloud
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-neutral-500">Chưa có ảnh đại diện</span>
+                        )}
 
-                      <input
-                        type="text"
-                        required
-                        value={formData.featured_image_url}
-                        onChange={(e) => setFormData({ ...formData, featured_image_url: e.target.value })}
-                        className="flex-1 min-w-0 rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-white focus:border-amber-500 focus:outline-none text-xs sm:text-sm"
-                        placeholder="https://res.cloudinary.com/..."
-                      />
+                        <div>
+                          <label className="inline-block cursor-pointer rounded-lg bg-neutral-800 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-neutral-700 border border-neutral-700">
+                            {uploadingFeatured ? '⏳ Đang xử lý...' : formData.featured_image_url ? '🔄 Đổi ảnh đại diện' : '📁 Tải ảnh lên'}
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={handleFeaturedImageUpload}
+                              disabled={uploadingFeatured}
+                              className="hidden"
+                            />
+                          </label>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
@@ -805,7 +810,7 @@ export default function AdminProductsPage() {
                   </div>
                 </div>
 
-                {/* 2. HÌNH ẢNH PHỤ + UPLOAD TRỰC TIẾP */}
+                {/* 2. HÌNH ẢNH PHỤ - ĐỒNG BỘ NHÃN "ĐÃ TẢI LÊN CLOUD" */}
                 <div className="space-y-3 border-t border-neutral-800 pt-4">
                   <div className="flex items-center justify-between">
                     <label className="text-sm font-semibold text-amber-400">
@@ -818,63 +823,63 @@ export default function AdminProductsPage() {
                       }
                       className="text-xs text-amber-400 hover:underline"
                     >
-                      + Thêm URL ảnh phụ
+                      + Thêm ô ảnh phụ
                     </button>
                   </div>
 
                   {formData.images.map((imgUrl, index) => (
-                    <div key={index} className="flex items-center gap-2 sm:gap-3">
-                      <div className="flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-neutral-800 bg-neutral-950">
+                    <div key={index} className="flex items-center gap-3 rounded-lg border border-neutral-800 bg-neutral-950 p-2.5">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-neutral-800 bg-neutral-900">
                         {imgUrl ? (
                           <img
                             src={imgUrl}
                             alt={`Ảnh phụ ${index + 1}`}
                             className="h-full w-full object-cover"
-                            onError={(e) => {
-                              (e.target as HTMLElement).style.display = 'none';
-                            }}
                           />
                         ) : (
-                          <span className="text-[9px] text-neutral-600">Trống</span>
+                          <span className="text-[9px] text-neutral-500">Chưa có</span>
                         )}
                       </div>
 
-                      {/* Nút Upload trực tiếp ảnh phụ */}
-                      <label className="cursor-pointer rounded-lg bg-neutral-800 px-2.5 py-2 text-xs font-semibold text-white transition hover:bg-neutral-700 border border-neutral-700 shrink-0">
-                        {uploadingImages[index] ? '⏳ Đang tải...' : '📁 Tải ảnh'}
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => handleSubImageUpload(e, index)}
-                          disabled={Boolean(uploadingImages[index])}
-                          className="hidden"
-                        />
-                      </label>
+                      <div className="flex flex-1 items-center justify-between min-w-0">
+                        {uploadingImages[index] ? (
+                          <span className="text-xs text-amber-400 font-medium animate-pulse">
+                            ⏳ Đang tải lên...
+                          </span>
+                        ) : imgUrl ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-400 border border-emerald-500/20">
+                            ✅ Đã tải lên Cloud
+                          </span>
+                        ) : (
+                          <span className="text-xs text-neutral-500">Ảnh phụ #{index + 1}</span>
+                        )}
 
-                      <input
-                        type="text"
-                        placeholder="Link URL ảnh phụ..."
-                        value={imgUrl}
-                        onChange={(e) => {
-                          const newImages = [...formData.images];
-                          newImages[index] = e.target.value;
-                          setFormData({ ...formData, images: newImages });
-                        }}
-                        className="flex-1 min-w-0 rounded-lg border border-neutral-800 bg-neutral-950 p-2 text-xs sm:text-sm text-white focus:border-amber-500 focus:outline-none"
-                      />
+                        <div className="flex items-center gap-2">
+                          <label className="cursor-pointer rounded-lg bg-neutral-800 px-2.5 py-1.5 text-xs font-semibold text-white transition hover:bg-neutral-700 border border-neutral-700 shrink-0">
+                            {uploadingImages[index] ? '⏳' : imgUrl ? 'Đổi ảnh' : '📁 Tải ảnh'}
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => handleSubImageUpload(e, index)}
+                              disabled={Boolean(uploadingImages[index])}
+                              className="hidden"
+                            />
+                          </label>
 
-                      {formData.images.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const newImages = formData.images.filter((_, i) => i !== index);
-                            setFormData({ ...formData, images: newImages });
-                          }}
-                          className="rounded bg-red-500/10 px-2.5 py-2 text-xs font-semibold text-red-500 hover:bg-red-500/20"
-                        >
-                          Xóa
-                        </button>
-                      )}
+                          {formData.images.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newImages = formData.images.filter((_, i) => i !== index);
+                                setFormData({ ...formData, images: newImages });
+                              }}
+                              className="rounded bg-red-500/10 px-2.5 py-1.5 text-xs font-semibold text-red-500 hover:bg-red-500/20"
+                            >
+                              Xóa
+                            </button>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -971,6 +976,7 @@ export default function AdminProductsPage() {
                     </div>
                   ))}
                 </div>
+
                 {/* Footer Buttons */}
                 <div className="flex justify-end gap-2 border-t border-neutral-800 pt-3">
                   <button
