@@ -37,7 +37,7 @@ interface CategoryOption {
 
 const getCategoryOptions = (): CategoryOption[] => {
   const options: CategoryOption[] = [];
-  
+
   MENU_DATA.forEach((item) => {
     const slug = item.path.replace('/search/', '').replace('/search', '');
     if (slug) {
@@ -60,9 +60,9 @@ const CATEGORY_OPTIONS = getCategoryOptions();
 
 const normalizeCategorySlug = (rawCategory?: string): string => {
   if (!rawCategory) return CATEGORY_OPTIONS[0]?.slug || 'tt-nam';
-  
+
   const cleanRaw = rawCategory.trim().toLowerCase();
-  
+
   const matchBySlug = CATEGORY_OPTIONS.find((c) => c.slug.toLowerCase() === cleanRaw);
   if (matchBySlug) return matchBySlug.slug;
 
@@ -113,6 +113,10 @@ export default function AdminProductsPage() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  // State quản lý trạng thái upload cho từng vị trí
+  const [uploadingFeatured, setUploadingFeatured] = useState(false);
+  const [uploadingImages, setUploadingImages] = useState<{ [key: number]: boolean }>({});
+
   const [formData, setFormData] = useState({
     title: '',
     handle: '',
@@ -133,6 +137,63 @@ export default function AdminProductsPage() {
       },
     ],
   });
+
+  // HÀM UPLOAD ẢNH LÊN CLOUDINARY
+  const uploadToCloudinary = async (file: File): Promise<string | null> => {
+    const data = new FormData();
+    data.append('file', file);
+    data.append('upload_preset', 'depvaxinh_preset'); // Upload Preset Unsigned ở Bước 1
+    data.append('cloud_name', 'dpsejpp2');
+
+    try {
+      const res = await fetch('https://api.cloudinary.com/v1_1/dpsejpp2/image/upload', {
+        method: 'POST',
+        body: data,
+      });
+
+      const result = await res.json();
+      if (result.secure_url) {
+        return result.secure_url;
+      } else {
+        alert('Upload ảnh lên Cloudinary thất bại!');
+        return null;
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Đã xảy ra lỗi kết nối khi upload ảnh!');
+      return null;
+    }
+  };
+
+  // Xử lý upload cho Ảnh đại diện
+  const handleFeaturedImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingFeatured(true);
+    const uploadedUrl = await uploadToCloudinary(file);
+    if (uploadedUrl) {
+      setFormData((prev) => ({ ...prev, featured_image_url: uploadedUrl }));
+    }
+    setUploadingFeatured(false);
+  };
+
+  // Xử lý upload cho Ảnh phụ (theo index)
+  const handleSubImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingImages((prev) => ({ ...prev, [index]: true }));
+    const uploadedUrl = await uploadToCloudinary(file);
+    if (uploadedUrl) {
+      setFormData((prev) => {
+        const newImages = [...prev.images];
+        newImages[index] = uploadedUrl;
+        return { ...prev, images: newImages };
+      });
+    }
+    setUploadingImages((prev) => ({ ...prev, [index]: false }));
+  };
 
   const fetchProducts = async () => {
     setLoading(true);
@@ -596,7 +657,7 @@ export default function AdminProductsPage() {
                           </div>
                         </td>
 
-                        <td className="p-4 text-right">                       
+                        <td className="p-4 text-right">
                           <button
                             onClick={() => handleDelete(product.id)}
                             className="rounded bg-red-500/10 px-3 py-1 text-xs font-semibold text-red-400 hover:bg-red-500/20"
@@ -617,7 +678,7 @@ export default function AdminProductsPage() {
         {isModalOpen && (
           <div className="fixed inset-0 z-[9999] flex items-start sm:items-center justify-center bg-black/80 p-2 sm:p-4 pt-12 sm:pt-4 backdrop-blur-sm">
             <div className="max-h-[85dvh] sm:max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-xl border border-neutral-800 bg-neutral-900 text-white shadow-2xl">
-              
+
               {/* HEADER GỌN GÀNG, STICKY CỐ ĐỊNH Ở ĐỈNH MODAL */}
               <div className="sticky top-0 z-20 flex items-center justify-between border-b border-neutral-800 bg-neutral-900 px-4 py-3 backdrop-blur">
                 <h2 className="text-base sm:text-lg font-bold text-amber-400 truncate">
@@ -690,7 +751,7 @@ export default function AdminProductsPage() {
                     </div>
                   </div>
 
-                  {/* LINK ẢNH ĐẠI DIỆN */}
+                  {/* LINK ẢNH ĐẠI DIỆN + UPLOAD TRỰC TIẾP */}
                   <div>
                     <label className="mb-1 block text-xs text-neutral-400">Link Ảnh Đại Diện (Featured Image) *</label>
                     <div className="flex items-center gap-2 sm:gap-3">
@@ -708,6 +769,19 @@ export default function AdminProductsPage() {
                           <span className="text-[9px] text-neutral-600">Chưa có</span>
                         )}
                       </div>
+
+                      {/* Nút Upload trực tiếp lên Cloudinary */}
+                      <label className="cursor-pointer rounded-lg bg-neutral-800 px-3 py-2 text-xs font-semibold text-white transition hover:bg-neutral-700 border border-neutral-700 shrink-0">
+                        {uploadingFeatured ? '⏳ Đang tải...' : '📁 Tải ảnh lên'}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleFeaturedImageUpload}
+                          disabled={uploadingFeatured}
+                          className="hidden"
+                        />
+                      </label>
+
                       <input
                         type="text"
                         required
@@ -731,7 +805,7 @@ export default function AdminProductsPage() {
                   </div>
                 </div>
 
-                {/* 2. HÌNH ẢNH PHỤ */}
+                {/* 2. HÌNH ẢNH PHỤ + UPLOAD TRỰC TIẾP */}
                 <div className="space-y-3 border-t border-neutral-800 pt-4">
                   <div className="flex items-center justify-between">
                     <label className="text-sm font-semibold text-amber-400">
@@ -764,6 +838,18 @@ export default function AdminProductsPage() {
                           <span className="text-[9px] text-neutral-600">Trống</span>
                         )}
                       </div>
+
+                      {/* Nút Upload trực tiếp ảnh phụ */}
+                      <label className="cursor-pointer rounded-lg bg-neutral-800 px-2.5 py-2 text-xs font-semibold text-white transition hover:bg-neutral-700 border border-neutral-700 shrink-0">
+                        {uploadingImages[index] ? '⏳ Đang tải...' : '📁 Tải ảnh'}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handleSubImageUpload(e, index)}
+                          disabled={Boolean(uploadingImages[index])}
+                          className="hidden"
+                        />
+                      </label>
 
                       <input
                         type="text"
