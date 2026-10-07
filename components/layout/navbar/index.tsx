@@ -31,61 +31,77 @@ function AdminMenu({ user }: { user: any }) {
         
         {/* Nhãn Quản trị */}
         <div className="flex shrink-0 items-center gap-1 font-bold text-amber-400 text-[11px] sm:text-xs">
-          <span>🛠</span>
-          <span>[{user?.admin?.role_name || user?.admin?.roleName || 'Quản trị'}]</span>
+          <span>🛠️</span>
+          <span>Quản trị : {user?.admin?.role_name || user?.admin?.roleName || 'Admin'}</span>
         </div>
 
-        {/* Các nút Menu Quản trị */}
-        <div className="flex flex-wrap items-center justify-start sm:justify-end gap-1.5">
+        {/* Dãy Menu liền khối có dấu gạch đứng | phân cách */}
+        <div className="flex items-center gap-1.5 sm:gap-2 rounded-lg bg-neutral-800/60 px-2.5 py-1 text-[11px] sm:text-xs font-medium overflow-x-auto">
           {allowedMenus.includes('orders') && (
             <Link 
               href="/admin/orders" 
-              className={`rounded px-2 py-1 text-[11px] sm:text-xs font-medium transition-colors whitespace-nowrap ${
+              className={`flex items-center gap-1 transition-colors whitespace-nowrap ${
                 pathname === '/admin/orders'
-                  ? 'bg-amber-500 text-black font-semibold'
-                  : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700 hover:text-white'
+                  ? 'text-amber-400 font-bold'
+                  : 'text-neutral-300 hover:text-white'
               }`}
             >
-              Đơn hàng
+              <span>📦</span>
+              <span>Đơn hàng</span>
             </Link>
+          )}
+
+          {allowedMenus.includes('orders') && allowedMenus.includes('products') && (
+            <span className="text-neutral-600">|</span>
           )}
 
           {allowedMenus.includes('products') && (
             <Link 
               href="/admin/products" 
-              className={`rounded px-2 py-1 text-[11px] sm:text-xs font-medium transition-colors whitespace-nowrap ${
+              className={`flex items-center gap-1 transition-colors whitespace-nowrap ${
                 pathname === '/admin/products'
-                  ? 'bg-amber-500 text-black font-semibold'
-                  : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700 hover:text-white'
+                  ? 'text-amber-400 font-bold'
+                  : 'text-neutral-300 hover:text-white'
               }`}
             >
-              Sản phẩm
+              <span>🏷️</span>
+              <span>Sản phẩm</span>
             </Link>
+          )}
+
+          {allowedMenus.includes('products') && allowedMenus.includes('customers') && (
+            <span className="text-neutral-600">|</span>
           )}
 
           {allowedMenus.includes('customers') && (
             <Link 
               href="/admin/customers" 
-              className={`rounded px-2 py-1 text-[11px] sm:text-xs font-medium transition-colors whitespace-nowrap ${
+              className={`flex items-center gap-1 transition-colors whitespace-nowrap ${
                 pathname === '/admin/customers'
-                  ? 'bg-amber-500 text-black font-semibold'
-                  : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700 hover:text-white'
+                  ? 'text-amber-400 font-bold'
+                  : 'text-neutral-300 hover:text-white'
               }`}
             >
-              Khách hàng
+              <span>👥</span>
+              <span>Khách hàng</span>
             </Link>
+          )}
+
+          {allowedMenus.includes('customers') && allowedMenus.includes('roles') && (
+            <span className="text-neutral-600">|</span>
           )}
 
           {allowedMenus.includes('roles') && (
             <Link 
               href="/admin/roles" 
-              className={`rounded px-2 py-1 text-[11px] sm:text-xs font-medium transition-colors whitespace-nowrap ${
+              className={`flex items-center gap-1 transition-colors whitespace-nowrap ${
                 pathname === '/admin/roles'
-                  ? 'bg-amber-500 text-black font-semibold'
-                  : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700 hover:text-white'
+                  ? 'text-amber-400 font-bold'
+                  : 'text-neutral-300 hover:text-white'
               }`}
             >
-              Phân quyền
+              <span>🔐</span>
+              <span>Phân quyền</span>
             </Link>
           )}
         </div>
@@ -239,10 +255,7 @@ export default function Navbar() {
           ) : null}
         </div>
 
-        {/* 2. KHỐI GIỮA: 
-            - Ô tìm kiếm Search trên Desktop (nằm tách biệt, co giãn cân đối)
-            - Tên user trên Mobile
-        */}
+        {/* 2. KHỐI GIỮA: Ô tìm kiếm / Tên user Mobile */}
         <div className="hidden md:flex md:flex-1 md:justify-center md:px-4 lg:px-8">
           <div className="w-full max-w-xs xl:max-w-md">
             <Suspense fallback={<SearchSkeleton />}>
@@ -263,7 +276,7 @@ export default function Navbar() {
           </div>
         )}
 
-        {/* 3. KHỐI PHẢI: Tên user (Desktop) + Nút Thoát + Account Icon + Giỏ hàng */}
+        {/* 3. KHỐI PHẢI */}
         <div className="flex shrink-0 items-center justify-end gap-1.5 sm:gap-3 text-xs">
           {customer ? (
             <div className="flex items-center gap-2">
@@ -292,7 +305,6 @@ export default function Navbar() {
               </Link>
             </>
           )}
-
           <Link
             href="/account"
             className="flex items-center justify-center rounded-md border border-neutral-200 p-1.5 sm:p-2 text-black transition-colors hover:bg-neutral-100 dark:border-neutral-800 dark:text-white dark:hover:bg-neutral-800"
