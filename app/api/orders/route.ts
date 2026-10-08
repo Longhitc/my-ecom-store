@@ -62,16 +62,28 @@ export async function POST(req: Request) {
 
     // Lưu từng sản phẩm vào bảng order_items
     for (const item of items) {
+      const itemId = `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const itemImageUrl = item.imageUrl || item.image_url || item.image || '';
+
+      let fullTitle = item.title || item.name || 'Sản phẩm';
+      if (item.style || item.size) {
+        const optionDetails = [item.style, item.size].filter(Boolean).join(' / ');
+        if (optionDetails && !fullTitle.includes(optionDetails)) {
+          fullTitle = `${fullTitle} (${optionDetails})`;
+        }
+      }
+
       await db.execute({
-        sql: `INSERT INTO order_items (order_id, product_id, product_title, price, quantity, image_url)
-              VALUES (?, ?, ?, ?, ?, ?)`,
+        sql: `INSERT INTO order_items (id, order_id, product_id, product_title, price, quantity, image_url)
+              VALUES (?, ?, ?, ?, ?, ?, ?)`,
         args: [
+          itemId,
           orderId,
-          item.id || item.product_id || '',
-          item.title || item.name || '',
+          item.id || item.productId || item.product_id || '',
+          fullTitle,
           Number(item.price) || 0,
           Number(item.quantity) || 1,
-          item.image || item.image_url || '',
+          itemImageUrl,
         ],
       });
     }
@@ -89,7 +101,7 @@ export async function POST(req: Request) {
   }
 }
 
-// 2. GET: Lấy danh sách đơn hàng cho Admin
+// 2. GET: Lấy danh sách đơn hàng cho Admin (ĐÃ JOIN LẤY KHÁCH HÀNG & NGƯỜI NHẬN BÀI BẢN)
 export async function GET() {
   const isAdmin = await checkAdminAuth();
   if (!isAdmin) {
@@ -99,17 +111,21 @@ export async function GET() {
   try {
     const ordersResult = await db.execute(`
       SELECT 
-        id, 
-        customer_id, 
-        total_price, 
-        status, 
-        full_name,
-        phone,
-        address_line,
-        city,
-        created_at
-      FROM orders
-      ORDER BY created_at DESC
+        o.id, 
+        o.customer_id, 
+        o.total_price, 
+        o.status, 
+        o.full_name AS recipient_name,
+        o.phone AS recipient_phone,
+        o.address_line,
+        o.city,
+        o.created_at,
+        c.name AS customer_name,
+        c.phone AS customer_phone,
+        c.email AS customer_email
+      FROM orders o
+      LEFT JOIN customers c ON o.customer_id = c.id
+      ORDER BY o.created_at DESC
     `);
 
     if (ordersResult.rows.length === 0) {
@@ -152,9 +168,13 @@ export async function GET() {
 
     const orders = ordersResult.rows.map((order: any) => ({
       id: order.id,
-      customer_name: order.full_name || 'Khách vãng lai',
-      customer_email: '',
-      customer_phone: order.phone || '',
+      // TÀI KHOẢN KHÁCH HÀNG
+      customer_name: order.customer_name || 'Tài khoản không tên',
+      customer_email: order.customer_email || '',
+      customer_phone: order.customer_phone || '',
+      // NGƯỜI NHẬN HÀNG (Võ Tuyết Vân)
+      recipient_name: order.recipient_name || 'Chưa có tên',
+      recipient_phone: order.recipient_phone || '',
       total_price: Number(order.total_price) || 0,
       status: order.status,
       shipping_address: [order.address_line, order.city].filter(Boolean).join(', '),
