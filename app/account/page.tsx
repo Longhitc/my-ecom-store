@@ -1,24 +1,42 @@
 "use client";
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
 import AddressSection from './AddressSection';
 
 type Order = {
   id: string;
   status: string;
-  createdAt: string;
-  total: number;
+  createdAt?: string;
+  created_at?: string;
+  date?: string;
+  created_date?: string;
+  total?: number;
+  total_amount?: number;
+  total_price?: number;
+  amount?: number;
 };
 
-export default function AccountPage() {
+function AccountContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const tabFromUrl = searchParams.get('tab') as 'info' | 'address' | 'orders' | null;
+
   const [customer, setCustomer] = useState<{ id: string; name: string; email: string; phone?: string } | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
-  const [activeTab, setActiveTab] = useState<'info' | 'address' | 'orders'>('info');
+  
+  // Khởi tạo activeTab trực tiếp từ URL (?tab=orders)
+  const [activeTab, setActiveTab] = useState<'info' | 'address' | 'orders'>(tabFromUrl || 'info');
   const [loading, setLoading] = useState(true);
   const [loadingOrders, setLoadingOrders] = useState(false);
+
+  // Tự động lắng nghe và nhảy Tab khi URL thay đổi
+  useEffect(() => {
+    if (tabFromUrl && ['info', 'address', 'orders'].includes(tabFromUrl)) {
+      setActiveTab(tabFromUrl);
+    }
+  }, [tabFromUrl]);
 
   // 1. Lấy thông tin user đăng nhập
   useEffect(() => {
@@ -55,6 +73,7 @@ export default function AccountPage() {
   const getStatusBadge = (status: string) => {
     switch (status?.toLowerCase()) {
       case 'pending':
+      case 'processing':
         return <span className="font-medium text-amber-500">Đang xử lý</span>;
       case 'completed':
         return <span className="font-medium text-green-500">Hoàn thành</span>;
@@ -65,68 +84,114 @@ export default function AccountPage() {
     }
   };
 
+  // Hàm định dạng ngày tháng hiển thị chuẩn dd/mm/yyyy hh:mm (24h)
+  const formatDate = (rawDate?: string) => {
+    if (!rawDate) return 'Chưa có ngày';
+    try {
+      const d = new Date(rawDate);
+      if (isNaN(d.getTime())) return rawDate;
+
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      const hours = String(d.getHours()).padStart(2, '0');
+      const minutes = String(d.getMinutes()).padStart(2, '0');
+
+      return `${day}/${month}/${year} ${hours}:${minutes}`;
+    } catch {
+      return rawDate;
+    }
+  };
+
   if (loading) {
-    return <div className="p-10 text-center text-neutral-500">Đang tải thông tin...</div>;
+    return <div className="p-10 text-center text-xs sm:text-sm text-neutral-500">Đang tải thông tin...</div>;
   }
 
   return (
-    <div className="mx-auto max-w-screen-xl px-4 py-8 md:py-12 text-black dark:text-white">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+    <div className="mx-auto max-w-screen-xl px-3 sm:px-4 py-4 sm:py-8 md:py-12 text-black dark:text-white">
+      <h1 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 md:hidden">Tài khoản cá nhân</h1>
+
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 md:gap-8">
         
-        {/* SIDEBAR BÊN TRÁI */}
-        <aside className="md:col-span-1 border-r border-neutral-200 dark:border-neutral-800 pr-6">
-          <h2 className="text-xl font-bold mb-4">Tài khoản cá nhân</h2>
-          <hr className="mb-4 border-neutral-200 dark:border-neutral-800" />
-          <nav className="space-y-3 text-sm">
+        {/* THANH MENU NAV */}
+        <aside className="md:col-span-1 md:border-r border-neutral-200 dark:border-neutral-800 md:pr-6">
+          <h2 className="hidden md:block text-xl font-bold mb-4">Tài khoản cá nhân</h2>
+          <hr className="hidden md:block mb-4 border-neutral-200 dark:border-neutral-800" />
+          
+          <nav className="flex md:flex-col overflow-x-auto no-scrollbar gap-2 md:space-y-3 text-xs sm:text-sm border-b md:border-b-0 border-neutral-200 dark:border-neutral-800 pb-2 md:pb-0">
             <button
-              onClick={() => setActiveTab('info')}
-              className={`flex items-center space-x-2 w-full text-left transition-colors ${
-                activeTab === 'info' ? 'text-blue-500 font-semibold' : 'text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white'
+              onClick={() => {
+                setActiveTab('info');
+                router.push('/account?tab=info');
+              }}
+              className={`flex items-center space-x-2 shrink-0 px-3 py-2 md:p-0 rounded-lg md:rounded-none md:w-full text-left transition-colors ${
+                activeTab === 'info' 
+                  ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-500 font-semibold md:bg-transparent md:dark:bg-transparent' 
+                  : 'text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white'
               }`}
             >
-              <span className={activeTab === 'info' ? 'text-blue-500' : 'text-neutral-400'}>▪</span>
+              <span className={`hidden md:inline ${activeTab === 'info' ? 'text-blue-500' : 'text-neutral-400'}`}>▪</span>
               <span>Thông tin tài khoản</span>
             </button>
 
             <button
-              onClick={() => setActiveTab('address')}
-              className={`flex items-center space-x-2 w-full text-left transition-colors ${
-                activeTab === 'address' ? 'text-blue-500 font-semibold' : 'text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white'
+              onClick={() => {
+                setActiveTab('address');
+                router.push('/account?tab=address');
+              }}
+              className={`flex items-center space-x-2 shrink-0 px-3 py-2 md:p-0 rounded-lg md:rounded-none md:w-full text-left transition-colors ${
+                activeTab === 'address' 
+                  ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-500 font-semibold md:bg-transparent md:dark:bg-transparent' 
+                  : 'text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white'
               }`}
             >
-              <span className={activeTab === 'address' ? 'text-blue-500' : 'text-neutral-400'}>▪</span>
+              <span className={`hidden md:inline ${activeTab === 'address' ? 'text-blue-500' : 'text-neutral-400'}`}>▪</span>
               <span>Địa chỉ nhận hàng</span>
             </button>
 
             <button
-              onClick={() => setActiveTab('orders')}
-              className={`flex items-center space-x-2 w-full text-left transition-colors ${
-                activeTab === 'orders' ? 'text-blue-500 font-semibold' : 'text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white'
+              onClick={() => {
+                setActiveTab('orders');
+                router.push('/account?tab=orders');
+              }}
+              className={`flex items-center space-x-2 shrink-0 px-3 py-2 md:p-0 rounded-lg md:rounded-none md:w-full text-left transition-colors ${
+                activeTab === 'orders' 
+                  ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-500 font-semibold md:bg-transparent md:dark:bg-transparent' 
+                  : 'text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white'
               }`}
             >
-              <span className={activeTab === 'orders' ? 'text-blue-500' : 'text-neutral-400'}>▪</span>
+              <span className={`hidden md:inline ${activeTab === 'orders' ? 'text-blue-500' : 'text-neutral-400'}`}>▪</span>
               <span>Đơn hàng</span>
             </button>
           </nav>
         </aside>
 
         {/* NỘI DUNG BÊN PHẢI */}
-        <main className="md:col-span-3 space-y-6">
+        <main className="md:col-span-3 space-y-4 sm:space-y-6">
           {/* TAB THÔNG TIN TÀI KHOẢN */}
           {activeTab === 'info' && (
-            <div>
-              <h1 className="text-2xl font-light tracking-wide pb-4 mb-6 border-b border-neutral-200 dark:border-neutral-800">
+            <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 p-4 sm:p-6 bg-white dark:bg-neutral-900/40">
+              <h1 className="text-lg sm:text-2xl font-semibold pb-3 mb-4 border-b border-neutral-200 dark:border-neutral-800">
                 Thông tin tài khoản
               </h1>
-              <div className="space-y-3 text-sm">
-                <p><strong>Họ và tên:</strong> {customer?.name || 'Chưa cập nhật'}</p>
-                <p><strong>Email:</strong> {customer?.email}</p>
-                <p><strong>Số điện thoại:</strong> {customer?.phone || 'Chưa cập nhật'}</p>
+              <div className="space-y-3 text-xs sm:text-sm">
+                <p className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                  <strong className="text-neutral-500 dark:text-neutral-400 sm:w-28">Họ và tên:</strong> 
+                  <span className="font-medium text-black dark:text-white">{customer?.name || 'Chưa cập nhật'}</span>
+                </p>
+                <p className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                  <strong className="text-neutral-500 dark:text-neutral-400 sm:w-28">Email:</strong> 
+                  <span className="font-medium text-black dark:text-white">{customer?.email}</span>
+                </p>
+                <p className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                  <strong className="text-neutral-500 dark:text-neutral-400 sm:w-28">Số điện thoại:</strong> 
+                  <span className="font-medium text-black dark:text-white">{customer?.phone || 'Chưa cập nhật'}</span>
+                </p>
               </div>
             </div>
           )}
 
-          {/* TAB ĐỊA CHỈ (Đã tích hợp AddressSection) */}
+          {/* TAB ĐỊA CHỈ */}
           {activeTab === 'address' && (
             <div>
               <AddressSection />
@@ -136,50 +201,71 @@ export default function AccountPage() {
           {/* TAB ĐƠN HÀNG */}
           {activeTab === 'orders' && (
             <div>
-              <h1 className="text-2xl font-light tracking-wide pb-4 mb-6 border-b border-neutral-200 dark:border-neutral-800">
-                Đơn hàng
+              <h1 className="text-lg sm:text-2xl font-semibold pb-3 mb-4 border-b border-neutral-200 dark:border-neutral-800">
+                Lịch sử đơn hàng
               </h1>
 
               {loadingOrders ? (
-                <p className="text-sm text-neutral-500">Đang tải danh sách đơn hàng...</p>
+                <p className="text-xs sm:text-sm text-neutral-500">Đang tải danh sách đơn hàng...</p>
               ) : orders.length > 0 ? (
-                <div className="space-y-6">
-                  {orders.map((order) => (
-                    <div key={order.id} className="border-b border-neutral-200 dark:border-neutral-800 pb-6">
-                      <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-lg font-normal text-neutral-800 dark:text-neutral-200">
-                          Mã đơn hàng: <span className="font-semibold text-sm">{order.id}</span>
-                        </h3>
-                        <Link
-                          href={`/account/orders/${order.id}`}
-                          className="px-3 py-1 text-sm border border-red-400 text-red-500 rounded hover:bg-red-50 dark:hover:bg-neutral-900 transition-colors"
-                        >
-                          Chi tiết đơn hàng
-                        </Link>
-                      </div>
+                <div className="space-y-4">
+                  {orders.map((order, idx) => {
+                    const orderTotal =
+                      order.total ??
+                      order.total_amount ??
+                      order.total_price ??
+                      order.amount ??
+                      0;
 
-                      <div className="bg-neutral-50 dark:bg-neutral-900/50 p-4 rounded space-y-2 text-sm text-neutral-600 dark:text-neutral-300">
-                        <p>
-                          Trạng thái đơn hàng: {getStatusBadge(order.status)}
-                        </p>
-                        <p>
-                          Ngày đặt hàng:{' '}
-                          <span className="text-black dark:text-white">
-                            {order.createdAt ? new Date(order.createdAt).toLocaleString('vi-VN') : 'Mới đặt'}
-                          </span>
-                        </p>
-                        <p>
-                          Tổng số tiền:{' '}
-                          <span className="font-semibold text-black dark:text-white">
-                            {Number(order.total || 0).toLocaleString('vi-VN')} đ
-                          </span>
-                        </p>
+                    const orderRawDate =
+                      order.createdAt ||
+                      order.created_at ||
+                      order.date ||
+                      order.created_date;
+
+                    const safeKey = order.id || `order-item-${idx}`;
+
+                    return (
+                      <div key={safeKey} className="rounded-xl border border-neutral-200 dark:border-neutral-800 p-3.5 sm:p-5 bg-white dark:bg-neutral-900/40 shadow-sm">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 mb-3 border-b border-neutral-100 dark:border-neutral-800/80">
+                          <div>
+                            <p className="text-xs text-neutral-500 dark:text-neutral-400">Mã đơn hàng</p>
+                            <h3 className="text-sm sm:text-base font-bold text-neutral-800 dark:text-neutral-100 font-mono">
+                              #{order.id}
+                            </h3>
+                          </div>
+                          <Link
+                            href={`/account/orders/${order.id}`}
+                            className="w-full sm:w-auto text-center px-3 py-1.5 text-xs font-semibold border border-red-500/30 text-red-500 rounded-lg hover:bg-red-50 dark:hover:bg-neutral-800 transition-colors"
+                          >
+                            Chi tiết đơn hàng
+                          </Link>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs text-neutral-600 dark:text-neutral-300">
+                          <div>
+                            <span className="text-neutral-400 block text-[11px]">Trạng thái</span>
+                            {getStatusBadge(order.status)}
+                          </div>
+                          <div>
+                            <span className="text-neutral-400 block text-[11px]">Ngày đặt hàng</span>
+                            <span className="font-medium text-black dark:text-white">
+                              {formatDate(orderRawDate)}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-neutral-400 block text-[11px]">Tổng số tiền</span>
+                            <span className="font-bold text-sm text-amber-600 dark:text-amber-400">
+                              {Number(orderTotal).toLocaleString('vi-VN')} đ
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
-                <p className="text-sm text-neutral-500">Bạn chưa có đơn hàng nào.</p>
+                <p className="text-xs sm:text-sm text-neutral-500">Bạn chưa có đơn hàng nào.</p>
               )}
             </div>
           )}
@@ -187,5 +273,12 @@ export default function AccountPage() {
 
       </div>
     </div>
+  );
+}
+export default function AccountPage() {
+  return (
+    <Suspense fallback={<div className="p-10 text-center text-xs sm:text-sm text-neutral-500">Đang tải...</div>}>
+      <AccountContent />
+    </Suspense>
   );
 }
