@@ -5,6 +5,16 @@ import { useCart } from 'context/CartContext';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
+interface Address {
+  id: string;
+  customer_id: string;
+  full_name: string;
+  phone: string;
+  address_line: string;
+  city: string;
+  is_default: number;
+}
+
 export default function CheckoutPage() {
   const { customer } = useAuth();
   const { cartItems, clearCart } = useCart();
@@ -13,81 +23,138 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
 
-  // Form State
-  const [addressData, setAddressData] = useState({
+  // Danh sách địa chỉ & địa chỉ đang chọn
+  const [addresses, setAddresses] = useState<Address[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState<string>('');
+
+  // Chế độ hiển thị: 'view' (danh sách), 'add' (thêm mới), 'edit' (sửa)
+  const [mode, setMode] = useState<'view' | 'add' | 'edit'>('view');
+  const [editingAddressId, setEditingAddressId] = useState<string | null>(null);
+
+  // Form State địa chỉ
+  const [addressForm, setAddressForm] = useState({
     fullName: '',
     phone: '',
     addressLine: '',
     city: '',
   });
 
-  // 1. Tải thông tin địa chỉ giao hàng
+  // 1. Tải danh sách địa chỉ giao hàng
   useEffect(() => {
     if (!customer?.id) {
       router.push('/login');
       return;
     }
 
-    async function fetchAddress() {
+    async function fetchAddresses() {
       try {
-        const addressRes = await fetch(`/api/address?userId=${customer?.id}`);
-        if (!addressRes.ok) {
-          setIsEditing(true);
-          return;
-        }
+        const res = await fetch(`/api/address?userId=${customer?.id}`);
+        if (res.ok) {
+          const data = await res.json();
+          const addressList: Address[] = data.addresses || [];
 
-        const addressDataRes = await addressRes.json();
+          setAddresses(addressList);
 
-        if (addressDataRes.address) {
-          setAddressData({
-            fullName: addressDataRes.address.full_name || '',
-            phone: addressDataRes.address.phone || '',
-            addressLine: addressDataRes.address.address_line || '',
-            city: addressDataRes.address.city || '',
-          });
-          setIsEditing(false);
+          if (addressList.length > 0) {
+            const defaultAddr = addressList.find((a: Address) => a.is_default === 1) || addressList[0];
+            setSelectedAddressId(defaultAddr?.id || '');
+            setMode('view');
+          } else {
+            setAddressForm({
+              fullName: customer?.name || '',
+              phone: customer?.phone || '',
+              addressLine: '',
+              city: '',
+            });
+            setMode('add');
+          }
         } else {
-          setAddressData((prev) => ({
-            ...prev,
-            fullName: customer?.name || '',
-            phone: customer?.phone || '',
-          }));
-          setIsEditing(true);
+          setMode('add');
         }
       } catch (err) {
-        console.error('Lỗi khi tải địa chỉ:', err);
-        setIsEditing(true);
+        console.error('Lỗi khi tải danh sách địa chỉ:', err);
+        setMode('add');
       } finally {
         setLoading(false);
       }
     }
 
-    fetchAddress();
+    fetchAddresses();
   }, [customer, router]);
 
-  // 2. Lưu thông tin địa chỉ
+  // Bật Form chỉnh sửa
+  const handleStartEdit = (e: React.MouseEvent, item: Address) => {
+    e.stopPropagation();
+    setEditingAddressId(item.id);
+    setAddressForm({
+      fullName: item.full_name,
+      phone: item.phone,
+      addressLine: item.address_line,
+      city: item.city,
+    });
+    setMode('edit');
+  };
+
+  // 2. Xử lý Thêm mới hoặc Cập nhật địa chỉ
   const handleSaveAddress = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!customer?.id) return;
 
     setSaving(true);
     try {
-      const res = await fetch('/api/address', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: customer.id,
-          ...addressData,
-        }),
-      });
+      if (mode === 'add') {
+        const res = await fetch('/api/address', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: customer.id,
+            ...addressForm,
+          }),
+        });
 
-      const data = await res.json();
-      if (res.ok) {
-        setIsEditing(false);
-      } else {
-        alert(data.error || 'Có lỗi xảy ra khi lưu địa chỉ');
+        const data = await res.json();
+        if (res.ok && data.newAddress) {
+          const createdAddr: Address = data.newAddress;
+          setAddresses((prev) => [createdAddr, ...prev]);
+          setSelectedAddressId(createdAddr.id);
+          setMode('view');
+          setAddressForm({ fullName: '', phone: '', addressLine: '', city: '' });
+        } else {
+          alert(data.error || 'Có lỗi xảy ra khi thêm địa chỉ');
+        }
+      } else if (mode === 'edit' && editingAddressId) {
+        const res = await fetch('/api/address', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            addressId: editingAddressId,
+            userId: customer.id,
+            ...addressForm,
+          }),
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+          setAddresses((prev) =>
+            prev.map((item) =>
+              item.id === editingAddressId
+                ? {
+                    ...item,
+                    full_name: addressForm.fullName,
+                    phone: addressForm.phone,
+                    address_line: addressForm.addressLine,
+                    city: addressForm.city,
+                  }
+                : item
+            )
+          );
+          setMode('view');
+          setEditingAddressId(null);
+          setAddressForm({ fullName: '', phone: '', addressLine: '', city: '' });
+        } else {
+          alert(data.error || 'Có lỗi xảy ra khi cập nhật địa chỉ');
+        }
       }
     } catch (err) {
       console.error(err);
@@ -97,10 +164,49 @@ export default function CheckoutPage() {
     }
   };
 
-  // 3. Xử lý Đặt hàng (Đã sửa logic bắt lỗi JSON)
+  // 3. Xử lý Thiết lập Địa chỉ Mặc định
+  const handleSetDefault = async (e: React.MouseEvent, addressId: string) => {
+    e.stopPropagation();
+    if (!customer?.id) return;
+
+    try {
+      const res = await fetch('/api/address', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: customer.id,
+          addressId: addressId,
+        }),
+      });
+
+      if (res.ok) {
+        setAddresses((prev) =>
+          prev.map((item) => ({
+            ...item,
+            is_default: item.id === addressId ? 1 : 0,
+          }))
+        );
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Có lỗi xảy ra khi cài đặt mặc định');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Không thể kết nối đến máy chủ.');
+    }
+  };
+
+  const activeAddress = addresses.find((a) => a.id === selectedAddressId);
+
+  // 4. Xử lý Đặt hàng
   const handleCheckout = async () => {
-    if (isEditing) {
-      alert('Vui lòng lưu địa chỉ giao hàng trước khi xác nhận đặt hàng!');
+    if (mode !== 'view') {
+      alert('Vui lòng hoàn tất lưu địa chỉ trước khi đặt hàng!');
+      return;
+    }
+
+    if (!activeAddress) {
+      alert('Vui lòng chọn địa chỉ giao hàng!');
       return;
     }
 
@@ -117,15 +223,14 @@ export default function CheckoutPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           customerId: customer?.id,
-          fullName: addressData.fullName,
-          phone: addressData.phone,
-          addressLine: addressData.addressLine,
-          city: addressData.city,
+          fullName: activeAddress.full_name,
+          phone: activeAddress.phone,
+          addressLine: activeAddress.address_line,
+          city: activeAddress.city,
           items: cartItems,
         }),
       });
 
-      // BƯỚC SỬA BẮT LỖI: Kiểm tra res.ok trước
       if (!res.ok) {
         const errorText = await res.text();
         let errorMessage = 'Không thể tạo đơn hàng.';
@@ -133,17 +238,13 @@ export default function CheckoutPage() {
           const errorJson = JSON.parse(errorText);
           errorMessage = errorJson.error || errorJson.message || errorMessage;
         } catch {
-          console.error('Lỗi từ Server (HTML/Text):', errorText);
+          console.error('Lỗi từ Server:', errorText);
         }
         throw new Error(errorMessage);
       }
 
-      // Chỉ parse JSON khi res.ok === true
       const data = await res.json();
-
-      // Dọn dẹp giỏ hàng
       clearCart();
-
       router.push(`/checkout/success?orderId=${data.orderId || data.id}`);
       router.refresh();
     } catch (error: any) {
@@ -168,30 +269,112 @@ export default function CheckoutPage() {
 
       {/* KHỐI ĐỊA CHỈ NHẬN HÀNG */}
       <div className="mb-6 rounded-xl border border-neutral-800 bg-neutral-900/50 p-6">
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-4 flex items-center justify-between border-b border-neutral-800 pb-3">
           <h2 className="text-lg font-semibold text-white">📍 Địa chỉ nhận hàng</h2>
-          {!isEditing && (
+          {addresses.length > 0 && mode === 'view' && (
             <button
               type="button"
-              onClick={() => setIsEditing(true)}
-              className="text-sm text-blue-500 hover:underline"
+              onClick={() => {
+                setAddressForm({
+                  fullName: customer?.name || '',
+                  phone: customer?.phone || '',
+                  addressLine: '',
+                  city: '',
+                });
+                setMode('add');
+              }}
+              className="text-sm font-medium text-blue-500 hover:text-blue-400 hover:underline"
             >
-              Thay đổi
+              + Thêm địa chỉ mới
+            </button>
+          )}
+          {mode !== 'view' && addresses.length > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                setMode('view');
+                setEditingAddressId(null);
+              }}
+              className="rounded-lg border border-blue-500/30 bg-blue-500/10 px-3 py-1.5 text-xs font-medium text-blue-400 transition-colors hover:bg-blue-500/20 hover:text-blue-300"
+            >
+              ← Hủy / Chọn địa chỉ sẵn có
             </button>
           )}
         </div>
 
-        {!isEditing ? (
-          <div className="rounded-lg bg-black p-4 text-sm text-neutral-300 border border-neutral-800">
-            <p className="font-bold text-white">
-              {addressData.fullName} - <span className="font-semibold text-blue-400">{addressData.phone}</span>
-            </p>
-            <p className="mt-1 text-neutral-300">
-              {addressData.addressLine}{addressData.city ? `, ${addressData.city}` : ''}
-            </p>
+        {/* CHẾ ĐỘ 1: XEM & CHỌN TRONG DANH SÁCH ĐỊA CHỈ SẴN CÓ */}
+        {mode === 'view' && (
+          <div className="space-y-3">
+            {addresses.map((item) => {
+              const isSelected = item.id === selectedAddressId;
+              return (
+                <div
+                  key={item.id}
+                  onClick={() => setSelectedAddressId(item.id)}
+                  className={`flex cursor-pointer items-center justify-between rounded-lg border p-4 transition-all ${
+                    isSelected
+                      ? 'border-blue-500 bg-neutral-950 text-white shadow-sm'
+                      : 'border-neutral-800 bg-black text-neutral-400 hover:border-neutral-700'
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <input
+                      type="radio"
+                      name="selected_address"
+                      checked={isSelected}
+                      onChange={() => setSelectedAddressId(item.id)}
+                      className="mt-1 h-4 w-4 accent-blue-600 cursor-pointer"
+                    />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-white">{item.full_name}</span>
+                        <span className="text-neutral-500">|</span>
+                        <span className="font-semibold text-blue-400">{item.phone}</span>
+                        {item.is_default === 1 && (
+                          <span className="ml-2 rounded bg-neutral-800 px-2 py-0.5 text-[10px] font-semibold text-blue-400 border border-neutral-700">
+                            Mặc định
+                          </span>
+                        )}
+                      </div>
+                      <p className="mt-1 text-sm text-neutral-300">
+                        {item.address_line}
+                        {item.city ? `, ${item.city}` : ''}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* THAO TÁC: ĐẶT MẶC ĐỊNH -> SỬA (Sắp xếp theo thứ tự nhất quán) */}
+                  <div className="flex items-center gap-2 shrink-0 ml-4">
+                    {item.is_default !== 1 && (
+                      <button
+                        type="button"
+                        onClick={(e) => handleSetDefault(e, item.id)}
+                        className="text-xs text-neutral-300 hover:text-blue-400 border border-neutral-700 rounded px-2.5 py-1 transition-colors bg-neutral-900 hover:bg-neutral-800"
+                      >
+                        Thiết lập mặc định
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={(e) => handleStartEdit(e, item)}
+                      className="text-xs text-blue-400 hover:underline border border-neutral-700 rounded px-2.5 py-1 bg-neutral-900 hover:bg-neutral-800"
+                    >
+                      Sửa
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        ) : (
+        )}
+
+        {/* CHẾ ĐỘ 2 & 3: FORM THÊM MỚI HOẶC CHỈNH SỬA ĐỊA CHỈ */}
+        {(mode === 'add' || mode === 'edit') && (
           <form onSubmit={handleSaveAddress} className="space-y-4">
+            <h3 className="text-sm font-semibold text-neutral-300 mb-2">
+              {mode === 'edit' ? '✏️ Chỉnh sửa địa chỉ' : '➕ Thêm địa chỉ mới'}
+            </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-medium text-neutral-400 mb-1">
@@ -201,8 +384,8 @@ export default function CheckoutPage() {
                   type="text"
                   required
                   placeholder="Ví dụ: Nguyễn Văn A"
-                  value={addressData.fullName}
-                  onChange={(e) => setAddressData({ ...addressData, fullName: e.target.value })}
+                  value={addressForm.fullName}
+                  onChange={(e) => setAddressForm({ ...addressForm, fullName: e.target.value })}
                   className="w-full rounded-lg border border-neutral-700 bg-black p-3 text-sm text-white focus:border-blue-500 focus:outline-none"
                 />
               </div>
@@ -215,8 +398,8 @@ export default function CheckoutPage() {
                   type="text"
                   required
                   placeholder="Ví dụ: 0912345678"
-                  value={addressData.phone}
-                  onChange={(e) => setAddressData({ ...addressData, phone: e.target.value })}
+                  value={addressForm.phone}
+                  onChange={(e) => setAddressForm({ ...addressForm, phone: e.target.value })}
                   className="w-full rounded-lg border border-neutral-700 bg-black p-3 text-sm text-white focus:border-blue-500 focus:outline-none"
                 />
               </div>
@@ -230,8 +413,8 @@ export default function CheckoutPage() {
                 type="text"
                 required
                 placeholder="Ví dụ: 123 Đường ABC, Phường 1"
-                value={addressData.addressLine}
-                onChange={(e) => setAddressData({ ...addressData, addressLine: e.target.value })}
+                value={addressForm.addressLine}
+                onChange={(e) => setAddressForm({ ...addressForm, addressLine: e.target.value })}
                 className="w-full rounded-lg border border-neutral-700 bg-black p-3 text-sm text-white focus:border-blue-500 focus:outline-none"
               />
             </div>
@@ -244,8 +427,8 @@ export default function CheckoutPage() {
                 type="text"
                 required
                 placeholder="Ví dụ: TP. Hồ Chí Minh"
-                value={addressData.city}
-                onChange={(e) => setAddressData({ ...addressData, city: e.target.value })}
+                value={addressForm.city}
+                onChange={(e) => setAddressForm({ ...addressForm, city: e.target.value })}
                 className="w-full rounded-lg border border-neutral-700 bg-black p-3 text-sm text-white focus:border-blue-500 focus:outline-none"
               />
             </div>
@@ -253,25 +436,32 @@ export default function CheckoutPage() {
             <button
               type="submit"
               disabled={saving}
-              className="w-full rounded-lg bg-neutral-800 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-neutral-700"
+              className="w-full rounded-lg bg-blue-600 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-500"
             >
-              {saving ? 'Đang lưu...' : 'Lưu địa chỉ giao hàng'}
+              {saving
+                ? 'Đang lưu...'
+                : mode === 'edit'
+                ? 'Cập nhật địa chỉ'
+                : 'Lưu và sử dụng địa chỉ này'}
             </button>
           </form>
         )}
       </div>
-
       <button
         type="button"
         onClick={handleCheckout}
-        disabled={isEditing || submitting}
+        disabled={mode !== 'view' || submitting}
         className={`w-full rounded-lg py-3.5 text-center font-bold text-white transition-colors ${
-          isEditing || submitting
+          mode !== 'view' || submitting
             ? 'bg-neutral-800 text-neutral-500 cursor-not-allowed'
             : 'bg-blue-600 hover:bg-blue-500'
         }`}
       >
-        {submitting ? 'Đang xử lý đặt hàng...' : isEditing ? 'Vui lòng lưu địa chỉ trước' : 'Xác nhận đặt hàng'}
+        {submitting
+          ? 'Đang xử lý đặt hàng...'
+          : mode !== 'view'
+          ? 'Vui lòng lưu địa chỉ trước'
+          : 'Xác nhận đặt hàng'}
       </button>
     </div>
   );
