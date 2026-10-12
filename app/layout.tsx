@@ -1,4 +1,5 @@
 import CartDrawer from "components/cart/CartDrawer";
+import InstallButton from "components/InstallButton";
 import Navbar from "components/layout/navbar";
 import PwaRegister from "components/PwaRegister";
 import { WelcomeToast } from "components/welcome-toast";
@@ -50,6 +51,7 @@ export default async function RootLayout({
 
             <CartDrawer />
             <PwaRegister />
+            <InstallButton />
           </CartProvider>
         </AuthProvider>
       </body>
