@@ -1,5 +1,6 @@
 import CartDrawer from "components/cart/CartDrawer";
 import Navbar from "components/layout/navbar";
+import PwaRegister from "components/PwaRegister";
 import { WelcomeToast } from "components/welcome-toast";
 import { AuthProvider } from 'context/auth-context';
 import { CartProvider } from 'context/CartContext';
@@ -9,6 +10,7 @@ import { baseUrl } from "lib/utils";
 import type { Metadata } from 'next';
 import { ReactNode } from "react";
 import { Toaster } from "sonner";
+// @ts-ignore
 import "./globals.css";
 
 const { SITE_NAME } = process.env;
@@ -23,6 +25,7 @@ export const metadata: Metadata = {
     follow: true,
     index: true,
   },
+  manifest: '/manifest.json',
 };
 
 export default async function RootLayout({
@@ -46,6 +49,7 @@ export default async function RootLayout({
             </main>
 
             <CartDrawer />
+            <PwaRegister />
           </CartProvider>
         </AuthProvider>
       </body>

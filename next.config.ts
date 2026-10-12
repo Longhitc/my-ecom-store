@@ -1,4 +1,16 @@
-export default {
+import type { NextConfig } from 'next';
+// @ts-ignore
+import withPWAInit from 'next-pwa';
+
+const withPWA = withPWAInit({
+  dest: 'public',
+  register: true,
+  skipWaiting: true,
+  disable: process.env.NODE_ENV === 'development',
+});
+
+const nextConfig: NextConfig = {
+  turbopack: {},
   experimental: {
     ppr: true,
     inlineCss: true,
@@ -20,3 +32,5 @@ export default {
     ],
   },
 };
+
+export default withPWA(nextConfig);
