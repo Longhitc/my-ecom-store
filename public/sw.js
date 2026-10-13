@@ -1,4 +1,10 @@
+const CACHE_NAME = 'depvaxinh-v1';
+const urlsToCache = ['/', '/manifest.json'];
+
 self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(urlsToCache))
+  );
   self.skipWaiting();
 });
 
@@ -7,13 +13,9 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Đảm bảo luôn trả về một Response hợp lệ, tránh bị lỗi undefined
   event.respondWith(
-    fetch(event.request).catch(() => {
-      return new Response('Network error / Offline fallback', {
-        status: 408,
-        headers: { 'Content-Type': 'text/plain' },
-      });
+    caches.match(event.request).then((response) => {
+      return response || fetch(event.request);
     })
   );
 });

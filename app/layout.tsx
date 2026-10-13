@@ -1,3 +1,4 @@
+import AutoPwaPopup from "components/AutoPwaPopup";
 import CartDrawer from "components/cart/CartDrawer";
 import Navbar from "components/layout/navbar";
 import PwaRegister from "components/PwaRegister";
@@ -50,6 +51,7 @@ export default async function RootLayout({
 
             <CartDrawer />
             <PwaRegister />
+            <AutoPwaPopup />
           </CartProvider>
         </AuthProvider>
       </body>

@@ -1,4 +1,3 @@
-import HomePwaBanner from 'components/HomePwaBanner';
 import { db } from 'lib/turso';
 import Link from 'next/link';
 
@@ -72,9 +71,6 @@ export default async function HomePage() {
 
         </div>
       </section>
-
-      {/* ----------------- PHẦN BANNER CÀI ĐẶT PWA ----------------- */}
-      <HomePwaBanner />
 
       {/* ----------------- PHẦN 2: SẢN PHẨM NỔI BẬT ----------------- */}
       <section>

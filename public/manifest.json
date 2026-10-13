@@ -1,6 +1,12 @@
 {
-  "name": "Đẹp & Xinh E-commerce",
+  "name": "Đẹp Và Xinh Shop",
   "short_name": "Đẹp & Xinh",
+  "description": "Cửa hàng thời trang và phụ kiện",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
   "icons": [
     {
       "src": "/icons/icon-192.png",
@@ -10,11 +16,8 @@
     {
       "src": "/icons/icon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
-  ],
-  "start_url": "/",
-  "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#ffffff"
+  ]
 }
