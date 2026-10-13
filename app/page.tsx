@@ -105,21 +105,22 @@ export default async function HomePage() {
                   </div>
                 </div>
 
-                {/* Thanh Tên + Giá hiển thị rõ ràng */}
-                <div className="flex items-center justify-between p-3">
-                  <span className="text-xs font-medium text-neutral-800 dark:text-white line-clamp-1 pr-1">
+                {/* Phần Tên (Dòng trên) và Giá (Dòng dưới nằm bên phải) */}
+                <div className="flex flex-col gap-1.5 p-3 text-left">
+                  <span className="text-xs font-medium text-neutral-800 dark:text-white line-clamp-1">
                     {product.title}
                   </span>
-                  <span className="rounded-full bg-blue-600 px-2.5 py-0.5 text-xs font-semibold text-white whitespace-nowrap">
-                    {product.price}
-                  </span>
+                  <div className="flex justify-end">
+                    <span className="inline-block rounded-full bg-blue-600 px-2.5 py-0.5 text-xs font-semibold text-white whitespace-nowrap">
+                      {product.price}
+                    </span>
+                  </div>
                 </div>
               </Link>
             ))}
           </div>
         )}
       </section>
-
     </div>
   );
 }
