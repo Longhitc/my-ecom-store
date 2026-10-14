@@ -23,7 +23,7 @@ export default function AdminChatPage() {
   const [replyText, setReplyText] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // 1. Tải danh sách các cuộc hội thoại
+  // 1. Tải danh sách các cuộc hội thoại và tự động đăng ký push notification ngầm
   const fetchConversations = async () => {
     try {
       const res = await fetch('/api/admin/chats');
@@ -43,8 +43,39 @@ export default function AdminChatPage() {
   useEffect(() => {
     fetchConversations();
     const interval = setInterval(fetchConversations, 4000); // Polling update danh sách mỗi 4s
+    
+    // Kích hoạt tự động đăng ký ngầm khi vào trang
+    autoRegisterPush();
+
     return () => clearInterval(interval);
   }, []);
+
+  // Hàm tự động đăng ký push ngầm xuống database Turso
+  const autoRegisterPush = async () => {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission === 'granted') {
+        const registration = await navigator.serviceWorker.ready;
+        const publicVapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYUH5NjhAE';
+        const convertedVapidKey = urlBase64ToUint8Array(publicVapidKey);
+
+        const subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: convertedVapidKey,
+        });
+
+        await fetch('/api/chat/push/subscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(subscription),
+        });
+        console.log('Auto registered push subscription to Turso successfully!');
+      }
+    } catch (err) {
+      console.error('Auto register push error:', err);
+    }
+  };
 
   // 2. Tải tin nhắn chi tiết của cuộc hội thoại đang chọn
   useEffect(() => {
@@ -74,7 +105,7 @@ export default function AdminChatPage() {
     }
   }, [messages.length]);
 
-  // Hàm yêu cầu quyền nhận Web Push Notification chuẩn hóa cho Android PWA
+  // Hàm yêu cầu quyền nhận Web Push Notification chuẩn hóa cho Android PWA (khi bấm nút thủ công)
   const handleEnablePush = async () => {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
       alert('Trình duyệt của bạn không hỗ trợ Web Push Notification.');
@@ -84,7 +115,7 @@ export default function AdminChatPage() {
     try {
       const permission = await Notification.requestPermission();
       if (permission !== 'granted') {
-        alert('Bạn đã từ chối quyền nhận thông báo.');
+        alert('Bạn đã từ chối hoặc chưa cấp quyền thông báo. Trạng thái: ' + permission);
         return;
       }
 
@@ -106,13 +137,13 @@ export default function AdminChatPage() {
 
       const data = await res.json();
       if (data.success) {
-        alert('Đã bật thông báo đẩy thành công trên thiết bị này!');
+        alert('Đã bật và cập nhật thông báo đẩy thành công lên Turso!');
       } else {
         alert('Lưu đăng ký thông báo thất bại: ' + (data.message || ''));
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Lỗi đăng ký push:', error);
-      alert('Lỗi khi bật thông báo trên thiết bị.');
+      alert('Lỗi khi bật thông báo: ' + (error?.message || error));
     }
   };
 
