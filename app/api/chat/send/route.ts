@@ -55,7 +55,7 @@ export async function POST(request: Request) {
       args: [messageId, conversationId, sender_type, message, vnTime],
     });
 
-    // Bắn thông báo đẩy an toàn (nếu lỗi cũng không làm sập API chat)
+    // Bắn thông báo đẩy an toàn (sử dụng Promise.all để chờ gửi xong trước khi serverless function kết thúc)
     if (sender_type === 'customer') {
       try {
         const subs = await db.execute(`SELECT * FROM push_subscriptions`);
@@ -65,19 +65,21 @@ export async function POST(request: Request) {
           url: '/admin/chats',
         });
 
-        subs.rows.forEach(async (sub: any) => {
-          try {
-            await webpush.sendNotification(
-              {
-                endpoint: sub.endpoint,
-                keys: { p256dh: sub.p256dh, auth: sub.auth },
-              },
-              payload
-            );
-          } catch (err) {
-            // Bỏ qua lỗi thiết bị cũ/hết hạn
-          }
-        });
+        await Promise.all(
+          subs.rows.map(async (sub: any) => {
+            try {
+              await webpush.sendNotification(
+                {
+                  endpoint: sub.endpoint,
+                  keys: { p256dh: sub.p256dh, auth: sub.auth },
+                },
+                payload
+              );
+            } catch (err) {
+              console.error('Lỗi gửi push cho thiết bị cũ/hết hạn:', err);
+            }
+          })
+        );
       } catch (pushErr) {
         console.error('Push notification background error:', pushErr);
       }
