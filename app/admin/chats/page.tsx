@@ -74,7 +74,7 @@ export default function AdminChatPage() {
     }
   }, [messages.length]);
 
-  // Hàm yêu cầu quyền nhận Web Push Notification
+  // Hàm yêu cầu quyền nhận Web Push Notification chuẩn hóa cho Android PWA
   const handleEnablePush = async () => {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
       alert('Trình duyệt của bạn không hỗ trợ Web Push Notification.');
@@ -90,7 +90,7 @@ export default function AdminChatPage() {
 
       const registration = await navigator.serviceWorker.ready;
       
-      const publicVapidKey = 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYUH5NjhAE';
+      const publicVapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYUH5NjhAE';
       const convertedVapidKey = urlBase64ToUint8Array(publicVapidKey);
 
       const subscription = await registration.pushManager.subscribe({
@@ -108,15 +108,15 @@ export default function AdminChatPage() {
       if (data.success) {
         alert('Đã bật thông báo đẩy thành công trên thiết bị này!');
       } else {
-        alert('Lưu đăng ký thông báo thất bại.');
+        alert('Lưu đăng ký thông báo thất bại: ' + (data.message || ''));
       }
     } catch (error) {
       console.error('Lỗi đăng ký push:', error);
-      alert('Lỗi khi bật thông báo.');
+      alert('Lỗi khi bật thông báo trên thiết bị.');
     }
   };
 
-  // Helper chuyển đổi VAPID key
+  // Helper chuyển đổi VAPID key an toàn
   function urlBase64ToUint8Array(base64String: string) {
     const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
     const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
@@ -246,6 +246,7 @@ export default function AdminChatPage() {
                 ))}
                 <div ref={messagesEndRef} />
               </div>
+
               {/* Ô nhập tin nhắn trả lời của Admin */}
               <form onSubmit={sendAdminMessage} className="p-3 bg-white dark:bg-neutral-900 border-t border-neutral-200 dark:border-neutral-800 flex items-center gap-2">
                 <input
