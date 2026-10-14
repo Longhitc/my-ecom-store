@@ -23,7 +23,7 @@ export default function AdminChatPage() {
   const [replyText, setReplyText] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // 1. Tải danh sách các cuộc hội thoại (Đã bỏ tự động bật push ngầm)
+  // 1. Tải danh sách các cuộc hội thoại
   const fetchConversations = async () => {
     try {
       const res = await fetch('/api/admin/chats');
@@ -41,7 +41,7 @@ export default function AdminChatPage() {
 
   useEffect(() => {
     fetchConversations();
-    const interval = setInterval(fetchConversations, 4000); // Polling update danh sách mỗi 4s
+    const interval = setInterval(fetchConversations, 4000);
     return () => clearInterval(interval);
   }, []);
 
@@ -62,39 +62,32 @@ export default function AdminChatPage() {
     };
 
     fetchMessages();
-    const interval = setInterval(fetchMessages, 3000); // Polling tin nhắn mỗi 3s
+    const interval = setInterval(fetchMessages, 3000);
     return () => clearInterval(interval);
   }, [selectedConvId]);
 
-  // Chỉ cuộn xuống khi có tin nhắn thay đổi số lượng (có tin mới)
   useEffect(() => {
     if (messages.length > 0) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages.length]);
 
-  // Hàm yêu cầu quyền nhận Web Push Notification khi bấm nút (có alert từng bước để debug)
+  // Hàm yêu cầu quyền nhận Web Push Notification khi bấm nút (Không còn alert rườm rà)
   const handleEnablePush = async () => {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      alert('Trình duyệt của bạn không hỗ trợ Web Push Notification.');
+      return;
+    }
+
     try {
-      alert('1. Đã bấm nút Bật thông báo!');
-
-      if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-        alert('Lỗi: Trình duyệt không hỗ trợ Push Notification.');
-        return;
-      }
-
       const permission = await Notification.requestPermission();
-      alert('2. Trạng thái quyền thông báo: ' + permission);
-      
       if (permission !== 'granted') {
         alert('Bạn chưa cấp quyền nhận thông báo!');
         return;
       }
 
-      alert('3. Đang chờ serviceWorker.ready...');
       const registration = await navigator.serviceWorker.ready;
-      alert('4. ServiceWorker sẵn sàng, đang đăng ký pushManager...');
-
+      
       const publicVapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYUH5NjhAE';
       const convertedVapidKey = urlBase64ToUint8Array(publicVapidKey);
 
@@ -103,8 +96,6 @@ export default function AdminChatPage() {
         applicationServerKey: convertedVapidKey,
       });
 
-      alert('5. Đã tạo subscription thành công, đang gửi lên API...');
-
       const res = await fetch('/api/chat/push/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -112,20 +103,18 @@ export default function AdminChatPage() {
       });
 
       const data = await res.json();
-      alert('6. Phản hồi từ server: ' + JSON.stringify(data));
-
       if (data.success) {
-        alert('Đã bật và cập nhật Turso thành công!');
+        alert('✅ Đã bật thông báo đẩy thành công!');
       } else {
-        alert('Lưu thất bại: ' + (data.message || ''));
+        alert('Lưu đăng ký thất bại: ' + (data.message || ''));
       }
     } catch (error: any) {
-      alert('❌ BẮT ĐƯỢC LỖI: ' + (error?.message || JSON.stringify(error)));
-      console.error('Lỗi chi tiết:', error);
+      console.error('Lỗi đăng ký push:', error);
+      alert('Lỗi khi bật thông báo: ' + (error?.message || error));
     }
   };
 
-  // Helper chuyển đổi VAPID key an toàn
+  // Helper chuyển đổi VAPID key
   function urlBase64ToUint8Array(base64String: string) {
     const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
     const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
@@ -224,7 +213,6 @@ export default function AdminChatPage() {
         <div className="col-span-2 flex flex-col bg-neutral-50/50 dark:bg-neutral-950/50">
           {selectedConvId ? (
             <>
-              {/* Header chat */}
               <div className="p-4 border-b border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 font-semibold text-sm flex items-center justify-between">
                 <span>Đang trò chuyện với khách hàng</span>
                 <span className="text-xs text-green-500 font-normal flex items-center gap-1">
@@ -232,7 +220,6 @@ export default function AdminChatPage() {
                 </span>
               </div>
 
-              {/* Lịch sử tin nhắn */}
               <div className="flex-1 overflow-y-auto p-4 space-y-3">
                 {messages.map((msg) => (
                   <div
@@ -256,7 +243,6 @@ export default function AdminChatPage() {
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Ô nhập tin nhắn trả lời của Admin */}
               <form onSubmit={sendAdminMessage} className="p-3 bg-white dark:bg-neutral-900 border-t border-neutral-200 dark:border-neutral-800 flex items-center gap-2">
                 <input
                   type="text"

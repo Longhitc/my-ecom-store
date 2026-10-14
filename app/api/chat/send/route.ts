@@ -55,10 +55,13 @@ export async function POST(request: Request) {
       args: [messageId, conversationId, sender_type, message, vnTime],
     });
 
-    // Bắn thông báo đẩy an toàn (sử dụng Promise.all để chờ gửi xong trước khi serverless function kết thúc)
+    // Kích hoạt bắn thông báo đẩy nếu là tin nhắn từ khách (để báo cho Admin)
+    // Hoặc bạn có thể bỏ điều kiện `sender_type === 'customer'` nếu muốn test mọi tin nhắn đều bắn push
     if (sender_type === 'customer') {
       try {
         const subs = await db.execute(`SELECT * FROM push_subscriptions`);
+        console.log(`Tìm thấy ${subs.rows.length} thiết bị đăng ký nhận push trong Turso.`);
+
         const payload = JSON.stringify({
           title: `💬 Tin nhắn mới từ ${customer_name || 'Khách hàng'}`,
           body: message,
@@ -75,8 +78,10 @@ export async function POST(request: Request) {
                 },
                 payload
               );
-            } catch (err) {
-              console.error('Lỗi gửi push cho thiết bị cũ/hết hạn:', err);
+              console.log('Đã bắn push thành công đến endpoint:', sub.endpoint.slice(0, 30) + '...');
+            } catch (err: any) {
+              console.error('Lỗi gửi push cho thiết bị:', err?.body || err);
+              // Nếu thiết bị hủy đăng ký (lỗi 410 hoặc 404), có thể chủ động xóa khỏi Turso ở đây nếu muốn
             }
           })
         );
