@@ -1,5 +1,6 @@
 import AutoPwaPopup from "components/AutoPwaPopup";
 import CartDrawer from "components/cart/CartDrawer";
+import ChatWidget from "components/ChatWidget";
 import Navbar from "components/layout/navbar";
 import PwaRegister from "components/PwaRegister";
 import { WelcomeToast } from "components/welcome-toast";
@@ -50,6 +51,7 @@ export default async function RootLayout({
             </main>
 
             <CartDrawer />
+            <ChatWidget />
             <PwaRegister />
             <AutoPwaPopup />
           </CartProvider>

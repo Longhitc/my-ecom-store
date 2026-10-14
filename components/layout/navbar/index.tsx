@@ -27,20 +27,20 @@ function AdminMenu({ user }: { user: any }) {
 
   return (
     <div className="w-full border-b border-neutral-800 bg-neutral-900 px-2 py-1.5 text-xs text-white">
-      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-1.5 sm:gap-2">
+      <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-1.5 sm:flex-row sm:items-center">
         
-        {/* Nhãn Quản trị */}
+        {/* Dòng 1: Nhãn Quản trị nằm bên trái */}
         <div className="flex shrink-0 items-center gap-1 font-bold text-amber-400 text-[11px] sm:text-xs">
           <span>🛠️</span>
           <span>Quản trị : {user?.admin?.role_name || user?.admin?.roleName || 'Admin'}</span>
         </div>
 
-        {/* Dãy Menu liền khối có dấu gạch đứng | phân cách */}
-        <div className="flex items-center gap-1.5 sm:gap-2 rounded-lg bg-neutral-800/60 px-2.5 py-1 text-[11px] sm:text-xs font-medium overflow-x-auto">
+        {/* Dòng 2: Dãy Menu lọt gọn trong 1 dòng trên Mobile */}
+        <div className="flex items-center gap-1 sm:gap-1.5 rounded-lg bg-neutral-800/60 px-2 py-1 text-[10px] sm:text-xs font-medium w-full sm:w-auto justify-between sm:justify-start overflow-x-auto">
           {allowedMenus.includes('orders') && (
             <Link 
               href="/admin/orders" 
-              className={`flex items-center gap-1 transition-colors whitespace-nowrap ${
+              className={`flex items-center gap-0.5 sm:gap-1 transition-colors whitespace-nowrap ${
                 pathname === '/admin/orders'
                   ? 'text-amber-400 font-bold'
                   : 'text-neutral-300 hover:text-white'
@@ -58,7 +58,7 @@ function AdminMenu({ user }: { user: any }) {
           {allowedMenus.includes('products') && (
             <Link 
               href="/admin/products" 
-              className={`flex items-center gap-1 transition-colors whitespace-nowrap ${
+              className={`flex items-center gap-0.5 sm:gap-1 transition-colors whitespace-nowrap ${
                 pathname === '/admin/products'
                   ? 'text-amber-400 font-bold'
                   : 'text-neutral-300 hover:text-white'
@@ -76,7 +76,7 @@ function AdminMenu({ user }: { user: any }) {
           {allowedMenus.includes('customers') && (
             <Link 
               href="/admin/customers" 
-              className={`flex items-center gap-1 transition-colors whitespace-nowrap ${
+              className={`flex items-center gap-0.5 sm:gap-1 transition-colors whitespace-nowrap ${
                 pathname === '/admin/customers'
                   ? 'text-amber-400 font-bold'
                   : 'text-neutral-300 hover:text-white'
@@ -94,7 +94,7 @@ function AdminMenu({ user }: { user: any }) {
           {allowedMenus.includes('roles') && (
             <Link 
               href="/admin/roles" 
-              className={`flex items-center gap-1 transition-colors whitespace-nowrap ${
+              className={`flex items-center gap-0.5 sm:gap-1 transition-colors whitespace-nowrap ${
                 pathname === '/admin/roles'
                   ? 'text-amber-400 font-bold'
                   : 'text-neutral-300 hover:text-white'
@@ -104,6 +104,20 @@ function AdminMenu({ user }: { user: any }) {
               <span>Phân quyền</span>
             </Link>
           )}
+
+          {/* Tab Chat ngắn gọn */}
+          <span className="text-neutral-600">|</span>
+          <Link 
+            href="/admin/chats" 
+            className={`flex items-center gap-0.5 sm:gap-1 transition-colors whitespace-nowrap ${
+              pathname === '/admin/chats'
+                ? 'text-amber-400 font-bold'
+                : 'text-neutral-300 hover:text-white'
+            }`}
+          >
+            <span>💬</span>
+            <span>Chat</span>
+          </Link>
         </div>
 
       </div>
