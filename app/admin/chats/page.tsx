@@ -88,7 +88,7 @@ export default function AdminChatPage() {
 
       const registration = await navigator.serviceWorker.ready;
       
-      const publicVapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYUH5NjhAE';
+      const publicVapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || 'BCbdu5W4Vo0IKzmihkWQORT_2woFw2gk-6PDE_d6ljoiMFxhMzD6Nv5mVdH5NJ94pYaoI4cedNPphzsT3rlsf0k';
       const convertedVapidKey = urlBase64ToUint8Array(publicVapidKey);
 
       const subscription = await registration.pushManager.subscribe({
