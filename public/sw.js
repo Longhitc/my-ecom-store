@@ -20,17 +20,25 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// === BỔ SUNG PHẦN XỬ LÝ WEB PUSH NOTIFICATION DƯỚI NÀY ===
-
-// Lắng nghe sự kiện push gửi từ server xuống
+// === XỬ LÝ WEB PUSH NOTIFICATION NỀN (BACKGROUND) ===
 self.addEventListener('push', (event) => {
-  let data = { title: 'Thông báo mới', body: 'Bạn có tin nhắn mới từ shop' };
+  let data = { 
+    title: '💬 Có tin nhắn mới từ khách hàng', 
+    body: 'Bạn có một tin nhắn mới cần phản hồi.', 
+    url: '/admin/chats' 
+  };
   
   if (event.data) {
     try {
-      data = event.data.json();
+      const jsonDat = event.data.json();
+      data.title = jsonDat.title || data.title;
+      data.body = jsonDat.body || data.body;
+      data.url = jsonDat.url || data.url;
     } catch (e) {
-      data.body = event.data.text();
+      const textDat = event.data.text();
+      if (textDat) {
+        data.body = textDat;
+      }
     }
   }
 
@@ -38,8 +46,11 @@ self.addEventListener('push', (event) => {
     body: data.body,
     icon: '/icons/icon-192.png',
     badge: '/icons/icon-192.png',
-    vibrate: [200, 100, 200],
-    data: { url: data.url || '/' }
+    vibrate: [300, 100, 300, 100, 300], // Rung mạnh để đánh thức thiết bị
+    tag: 'admin-chat-notification', // Gộp nhóm thông báo tránh tràn màn hình
+    renotify: true,
+    requireInteraction: true, // Giữ thông báo trên màn hình khóa cho đến khi bấm vào
+    data: { url: data.url }
   };
 
   event.waitUntil(
@@ -47,20 +58,18 @@ self.addEventListener('push', (event) => {
   );
 });
 
-// Lắng nghe sự kiện người dùng bấm vào thông báo trên điện thoại/máy tính
+// Xử lý khi bấm vào thông báo
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const targetUrl = event.notification.data?.url || '/';
+  const targetUrl = event.notification.data?.url || '/admin/chats';
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
-      // Nếu đã mở sẵn tab web thì focus lại tab đó
       for (let client of windowClients) {
-        if (client.url === targetUrl && 'focus' in client) {
+        if (client.url.includes('/admin/chats') && 'focus' in client) {
           return client.focus();
         }
       }
-      // Nếu chưa mở thì mở tab mới dẫn tới trang chat/admin
       if (clients.openWindow) {
         return clients.openWindow(targetUrl);
       }
