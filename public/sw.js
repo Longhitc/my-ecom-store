@@ -13,9 +13,18 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  // Chỉ xử lý các phương thức GET
+  if (event.request.method !== 'GET') return;
+
   event.respondWith(
     caches.match(event.request).then((response) => {
-      return response || fetch(event.request);
+      return response || fetch(event.request).catch(() => {
+        // Fallback an toàn khi offline hoặc lỗi kết nối mạng cục bộ
+        return new Response('Network error happened', {
+          status: 408,
+          headers: { 'Content-Type': 'text/plain' },
+        });
+      });
     })
   );
 });

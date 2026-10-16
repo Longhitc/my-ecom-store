@@ -1,7 +1,7 @@
 import { db } from 'lib/turso';
 import { NextResponse } from 'next/server';
 
-// GET: Lấy danh sách tất cả các cuộc hội thoại (sắp xếp theo tin nhắn mới nhất)
+// GET: Lấy danh sách tất cả các cuộc hội thoại hoặc chi tiết tin nhắn
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -28,5 +28,34 @@ export async function GET(request: Request) {
   } catch (error) {
     console.error('Lỗi API admin get chats:', error);
     return NextResponse.json({ success: false, message: 'Lỗi server' }, { status: 500 });
+  }
+}
+
+// DELETE: Xóa cuộc hội thoại và toàn bộ tin nhắn liên quan
+export async function DELETE(request: Request) {
+  try {
+    const body = await request.json();
+    const { conversation_id } = body;
+
+    if (!conversation_id) {
+      return NextResponse.json({ success: false, message: 'Thiếu conversation_id' }, { status: 400 });
+    }
+
+    // Xóa tin nhắn thuộc hội thoại trước để tránh ràng buộc khóa ngoại
+    await db.execute({
+      sql: `DELETE FROM chat_messages WHERE conversation_id = ?`,
+      args: [conversation_id],
+    });
+
+    // Xóa hội thoại chính
+    await db.execute({
+      sql: `DELETE FROM chat_conversations WHERE id = ?`,
+      args: [conversation_id],
+    });
+
+    return NextResponse.json({ success: true, message: 'Đã xóa hội thoại thành công' });
+  } catch (error) {
+    console.error('Lỗi API xóa hội thoại:', error);
+    return NextResponse.json({ success: false, message: 'Lỗi server khi xóa' }, { status: 500 });
   }
 }
