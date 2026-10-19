@@ -1,5 +1,6 @@
 'use client';
 
+import { useAuth } from '@/context/auth-context';
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
@@ -17,11 +18,16 @@ export default function ChatWidget() {
   const [inputMessage, setInputMessage] = useState('');
   const [guestId, setGuestId] = useState<string>('');
   const [unreadCount, setUnreadCount] = useState<number>(0);
-  const [hasAdminBar, setHasAdminBar] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const pathname = usePathname();
+  const auth = useAuth() as any;
 
+  // Lấy đối tượng customer / user từ AuthContext
+  const currentUser = auth?.customer || auth?.user;
+  const isAdmin = currentUser?.is_admin === true || Number(currentUser?.is_admin) === 1 || currentUser?.role === 'admin';
+
+  // Đánh dấu component đã mount trên client để tránh lỗi Hydration SSR
   useEffect(() => {
     setIsMounted(true);
     let storedId = localStorage.getItem('chat_guest_id');
@@ -30,23 +36,9 @@ export default function ChatWidget() {
       localStorage.setItem('chat_guest_id', storedId);
     }
     setGuestId(storedId);
-
-    // Kiểm tra xem trên giao diện có đang hiện thanh công cụ Quản trị / nút Thoát của Admin hay không
-    const checkAdminElement = () => {
-      const adminTextCheck = document.body.innerText.includes('Quản trị : Admin') || 
-                             document.body.innerText.includes('Quản trị: Admin') ||
-                             Boolean(document.querySelector('a[href*="admin"]')) ||
-                             localStorage.getItem('role') === 'admin';
-      setHasAdminBar(Boolean(adminTextCheck));
-    };
-
-    checkAdminElement();
-    // Lắng nghe thay đổi DOM phòng khi chuyển trạng thái đăng nhập
-    const interval = setInterval(checkAdminElement, 1000);
-    return () => clearInterval(interval);
   }, []);
 
-  // Kiểm tra số tin nhắn chưa đọc từ admin
+  // Kiểm tra số tin nhắn chưa đọc từ admin một lần duy nhất khi có guestId
   useEffect(() => {
     if (!guestId) return;
 
@@ -65,6 +57,7 @@ export default function ChatWidget() {
     checkUnread();
   }, [guestId]);
 
+  // Tải lịch sử tin nhắn khi mở khung chat
   const fetchMessages = async (currentGuestId: string) => {
     try {
       const res = await fetch(`/api/chat/messages?guest_id=${currentGuestId}`);
@@ -130,12 +123,14 @@ export default function ChatWidget() {
     }
   };
 
+  // Tránh render lệch SSR bằng cách đợi mount xong
   if (!isMounted) {
     return null;
   }
 
-  // Ẩn ngay lập tức nếu đang ở đường dẫn /admin HOẶC trên giao diện đang hiển thị thanh công cụ Quản trị của Admin
-  if (pathname?.startsWith('/admin') || hasAdminBar) {
+  // Nếu đang ở route /admin HOẶC tài khoản hiện tại là Admin -> Ẩn nút chat ngay lập tức
+  const isAdminRoute = pathname?.startsWith('/admin');
+  if (isAdminRoute || isAdmin) {
     return null;
   }
 
@@ -189,7 +184,7 @@ export default function ChatWidget() {
                   className={`flex ${msg.sender_type === 'customer' ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
-                    className={`max-w-[75%]Ron rounded-2xl px-3.5 py-2 text-xs shadow-sm ${
+                    className={`max-w-[75%] rounded-2xl px-3.5 py-2 text-xs shadow-sm ${
                       msg.sender_type === 'customer'
                         ? 'bg-blue-600 text-white rounded-br-none'
                         : 'bg-white text-neutral-800 border border-neutral-200 dark:bg-neutral-800 dark:text-white dark:border-neutral-700 rounded-bl-none'
@@ -202,7 +197,6 @@ export default function ChatWidget() {
             )}
             <div ref={messagesEndRef} />
           </div>
-
           {/* Ô nhập tin nhắn */}
           <form onSubmit={handleSendMessage} className="flex items-center border-t border-neutral-200 p-2 bg-white dark:bg-neutral-900 rounded-b-2xl dark:border-neutral-800">
             <input
