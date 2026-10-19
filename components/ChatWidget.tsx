@@ -123,14 +123,19 @@ export default function ChatWidget() {
     }
   };
 
-  // Tránh render lệch SSR bằng cách đợi mount xong
-  if (!isMounted) {
-    return null;
-  }
-
-  // Nếu đang ở route /admin HOẶC tài khoản hiện tại là Admin -> Ẩn nút chat ngay lập tức
+  // Kiểm tra đường dẫn admin hoặc kiểm tra nhanh trên trình duyệt
   const isAdminRoute = pathname?.startsWith('/admin');
-  if (isAdminRoute || isAdmin) {
+  
+  // Trên production, kiểm tra thêm xem có dấu hiệu admin trong storage/cookie không để ẩn ngay lập tức từ frame đầu
+  const hasAdminCookieOrStorage = 
+    typeof window !== 'undefined' && (
+      document.cookie.includes('is_admin=true') || 
+      document.cookie.includes('role=admin') ||
+      localStorage.getItem('role') === 'admin'
+    );
+
+  // Nếu chưa mount xong, hoặc đang ở trang admin, hoặc là tài khoản admin -> Không render gì cả
+  if (!isMounted || isAdminRoute || isAdmin || hasAdminCookieOrStorage) {
     return null;
   }
 
@@ -197,6 +202,7 @@ export default function ChatWidget() {
             )}
             <div ref={messagesEndRef} />
           </div>
+
           {/* Ô nhập tin nhắn */}
           <form onSubmit={handleSendMessage} className="flex items-center border-t border-neutral-200 p-2 bg-white dark:bg-neutral-900 rounded-b-2xl dark:border-neutral-800">
             <input
