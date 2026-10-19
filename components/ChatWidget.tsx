@@ -21,11 +21,11 @@ export default function ChatWidget() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const pathname = usePathname();
-  const auth = useAuth() as any;
+  const { customer } = useAuth() as any;
 
-  // Lấy đối tượng customer / user từ AuthContext
-  const currentUser = auth?.customer || auth?.user;
-  const isAdmin = currentUser?.is_admin === true || Number(currentUser?.is_admin) === 1 || currentUser?.role === 'admin';
+  // Kiểm tra quyền Admin đồng bộ chuẩn xác giống hệt Navbar
+  const isAdmin = customer?.is_admin === true || Number(customer?.is_admin) === 1;
+  const isAdminRoute = pathname?.startsWith('/admin');
 
   // Đánh dấu component đã mount trên client để tránh lỗi Hydration SSR
   useEffect(() => {
@@ -38,9 +38,9 @@ export default function ChatWidget() {
     setGuestId(storedId);
   }, []);
 
-  // Kiểm tra số tin nhắn chưa đọc từ admin một lần duy nhất khi có guestId
+  // Kiểm tra số tin nhắn chưa đọc từ admin
   useEffect(() => {
-    if (!guestId) return;
+    if (!guestId || isAdmin || isAdminRoute) return;
 
     const checkUnread = async () => {
       try {
@@ -55,9 +55,8 @@ export default function ChatWidget() {
     };
 
     checkUnread();
-  }, [guestId]);
+  }, [guestId, isAdmin, isAdminRoute]);
 
-  // Tải lịch sử tin nhắn khi mở khung chat
   const fetchMessages = async (currentGuestId: string) => {
     try {
       const res = await fetch(`/api/chat/messages?guest_id=${currentGuestId}`);
@@ -123,25 +122,13 @@ export default function ChatWidget() {
     }
   };
 
-  // Kiểm tra đường dẫn admin hoặc kiểm tra nhanh trên trình duyệt
-  const isAdminRoute = pathname?.startsWith('/admin');
-  
-  // Trên production, kiểm tra thêm xem có dấu hiệu admin trong storage/cookie không để ẩn ngay lập tức từ frame đầu
-  const hasAdminCookieOrStorage = 
-    typeof window !== 'undefined' && (
-      document.cookie.includes('is_admin=true') || 
-      document.cookie.includes('role=admin') ||
-      localStorage.getItem('role') === 'admin'
-    );
-
-  // Nếu chưa mount xong, hoặc đang ở trang admin, hoặc là tài khoản admin -> Không render gì cả
-  if (!isMounted || isAdminRoute || isAdmin || hasAdminCookieOrStorage) {
+  // Nếu đang ở trang admin HOẶC tài khoản là Admin thì ẩn hoàn toàn ngay lập tức
+  if (!isMounted || isAdminRoute || isAdmin) {
     return null;
   }
 
   return (
     <div className="fixed bottom-20 right-4 z-[999] md:bottom-5 md:right-5">
-      {/* Nút Bong bóng chat nổi kèm Huy hiệu số lượng */}
       {!isOpen && (
         <button
           onClick={handleOpenChat}
@@ -159,10 +146,8 @@ export default function ChatWidget() {
         </button>
       )}
 
-      {/* Khung chat Box */}
       {isOpen && (
         <div className="flex h-[450px] w-[calc(100vw-32px)] sm:w-[350px] flex-col rounded-2xl border border-neutral-200 bg-white shadow-2xl dark:border-neutral-800 dark:bg-neutral-900">
-          {/* Header */}
           <div className="flex items-center justify-between border-b border-neutral-200 bg-blue-600 px-4 py-3 rounded-t-2xl text-white">
             <div className="flex items-center space-x-2">
               <span className="h-3 w-3 rounded-full bg-green-400 animate-pulse"></span>
@@ -175,8 +160,6 @@ export default function ChatWidget() {
               &times;
             </button>
           </div>
-
-          {/* Danh sách tin nhắn */}
           <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-neutral-50 dark:bg-neutral-950 text-sm">
             {messages.length === 0 ? (
               <div className="text-center text-neutral-400 mt-16 text-xs">
@@ -203,7 +186,6 @@ export default function ChatWidget() {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Ô nhập tin nhắn */}
           <form onSubmit={handleSendMessage} className="flex items-center border-t border-neutral-200 p-2 bg-white dark:bg-neutral-900 rounded-b-2xl dark:border-neutral-800">
             <input
               type="text"
