@@ -21,13 +21,13 @@ export default function ChatWidget() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const pathname = usePathname();
-  const { customer } = useAuth() as any;
+  const auth = useAuth() as any;
+  const customer = auth?.customer || auth?.user;
 
-  // Kiểm tra quyền Admin đồng bộ chuẩn xác giống hệt Navbar
-  const isAdmin = customer?.is_admin === true || Number(customer?.is_admin) === 1;
+  // Lấy trực tiếp cờ is_admin từ API/database trả về qua customer object
+  const isAdmin = Number(customer?.is_admin) === 1 || customer?.is_admin === true;
   const isAdminRoute = pathname?.startsWith('/admin');
 
-  // Đánh dấu component đã mount trên client để tránh lỗi Hydration SSR
   useEffect(() => {
     setIsMounted(true);
     let storedId = localStorage.getItem('chat_guest_id');
@@ -122,7 +122,7 @@ export default function ChatWidget() {
     }
   };
 
-  // Nếu đang ở trang admin HOẶC tài khoản là Admin thì ẩn hoàn toàn ngay lập tức
+  // Nếu đang ở route /admin HOẶC customer có is_admin == 1 -> Trả về null ẩn ngay lập tức
   if (!isMounted || isAdminRoute || isAdmin) {
     return null;
   }
@@ -160,6 +160,7 @@ export default function ChatWidget() {
               &times;
             </button>
           </div>
+
           <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-neutral-50 dark:bg-neutral-950 text-sm">
             {messages.length === 0 ? (
               <div className="text-center text-neutral-400 mt-16 text-xs">
@@ -185,7 +186,6 @@ export default function ChatWidget() {
             )}
             <div ref={messagesEndRef} />
           </div>
-
           <form onSubmit={handleSendMessage} className="flex items-center border-t border-neutral-200 p-2 bg-white dark:bg-neutral-900 rounded-b-2xl dark:border-neutral-800">
             <input
               type="text"
