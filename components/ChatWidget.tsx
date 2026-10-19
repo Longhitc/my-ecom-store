@@ -1,5 +1,6 @@
 'use client';
 
+import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
 interface Message {
@@ -10,32 +11,50 @@ interface Message {
 }
 
 export default function ChatWidget() {
+  const [isMounted, setIsMounted] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [guestId, setGuestId] = useState<string>('');
   const [unreadCount, setUnreadCount] = useState<number>(0);
+  const [hasAdminBar, setHasAdminBar] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Khởi tạo hoặc lấy guest_session_id từ localStorage khi load trang
+  const pathname = usePathname();
+
   useEffect(() => {
+    setIsMounted(true);
     let storedId = localStorage.getItem('chat_guest_id');
     if (!storedId) {
       storedId = 'guest_' + Math.random().toString(36).substring(2, 15) + Date.now();
       localStorage.setItem('chat_guest_id', storedId);
     }
     setGuestId(storedId);
+
+    // Kiểm tra xem trên giao diện có đang hiện thanh công cụ Quản trị / nút Thoát của Admin hay không
+    const checkAdminElement = () => {
+      const adminTextCheck = document.body.innerText.includes('Quản trị : Admin') || 
+                             document.body.innerText.includes('Quản trị: Admin') ||
+                             Boolean(document.querySelector('a[href*="admin"]')) ||
+                             localStorage.getItem('role') === 'admin';
+      setHasAdminBar(Boolean(adminTextCheck));
+    };
+
+    checkAdminElement();
+    // Lắng nghe thay đổi DOM phòng khi chuyển trạng thái đăng nhập
+    const interval = setInterval(checkAdminElement, 1000);
+    return () => clearInterval(interval);
   }, []);
 
-  // 1. Kiểm tra số tin nhắn chưa đọc từ admin (chạy định kỳ nhẹ nhàng khi chat ĐÓNG)
+  // Kiểm tra số tin nhắn chưa đọc từ admin
   useEffect(() => {
     if (!guestId) return;
 
-    const fetchUnread = async () => {
+    const checkUnread = async () => {
       try {
         const res = await fetch(`/api/chat/unread?guest_id=${guestId}`);
         const data = await res.json();
-        if (data.success) {
+        if (data.success && data.unread_count > 0) {
           setUnreadCount(data.unread_count);
         }
       } catch (error) {
@@ -43,38 +62,28 @@ export default function ChatWidget() {
       }
     };
 
-    fetchUnread();
-    const interval = setInterval(fetchUnread, 5000); // 5 giây kiểm tra 1 lần khi đóng chat
-    return () => clearInterval(interval);
+    checkUnread();
   }, [guestId]);
 
-  // 2. Tải tin nhắn chi tiết (CHỈ CHẠY KHI KHUNG CHAT ĐANG MỞ để tiết kiệm tài nguyên)
-  useEffect(() => {
-    if (!guestId || !isOpen) return;
-
-    const fetchMessages = async () => {
-      try {
-        const res = await fetch(`/api/chat/messages?guest_id=${guestId}`);
-        const data = await res.json();
-        if (data.success) {
-          setMessages(data.messages);
-        }
-      } catch (error) {
-        console.error('Lỗi tải tin nhắn:', error);
+  const fetchMessages = async (currentGuestId: string) => {
+    try {
+      const res = await fetch(`/api/chat/messages?guest_id=${currentGuestId}`);
+      const data = await res.json();
+      if (data.success) {
+        setMessages(data.messages || []);
       }
-    };
+    } catch (error) {
+      console.error('Lỗi tải tin nhắn:', error);
+    }
+  };
 
-    fetchMessages();
-    const interval = setInterval(fetchMessages, 3000); // 3 giây cập nhật khi đang mở chat
-    return () => clearInterval(interval);
-  }, [guestId, isOpen]);
-
-  // Khi khách bấm mở khung chat -> Đánh dấu đã đọc tất cả tin nhắn của admin
   const handleOpenChat = async () => {
     setIsOpen(true);
-    setUnreadCount(0); // Ẩn badge ngay lập tức
+    setUnreadCount(0);
 
     if (guestId) {
+      fetchMessages(guestId);
+
       try {
         await fetch('/api/chat/unread', {
           method: 'POST',
@@ -87,14 +96,12 @@ export default function ChatWidget() {
     }
   };
 
-  // Cuộn xuống tin nhắn mới nhất
   useEffect(() => {
     if (isOpen) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages, isOpen]);
 
-  // Gửi tin nhắn từ khách hàng
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputMessage.trim() || !guestId) return;
@@ -115,7 +122,7 @@ export default function ChatWidget() {
       });
 
       const data = await res.json();
-      if (data.success) {
+      if (data.success && data.message) {
         setMessages((prev) => [...prev, data.message]);
       }
     } catch (error) {
@@ -123,13 +130,22 @@ export default function ChatWidget() {
     }
   };
 
+  if (!isMounted) {
+    return null;
+  }
+
+  // Ẩn ngay lập tức nếu đang ở đường dẫn /admin HOẶC trên giao diện đang hiển thị thanh công cụ Quản trị của Admin
+  if (pathname?.startsWith('/admin') || hasAdminBar) {
+    return null;
+  }
+
   return (
     <div className="fixed bottom-20 right-4 z-[999] md:bottom-5 md:right-5">
       {/* Nút Bong bóng chat nổi kèm Huy hiệu số lượng */}
       {!isOpen && (
         <button
           onClick={handleOpenChat}
-          className="relative flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-xl transition-transform hover:scale-110 focus:outline-none"
+          className="relative flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-xl transition-transform hover:scale-110 focus:outline-none cursor-pointer"
           title="Hỗ trợ trực tuyến"
         >
           {unreadCount > 0 && (
@@ -154,7 +170,7 @@ export default function ChatWidget() {
             </div>
             <button
               onClick={() => setIsOpen(false)}
-              className="text-white hover:text-neutral-200 focus:outline-none text-lg font-bold"
+              className="text-white hover:text-neutral-200 focus:outline-none text-lg font-bold cursor-pointer"
             >
               &times;
             </button>
@@ -167,13 +183,13 @@ export default function ChatWidget() {
                 Xin chào! Bạn cần shop tư vấn sản phẩm gì ạ? Hãy nhắn cho chúng mình nhé.
               </div>
             ) : (
-              messages.map((msg) => (
+              messages.map((msg, index) => (
                 <div
-                  key={msg.id}
+                  key={`${msg.id}-${index}`}
                   className={`flex ${msg.sender_type === 'customer' ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
-                    className={`max-w-[75%] rounded-2xl px-3.5 py-2 text-xs shadow-sm ${
+                    className={`max-w-[75%]Ron rounded-2xl px-3.5 py-2 text-xs shadow-sm ${
                       msg.sender_type === 'customer'
                         ? 'bg-blue-600 text-white rounded-br-none'
                         : 'bg-white text-neutral-800 border border-neutral-200 dark:bg-neutral-800 dark:text-white dark:border-neutral-700 rounded-bl-none'
@@ -198,7 +214,7 @@ export default function ChatWidget() {
             />
             <button
               type="submit"
-              className="ml-2 rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-blue-700"
+              className="ml-2 rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-blue-700 cursor-pointer"
             >
               Gửi
             </button>

@@ -3,14 +3,15 @@ import CartDrawer from "components/cart/CartDrawer";
 import ChatWidget from "components/ChatWidget";
 import Navbar from "components/layout/navbar";
 import PwaRegister from "components/PwaRegister";
-import { WelcomeToast } from "components/welcome-toast";
 import { AuthProvider } from 'context/auth-context';
 import { CartProvider } from 'context/CartContext';
+// @ts-ignore
 import { GeistSans } from "geist/font/sans";
 import { getCart } from "lib/shopify";
 import { baseUrl } from "lib/utils";
 import type { Metadata } from 'next';
 import { ReactNode } from "react";
+// @ts-ignore
 import { Toaster } from "sonner";
 // @ts-ignore
 import "./globals.css";
@@ -47,7 +48,6 @@ export default async function RootLayout({
             <main>
               {children}
               <Toaster closeButton />
-              <WelcomeToast />
             </main>
 
             <CartDrawer />

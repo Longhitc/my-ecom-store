@@ -55,12 +55,11 @@ export async function POST(request: Request) {
       args: [messageId, conversationId, sender_type, message, vnTime],
     });
 
-    // Kích hoạt bắn thông báo đẩy nếu là tin nhắn từ khách (để báo cho Admin)
+    // Kích hoạt Web Push Notification báo cho Admin
     if (sender_type === 'customer') {
       try {
         const subs = await db.execute(`SELECT * FROM push_subscriptions`);
-        console.log(`Tìm thấy ${subs.rows.length} thiết bị đăng ký nhận push trong Turso.`);
-
+        
         const payload = JSON.stringify({
           title: `💬 Tin nhắn mới từ ${customer_name || 'Khách hàng'}`,
           body: message,
@@ -76,16 +75,15 @@ export async function POST(request: Request) {
                   keys: { p256dh: sub.p256dh, auth: sub.auth },
                 },
                 payload,
-                { urgency: 'high' } // <--- Ép độ ưu tiên cao để đánh thức Android khi app chạy nền
+                { urgency: 'high' }
               );
-              console.log('Đã bắn push thành công đến endpoint:', sub.endpoint.slice(0, 30) + '...');
             } catch (err: any) {
-              console.error('Lỗi gửi push cho thiết bị:', err?.body || err);
+              console.error('Lỗi gửi push:', err?.body || err);
             }
           })
         );
       } catch (pushErr) {
-        console.error('Push notification background error:', pushErr);
+        console.error('Push notification error:', pushErr);
       }
     }
 

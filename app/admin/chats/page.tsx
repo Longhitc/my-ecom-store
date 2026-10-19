@@ -45,7 +45,6 @@ export default function AdminChatPage() {
   const shouldScrollToBottomRef = useRef(true);
   const lastMessageIdRef = useRef<string | null>(null);
 
-  // Keep a ref in sync so an older network response cannot replace the active chat.
   useEffect(() => {
     selectedConvIdRef.current = selectedConvId;
   }, [selectedConvId]);
@@ -72,17 +71,25 @@ export default function AdminChatPage() {
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') return;
       console.error('Lỗi tải danh sách hội thoại:', error);
-      setPageError('Không tải được danh sách khách hàng. Anh thử bấm “Làm mới danh sách”.');
     }
   }, []);
 
+  // Polling danh sách hội thoại mỗi 5 giây ở trang Admin để tự động thấy khách mới nhắn
   useEffect(() => {
     const controller = new AbortController();
     void fetchConversations(controller.signal);
-    return () => controller.abort();
+
+    const intervalId = window.setInterval(() => {
+      void fetchConversations();
+    }, 20000);
+
+    return () => {
+      controller.abort();
+      window.clearInterval(intervalId);
+    };
   }, [fetchConversations]);
 
-  // Poll only the selected conversation. Abort the previous request/interval when selection changes.
+  // Poll tin nhắn của hội thoại đang chọn mỗi 3 giây
   useEffect(() => {
     if (!selectedConvId) {
       setMessages([]);
@@ -114,7 +121,6 @@ export default function AdminChatPage() {
 
         const data: MessagesResponse = await res.json();
 
-        // Guard against stale responses even if a request finishes while selection changes.
         if (
           disposed ||
           controller.signal.aborted ||
@@ -131,10 +137,6 @@ export default function AdminChatPage() {
         }
       } catch (error) {
         if (error instanceof DOMException && error.name === 'AbortError') return;
-        if (!disposed && selectedConvIdRef.current === conversationId) {
-          console.error('Lỗi tải tin nhắn:', error);
-          setMessageError('Không tải được tin nhắn. Đang thử lại tự động.');
-        }
       } finally {
         firstLoad = false;
         if (!disposed && selectedConvIdRef.current === conversationId) {
@@ -155,7 +157,7 @@ export default function AdminChatPage() {
     };
   }, [selectedConvId]);
 
-  // Scroll to bottom when the conversation changes or genuinely new messages arrive.
+  // Cuộn xuống tin nhắn mới nhất
   useEffect(() => {
     if (!selectedConvId || messages.length === 0) {
       lastMessageIdRef.current = null;
@@ -177,11 +179,8 @@ export default function AdminChatPage() {
   const handleMessagesScroll = () => {
     const container = messagesContainerRef.current;
     if (!container) return;
-
     const distanceFromBottom =
       container.scrollHeight - container.scrollTop - container.clientHeight;
-
-    // If the admin is reading older messages, do not force-scroll them to the bottom.
     shouldScrollToBottomRef.current = distanceFromBottom < 100;
   };
 
@@ -192,8 +191,6 @@ export default function AdminChatPage() {
       setShowMobileChat(true);
       return;
     }
-
-    // Immediately invalidate the previous conversation before its request can finish.
     selectedConvIdRef.current = id;
     lastMessageIdRef.current = null;
     shouldScrollToBottomRef.current = true;
@@ -266,11 +263,10 @@ export default function AdminChatPage() {
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok || !data.success) {
-        setMessageError(data.message || 'Gửi tin nhắn thất bại. Nội dung vẫn được giữ lại.');
+        setMessageError(data.message || 'Gửi tin nhắn thất bại.');
         return;
       }
 
-      // Do not append a response to another conversation if the admin switched chats meanwhile.
       if (selectedConvIdRef.current === conversationId && data.message) {
         setMessages((previous) => {
           const newMessage = data.message as Message;
@@ -285,14 +281,13 @@ export default function AdminChatPage() {
       void fetchConversations();
     } catch (error) {
       console.error('Lỗi gửi tin nhắn:', error);
-      setMessageError('Không gửi được tin nhắn do lỗi kết nối. Anh thử lại nhé.');
+      setMessageError('Không gửi được tin nhắn do lỗi kết nối.');
     } finally {
       setSending(false);
     }
   };
 
   return (
-    /* ĐÃ SẢU CHIỀU CAO Ở ĐÂY: Dùng h-[calc(100vh-140px)] hoặc h-[720px] max-h-[calc(100vh-120px)] để ôm gọn trong 1 màn hình, tuyệt đối không bị tràn cuộn trang */
     <main className="mx-auto box-border flex h-[calc(100vh-140px)] min-h-[500px] w-full max-w-screen-2xl flex-col px-2 py-2 sm:px-4 sm:py-3">
       <header className="mb-2 flex shrink-0 items-center justify-between gap-3">
         <h1 className="min-w-0 truncate text-lg font-bold text-neutral-800 dark:text-white sm:text-xl">
@@ -301,7 +296,7 @@ export default function AdminChatPage() {
         <button
           type="button"
           onClick={() => void fetchConversations()}
-          className="shrink-0 rounded-xl bg-neutral-200 px-3 py-1.5 text-xs font-semibold text-neutral-700 hover:bg-neutral-300 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700"
+          className="shrink-0 rounded-xl bg-neutral-200 px-3 py-1.5 text-xs font-semibold text-neutral-700 hover:bg-neutral-300 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700 cursor-pointer"
         >
           🔄 Làm mới danh sách
         </button>
@@ -313,7 +308,6 @@ export default function AdminChatPage() {
         </p>
       )}
 
-      {/* Desktop: two real grid columns. Mobile: switch between list and chat panels. */}
       <section className="relative grid min-h-0 min-w-0 flex-1 grid-cols-1 overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900 md:grid-cols-[minmax(260px,1fr)_minmax(0,2fr)]">
         {/* Customer list */}
         <aside
@@ -323,8 +317,6 @@ export default function AdminChatPage() {
             showMobileChat ? '-translate-x-full md:translate-x-0' : 'translate-x-0',
             'transition-transform duration-200',
           ].join(' ')}
-          aria-label="Danh sách khách hàng"
-          aria-hidden={showMobileChat}
         >
           <div className="flex shrink-0 items-center justify-between border-b border-neutral-200 bg-neutral-50 p-3 text-xs font-semibold dark:border-neutral-800 dark:bg-neutral-950 sm:text-sm">
             <span>Khách hàng ({conversations.length})</span>
@@ -344,7 +336,6 @@ export default function AdminChatPage() {
                     type="button"
                     key={conversation.id}
                     onClick={() => handleSelectConversation(conversation.id)}
-                    aria-pressed={isSelected}
                     className={[
                       'block w-full min-w-0 cursor-pointer border-l-4 p-3 text-left transition-colors',
                       isSelected
@@ -383,21 +374,17 @@ export default function AdminChatPage() {
             showMobileChat ? 'translate-x-0' : 'translate-x-full md:translate-x-0',
             'transition-transform duration-200',
           ].join(' ')}
-          aria-label="Chi tiết hội thoại"
-          aria-hidden={!showMobileChat && !selectedConvId}
         >
           {selectedConvId ? (
             <>
-              {/* Fixed chat header */}
               <header className="flex shrink-0 items-center justify-between gap-2 border-b border-neutral-200 bg-white p-3 text-xs font-semibold shadow-sm dark:border-neutral-800 dark:bg-neutral-900 sm:text-sm">
                 <div className="flex min-w-0 items-center gap-2">
                   <button
                     type="button"
                     onClick={() => setShowMobileChat(false)}
-                    className="shrink-0 rounded-lg p-1 text-neutral-600 dark:text-neutral-300 md:hidden"
-                    aria-label="Quay lại danh sách khách hàng"
+                    className="shrink-0 rounded-lg p-1 text-neutral-600 dark:text-neutral-300 md:hidden cursor-pointer"
                   >
-                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                     </svg>
                   </button>
@@ -412,22 +399,17 @@ export default function AdminChatPage() {
                 <button
                   type="button"
                   onClick={() => void handleDeleteConversation()}
-                  className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-red-50 px-2.5 py-1.5 text-[11px] font-medium text-red-600 hover:bg-red-100 dark:bg-red-950/30 dark:text-red-300"
+                  className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-red-50 px-2.5 py-1.5 text-[11px] font-medium text-red-600 hover:bg-red-100 dark:bg-red-950/30 dark:text-red-300 cursor-pointer"
                 >
-                  <span aria-hidden="true">🗑️</span>
-                  <span className="hidden sm:inline">Xóa hội thoại</span>
-                  <span className="sm:hidden">Xóa</span>
+                  <span>🗑️</span>
+                  <span>Xóa hội thoại</span>
                 </button>
               </header>
 
-              {/* This is the only vertically scrollable chat region. */}
               <div
                 ref={messagesContainerRef}
                 onScroll={handleMessagesScroll}
                 className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-x-hidden overflow-y-auto overscroll-contain p-3 sm:p-4"
-                role="log"
-                aria-live="polite"
-                aria-label="Nội dung hội thoại"
               >
                 {loadingMessages && messages.length === 0 && (
                   <p className="m-auto text-xs text-neutral-400">Đang tải tin nhắn...</p>
@@ -439,12 +421,12 @@ export default function AdminChatPage() {
                   </p>
                 )}
 
-                {messages.map((message) => {
+                {messages.map((message, index) => {
                   const isAdmin = message.sender_type === 'admin';
 
                   return (
                     <div
-                      key={message.id}
+                      key={`${message.id}-${index}`}
                       className={`flex w-full min-w-0 ${isAdmin ? 'justify-end' : 'justify-start'}`}
                     >
                       <div
@@ -483,7 +465,6 @@ export default function AdminChatPage() {
                 </p>
               )}
 
-              {/* Fixed reply box */}
               <form
                 onSubmit={sendAdminMessage}
                 className="flex shrink-0 items-center gap-2 border-t border-neutral-200 bg-white p-2 dark:border-neutral-800 dark:bg-neutral-900 sm:p-2.5"
