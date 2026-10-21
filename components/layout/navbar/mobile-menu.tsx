@@ -30,6 +30,15 @@ export default function MobileMenu({ menu }: { menu: Menu[] }) {
     setIsOpen(false);
   }, [pathname, searchParams]);
 
+  // Kiểm tra và đảm bảo luôn có mục "Trang Chủ" ở đầu danh sách
+  const hasHome = menu.some(
+    (item) => item.path === "/search" || item.title.toLowerCase() === "trang chủ"
+  );
+
+  const displayMenu: Menu[] = hasHome
+    ? menu
+    : [{ title: "Trang Chủ", path: "/search" }, ...menu];
+
   return (
     <>
       <button
@@ -76,9 +85,9 @@ export default function MobileMenu({ menu }: { menu: Menu[] }) {
                     <Search />
                   </Suspense>
                 </div>
-                {menu.length ? (
+                {displayMenu.length ? (
                   <ul className="flex w-full flex-col">
-                    {menu.map((item: Menu) => (
+                    {displayMenu.map((item: Menu) => (
                       <li
                         className="py-2 text-xl text-black transition-colors hover:text-neutral-500 dark:text-white"
                         key={item.title}
