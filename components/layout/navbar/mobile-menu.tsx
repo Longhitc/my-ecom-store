@@ -30,14 +30,15 @@ export default function MobileMenu({ menu }: { menu: Menu[] }) {
     setIsOpen(false);
   }, [pathname, searchParams]);
 
-  // Kiểm tra và đảm bảo luôn có mục "Trang Chủ" ở đầu danh sách
-  const hasHome = menu.some(
-    (item) => item.path === "/search" || item.title.toLowerCase() === "trang chủ"
-  );
-
-  const displayMenu: Menu[] = hasHome
-    ? menu
-    : [{ title: "Trang Chủ", path: "/search" }, ...menu];
+  // Danh sách menu cố định hiển thị đầy đủ trên mobile
+  const fixedMobileMenu = [
+    { title: 'Trang Chủ', path: '/search' },
+    { title: 'Thời Trang Nam', path: '/search/tt-nam' },
+    { title: 'Thời Trang Nữ', path: '/search/tt-nu' },
+    { title: 'Thời Trang Trẻ Em', path: '/search/tt-te' },
+    { title: 'Giày dép Crocs', path: '/search/gd-crocs' },
+    { title: 'Phụ Kiện', path: '/search/pk' },
+  ];
 
   return (
     <>
@@ -70,7 +71,7 @@ export default function MobileMenu({ menu }: { menu: Menu[] }) {
             leaveFrom="translate-x-0"
             leaveTo="translate-x-[-100%]"
           >
-            <Dialog.Panel className="fixed bottom-0 left-0 right-0 top-0 flex h-full w-full flex-col bg-white pb-6 dark:bg-black">
+            <Dialog.Panel className="fixed bottom-0 left-0 right-0 top-0 flex h-full w-full flex-col bg-white pb-6 dark:bg-black overflow-y-auto">
               <div className="p-4">
                 <button
                   className="mb-4 flex h-11 w-11 items-center justify-center rounded-md border border-neutral-200 text-black transition-colors dark:border-neutral-700 dark:text-white"
@@ -85,24 +86,24 @@ export default function MobileMenu({ menu }: { menu: Menu[] }) {
                     <Search />
                   </Suspense>
                 </div>
-                {displayMenu.length ? (
-                  <ul className="flex w-full flex-col">
-                    {displayMenu.map((item: Menu) => (
-                      <li
-                        className="py-2 text-xl text-black transition-colors hover:text-neutral-500 dark:text-white"
-                        key={item.title}
+
+                {/* Thêm pt-2 để danh sách các mục (bắt đầu từ Trang Chủ) hiển thị thấp xuống, không bị che khuất */}
+                <ul className="flex w-full flex-col gap-2 pt-2">
+                  {fixedMobileMenu.map((item) => (
+                    <li
+                      className="py-2.5 text-xl text-black transition-colors hover:text-neutral-500 dark:text-white border-b border-neutral-100 dark:border-neutral-900"
+                      key={item.title}
+                    >
+                      <Link
+                        href={item.path}
+                        prefetch={true}
+                        onClick={closeMobileMenu}
                       >
-                        <Link
-                          href={item.path}
-                          prefetch={true}
-                          onClick={closeMobileMenu}
-                        >
-                          {item.title}
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
+                        {item.title}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
               </div>
             </Dialog.Panel>
           </Transition.Child>

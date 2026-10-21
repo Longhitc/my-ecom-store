@@ -13,8 +13,10 @@ export async function generateMetadata(props: {
     "co-san": "Hàng Có Sẵn",
     "order": "Hàng Order",
     "tt-namnu": "Thời Trang Nam Nữ",
+    "tt-nam": "Thời Trang Nam",
+    "tt-nu": "Thời Trang Nữ",
     "tt-te": "Thời Trang Trẻ Em",
-    "gd-crocs": "Giày Dép Crocks",
+    "gd-crocs": "Giày Dép Crocs",
     "crocs-nam": "Crocs Nam",
     "crocs-nu": "Crocs Nữ",
     "crocs-tre-em": "Crocs Trẻ Em",
@@ -38,9 +40,6 @@ async function getCollectionProducts(collection: string, sort?: string) {
     const { sortKey, reverse } =
       sorting.find((item) => item.slug === sort) || defaultSort;
 
-    const crocsSubCategories = ['crocs-nam', 'crocs-nu', 'crocs-tre-em', 'crocs-unisex'];
-
-    // Truy vấn dữ liệu kết hợp với bảng trung gian product_categories
     let sql = '';
     let args: any[] = [];
 
@@ -75,7 +74,6 @@ async function getCollectionProducts(collection: string, sort?: string) {
 
     const result = await db.execute({ sql, args });
 
-    // 1. Lọc sản phẩm ẩn (is_active / status)
     let filteredRows = result.rows.filter((row: any) => {
       if (row.is_active !== undefined && row.is_active !== null) {
         if (Number(row.is_active) === 0 || row.is_active === false) return false;
@@ -86,7 +84,6 @@ async function getCollectionProducts(collection: string, sort?: string) {
       return true;
     });
 
-    // 2. Map dữ liệu chuẩn hóa UI
     let products = filteredRows.map((row: any) => {
       const rawPrice = Number(row.min_price ?? row.price ?? 0);
       const formattedPrice = `${rawPrice.toLocaleString('vi-VN')} đ`;
@@ -114,7 +111,6 @@ async function getCollectionProducts(collection: string, sort?: string) {
       };
     });
 
-    // 3. Sắp xếp theo giá nếu có
     if (sortKey === "PRICE") {
       products.sort((a, b) => {
         return reverse ? b.rawPrice - a.rawPrice : a.rawPrice - b.rawPrice;

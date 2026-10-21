@@ -26,8 +26,8 @@ function AdminMenu({ user }: { user: any }) {
   if (!allowedMenus.length) return null;
 
   return (
-    <div className="w-full border-b border-neutral-800 bg-neutral-900 px-2 py-2 text-xs text-white">
-      <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-2 sm:flex-row sm:items-center">
+    <div className="w-full border-b border-neutral-800 bg-neutral-900 px-2 py-1.5 text-xs text-white">
+      <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-1.5 sm:flex-row sm:items-center">
         
         {/* Dòng 1: Nhãn Quản trị nằm bên trái */}
         <div className="flex shrink-0 items-center gap-1 font-bold text-amber-400 text-[11px] sm:text-xs">
@@ -35,15 +35,15 @@ function AdminMenu({ user }: { user: any }) {
           <span>Quản trị : {user?.admin?.role_name || user?.admin?.roleName || 'Admin'}</span>
         </div>
 
-        {/* Dòng 2: Dãy Menu dạng lưới (Grid) trên Mobile, chuyển thành Flex hàng ngang trên Desktop */}
-        <div className="grid grid-cols-3 sm:flex sm:flex-row items-center gap-1.5 rounded-lg bg-neutral-800/60 p-1.5 text-[11px] sm:text-xs font-medium w-full sm:w-auto justify-between">
+        {/* Dòng 2: Dãy Menu lọt gọn trong 1 dòng trên Mobile */}
+        <div className="grid w-full grid-cols-3 gap-1 rounded-lg bg-neutral-800/60 p-1 text-[10px] sm:text-xs font-medium sm:w-auto sm:flex sm:flex-wrap sm:items-center sm:gap-1.5">
           {allowedMenus.includes('orders') && (
             <Link 
               href="/admin/orders" 
-              className={`flex items-center justify-center gap-1 transition-colors py-1.5 px-2 rounded bg-neutral-700/40 sm:bg-transparent ${
+              className={`flex items-center justify-center gap-0.5 sm:gap-1 rounded px-1.5 py-1 transition-colors whitespace-nowrap ${
                 pathname === '/admin/orders'
-                  ? 'text-amber-400 font-bold bg-neutral-700'
-                  : 'text-neutral-300 hover:text-white'
+                  ? 'bg-neutral-700 text-amber-400 font-bold'
+                  : 'text-neutral-300 hover:bg-neutral-700/50 hover:text-white'
               }`}
             >
               <span>📦</span>
@@ -54,10 +54,10 @@ function AdminMenu({ user }: { user: any }) {
           {allowedMenus.includes('products') && (
             <Link 
               href="/admin/products" 
-              className={`flex items-center justify-center gap-1 transition-colors py-1.5 px-2 rounded bg-neutral-700/40 sm:bg-transparent ${
+              className={`flex items-center justify-center gap-0.5 sm:gap-1 rounded px-1.5 py-1 transition-colors whitespace-nowrap ${
                 pathname === '/admin/products'
-                  ? 'text-amber-400 font-bold bg-neutral-700'
-                  : 'text-neutral-300 hover:text-white'
+                  ? 'bg-neutral-700 text-amber-400 font-bold'
+                  : 'text-neutral-300 hover:bg-neutral-700/50 hover:text-white'
               }`}
             >
               <span>🏷️</span>
@@ -68,10 +68,10 @@ function AdminMenu({ user }: { user: any }) {
           {allowedMenus.includes('promotions') && (
             <Link 
               href="/admin/promotions" 
-              className={`flex items-center justify-center gap-1 transition-colors py-1.5 px-2 rounded bg-neutral-700/40 sm:bg-transparent ${
+              className={`flex items-center justify-center gap-0.5 sm:gap-1 rounded px-1.5 py-1 transition-colors whitespace-nowrap ${
                 pathname?.startsWith('/admin/promotions')
-                  ? 'text-amber-400 font-bold bg-neutral-700'
-                  : 'text-neutral-300 hover:text-white'
+                  ? 'bg-neutral-700 text-amber-400 font-bold'
+                  : 'text-neutral-300 hover:bg-neutral-700/50 hover:text-white'
               }`}
             >
               <span>🔥</span>
@@ -82,10 +82,10 @@ function AdminMenu({ user }: { user: any }) {
           {allowedMenus.includes('customers') && (
             <Link 
               href="/admin/customers" 
-              className={`flex items-center justify-center gap-1 transition-colors py-1.5 px-2 rounded bg-neutral-700/40 sm:bg-transparent ${
+              className={`flex items-center justify-center gap-0.5 sm:gap-1 rounded px-1.5 py-1 transition-colors whitespace-nowrap ${
                 pathname === '/admin/customers'
-                  ? 'text-amber-400 font-bold bg-neutral-700'
-                  : 'text-neutral-300 hover:text-white'
+                  ? 'bg-neutral-700 text-amber-400 font-bold'
+                  : 'text-neutral-300 hover:bg-neutral-700/50 hover:text-white'
               }`}
             >
               <span>👥</span>
@@ -96,10 +96,10 @@ function AdminMenu({ user }: { user: any }) {
           {allowedMenus.includes('roles') && (
             <Link 
               href="/admin/roles" 
-              className={`flex items-center justify-center gap-1 transition-colors py-1.5 px-2 rounded bg-neutral-700/40 sm:bg-transparent ${
+              className={`flex items-center justify-center gap-0.5 sm:gap-1 rounded px-1.5 py-1 transition-colors whitespace-nowrap ${
                 pathname === '/admin/roles'
-                  ? 'text-amber-400 font-bold bg-neutral-700'
-                  : 'text-neutral-300 hover:text-white'
+                  ? 'bg-neutral-700 text-amber-400 font-bold'
+                  : 'text-neutral-300 hover:bg-neutral-700/50 hover:text-white'
               }`}
             >
               <span>🔐</span>
@@ -109,10 +109,10 @@ function AdminMenu({ user }: { user: any }) {
 
           <Link 
             href="/admin/chats" 
-            className={`flex items-center justify-center gap-1 transition-colors py-1.5 px-2 rounded bg-neutral-700/40 sm:bg-transparent ${
+            className={`flex items-center justify-center gap-0.5 sm:gap-1 rounded px-1.5 py-1 transition-colors whitespace-nowrap ${
               pathname === '/admin/chats'
-                ? 'text-amber-400 font-bold bg-neutral-700'
-                : 'text-neutral-300 hover:text-white'
+                ? 'bg-neutral-700 text-amber-400 font-bold'
+                : 'text-neutral-300 hover:bg-neutral-700/50 hover:text-white'
             }`}
           >
             <span>💬</span>
@@ -154,6 +154,7 @@ export default function Navbar() {
   const { customer, logout } = useAuth();
   const [openMenu, setOpenMenu] = useState<string | null>(null);
 
+  // Mảng menu chung cho cả Desktop và Mobile, có sẵn "Trang Chủ" ở đầu tiên
   const menu: MenuItem[] = [
     { title: 'Trang Chủ', path: '/search' },
     { title: 'Thời Trang Nam', path: '/search/tt-nam' },
@@ -190,7 +191,11 @@ export default function Navbar() {
         <div className="flex shrink-0 items-center gap-2 lg:gap-6">
           <div className="block flex-none md:hidden">
             <Suspense fallback={null}>
-              <MobileMenu menu={menu as any} />
+              {/* Truyền trực tiếp mảng menu có Trang Chủ sang MobileMenu để ép hiển thị */}
+              <MobileMenu menu={[
+                { title: 'Trang Chủ', path: '/search' },
+                ...menu.filter(item => item.path !== '/search')
+              ] as any} />
             </Suspense>
           </div>
 
