@@ -35,7 +35,7 @@ export async function GET(req: Request) {
     // === TRƯỜNG HỢP 1: LẤY CHI TIẾT 1 SẢN PHẨM THEO ID ===
     if (id) {
       const productRes = await db.execute(
-        'SELECT id, handle, title, description, category, featured_image_url, featured_image_alt, is_active FROM products WHERE id = ?',
+        'SELECT id, handle, title, description, featured_image_url, featured_image_alt, is_active FROM products WHERE id = ?',
         [id]
       );
 
@@ -44,6 +44,13 @@ export async function GET(req: Request) {
       }
 
       const p = productRes.rows[0] as Record<string, any>;
+
+      // Lấy danh sách các danh mục thuộc sản phẩm này từ bảng product_categories
+      const categoriesRes = await db.execute(
+        'SELECT category_code FROM product_categories WHERE product_id = ?',
+        [id]
+      );
+      const categories = categoriesRes.rows.map((r) => String(r.category_code || ''));
 
       // Lấy danh sách ảnh phụ
       const imagesRes = await db.execute(
@@ -87,7 +94,8 @@ export async function GET(req: Request) {
           handle: String(p.handle || ''),
           title: String(p.title || ''),
           description: String(p.description || ''),
-          category: String(p.category || 'Thời Trang Nam'),
+          categories: categories, // Trả về mảng nhiều danh mục
+          category: categories[0] || '', // Hỗ trợ tương thích ngược nếu giao diện cũ gọi lẻ 1 category
           featured_image_url: String(p.featured_image_url || ''),
           featured_image_alt: String(p.featured_image_alt || ''),
           is_active: p.is_active === 1 || p.is_active === true,
@@ -115,7 +123,6 @@ export async function GET(req: Request) {
         p.title, 
         p.description, 
         p.featured_image_url, 
-        p.category,
         p.is_active,
         COALESCE(p.min_price, MIN(v.amount), 0) as price,
         COALESCE(SUM(v.quantity_available), 0) as stock
@@ -125,16 +132,29 @@ export async function GET(req: Request) {
       ORDER BY p.id DESC
     `);
 
+    // Lấy trước toàn bộ danh mục của các sản phẩm để gộp nhanh
+    const allCategoriesRes = await db.execute('SELECT product_id, category_code FROM product_categories');
+    const categoriesMap: Record<string, string[]> = {};
+    allCategoriesRes.rows.forEach((row) => {
+      const r = row as Record<string, any>;
+      const pId = String(r.product_id);
+      if (!categoriesMap[pId]) categoriesMap[pId] = [];
+      categoriesMap[pId].push(String(r.category_code));
+    });
+
     const products = result.rows.map((row) => {
       const r = row as Record<string, any>;
+      const pId = String(r.id);
+      const productCategories = categoriesMap[pId] || [];
       return {
-        id: String(r.id),
+        id: pId,
         handle: String(r.handle || ''),
         title: String(r.title || ''),
         description: String(r.description || ''),
         price: Number(r.price || 0),
         stock: Number(r.stock || 0),
-        category: String(r.category || ''),
+        categories: productCategories,
+        category: productCategories[0] || '', // Tương thích ngược
         image_url: String(r.featured_image_url || ''),
         is_active: r.is_active === 1 || r.is_active === true,
       };
@@ -154,32 +174,50 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { title, handle, category, featured_image_url, featured_image_alt, description, images, variants } = body;
+    const { title, handle, categories, category, featured_image_url, featured_image_alt, description, images, variants } = body;
 
     if (!title) {
       return NextResponse.json({ error: 'Tên sản phẩm là bắt buộc' }, { status: 400 });
     }
 
     const productId = `prod-${Date.now()}`;
-
-    // Tính toán min_price & max_price từ biến thể
     const { minPrice, maxPrice } = calculatePrices(variants);
 
+    // Lưu bảng products (không còn cột category đơn lẻ)
     await db.execute(
-      `INSERT INTO products (id, handle, title, description, category, min_price, max_price, featured_image_url, featured_image_alt, is_active) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+      `INSERT INTO products (id, handle, title, description, min_price, max_price, featured_image_url, featured_image_alt, is_active) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)`,
       [
         productId,
         handle || `slug-${Date.now()}`,
         title,
         description || '',
-        category || 'Thời Trang Nam',
         minPrice,
         maxPrice,
         featured_image_url || '',
         featured_image_alt || '',
       ]
     );
+
+    // Xử lý lưu danh sách nhiều danh mục vào bảng product_categories (hỗ trợ cả mảng `categories` hoặc chuỗi đơn `category`)
+    let listCategories: string[] = [];
+    if (Array.isArray(categories)) {
+      listCategories = categories;
+    } else if (category) {
+      listCategories = [category];
+    } else {
+      listCategories = ['Thời Trang Nam'];
+    }
+
+    for (const catCode of listCategories) {
+      if (catCode && catCode.trim() !== '') {
+        await db.execute(
+          `INSERT INTO product_categories (product_id, category_code, updated_at) 
+           VALUES (?, ?, datetime('now', '+7 hours'))`,
+          [productId, catCode.trim()]
+        );
+      }
+    }
 
     if (Array.isArray(images)) {
       for (let i = 0; i < images.length; i++) {
@@ -225,22 +263,41 @@ export async function POST(req: Request) {
 export async function PUT(req: Request) {
   try {
     const body = await req.json();
-    const { id, title, handle, category, featured_image_url, featured_image_alt, description, images, variants } = body;
+    const { id, title, handle, categories, category, featured_image_url, featured_image_alt, description, images, variants } = body;
 
     if (!id) {
       return NextResponse.json({ error: 'Thiếu ID sản phẩm' }, { status: 400 });
     }
 
-    // Tính toán min_price & max_price từ biến thể mới
     const { minPrice, maxPrice } = calculatePrices(variants);
 
+    // Cập nhật thông tin chính của sản phẩm
     await db.execute(
       `UPDATE products 
-       SET title = ?, handle = ?, description = ?, category = ?, min_price = ?, max_price = ?, featured_image_url = ?, featured_image_alt = ?
+       SET title = ?, handle = ?, description = ?, min_price = ?, max_price = ?, featured_image_url = ?, featured_image_alt = ?
        WHERE id = ?`,
-      [title, handle || '', description || '', category || '', minPrice, maxPrice, featured_image_url || '', featured_image_alt || '', id]
+      [title, handle || '', description || '', minPrice, maxPrice, featured_image_url || '', featured_image_alt || '', id]
     );
 
+    // Xóa danh mục cũ trong bảng trung gian & chèn lại danh sách mới
+    await db.execute('DELETE FROM product_categories WHERE product_id = ?', [id]);
+    
+    let listCategories: string[] = [];
+    if (Array.isArray(categories)) {
+      listCategories = categories;
+    } else if (category) {
+      listCategories = [category];
+    }
+
+    for (const catCode of listCategories) {
+      if (catCode && catCode.trim() !== '') {
+        await db.execute(
+          `INSERT INTO product_categories (product_id, category_code, updated_at) 
+           VALUES (?, ?, datetime('now', '+7 hours'))`,
+          [id, catCode.trim()]
+        );
+      }
+    }
     // Xóa ảnh phụ cũ & chèn mới
     await db.execute('DELETE FROM product_images WHERE product_id = ?', [id]);
     if (Array.isArray(images)) {
@@ -300,6 +357,9 @@ export async function DELETE(req: Request) {
     if (!id) {
       return NextResponse.json({ error: 'Thiếu ID sản phẩm cần xóa' }, { status: 400 });
     }
+
+    // Xóa dữ liệu liên quan ở các bảng phụ trước khi xóa sản phẩm
+    await db.execute('DELETE FROM product_categories WHERE product_id = ?', [id]);
     await db.execute(
       'DELETE FROM variant_attributes WHERE variant_id IN (SELECT id FROM product_variants WHERE product_id = ?)',
       [id]

@@ -93,6 +93,7 @@ interface Product {
   title: string;
   description?: string;
   category?: string;
+  categories?: string[];
   price?: number;
   stock?: number;
   is_active?: boolean;
@@ -135,7 +136,7 @@ export default function AdminProductsPage() {
   const [formData, setFormData] = useState({
     title: '',
     handle: '',
-    category: CATEGORY_OPTIONS[0]?.slug || 'tt-nam',
+    categories: [CATEGORY_OPTIONS[0]?.slug || 'tt-nam'],
     featured_image_url: '',
     featured_image_alt: '',
     description: '',
@@ -212,11 +213,10 @@ export default function AdminProductsPage() {
     setUploadingImages((prev) => ({ ...prev, [index]: false }));
   };
 
-  // Xóa ảnh phụ đồng thời xóa vĩnh viễn trên Cloudinary
   const handleRemoveSubImage = async (index: number) => {
     const targetUrl = formData.images[index];
     if (targetUrl) {
-      deleteCloudinaryImage(targetUrl); // Xóa trên Cloudinary
+      deleteCloudinaryImage(targetUrl);
     }
     const newImages = formData.images.filter((_, i) => i !== index);
     setFormData((prev) => ({ ...prev, images: newImages }));
@@ -275,7 +275,7 @@ export default function AdminProductsPage() {
     setFormData({
       title: '',
       handle: '',
-      category: CATEGORY_OPTIONS[0]?.slug || 'tt-nam',
+      categories: [CATEGORY_OPTIONS[0]?.slug || 'tt-nam'],
       featured_image_url: '',
       featured_image_alt: '',
       description: '',
@@ -339,12 +339,16 @@ export default function AdminProductsPage() {
             setDefaultStock(loadedVariants[0]?.quantity_available || product.stock || 0);
           }
 
-          const matchedCategorySlug = normalizeCategorySlug(p.category || product.category);
+          const rawCategories = Array.isArray(p.categories) && p.categories.length > 0
+            ? p.categories
+            : [p.category || product.category || 'tt-nam'];
+
+          const loadedCategories = rawCategories.map((c: string) => normalizeCategorySlug(c));
 
           setFormData({
             title: p.title || '',
             handle: p.handle || '',
-            category: matchedCategorySlug,
+            categories: loadedCategories.length > 0 ? loadedCategories : ['tt-nam'],
             featured_image_url: p.featured_image_url || p.image_url || '',
             featured_image_alt: p.featured_image_alt || '',
             description: p.description || '',
@@ -529,6 +533,11 @@ export default function AdminProductsPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (formData.categories.length === 0) {
+      alert('Vui lòng chọn ít nhất 1 danh mục cho sản phẩm!');
+      return;
+    }
+
     if (formData.variants.length === 0) {
       alert('Sản phẩm phải có ít nhất 1 biến thể! Vui lòng bấm áp dụng tạo biến thể.');
       return;
@@ -569,8 +578,9 @@ export default function AdminProductsPage() {
       p.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       String(p.id).toLowerCase().includes(searchTerm.toLowerCase());
 
-    const productNormalizedCategory = normalizeCategorySlug(p.category);
-    const matchesCategory = categoryFilter === 'ALL' || productNormalizedCategory === categoryFilter;
+    const pCategories = Array.isArray(p.categories) ? p.categories : (p.category ? [p.category] : []);
+    const normalizedProductCategories = pCategories.map((c) => normalizeCategorySlug(c));
+    const matchesCategory = categoryFilter === 'ALL' || normalizedProductCategories.includes(categoryFilter);
 
     return matchesSearch && matchesCategory;
   });
@@ -637,9 +647,15 @@ export default function AdminProductsPage() {
             <div className="grid grid-cols-1 gap-3 md:hidden">
               {filteredProducts.map((product) => {
                 const displayImage = product.featured_image_url || product.image_url;
-                const categorySlug = normalizeCategorySlug(product.category);
-                const categoryObj = CATEGORY_OPTIONS.find((c) => c.slug === categorySlug);
-                const displayCategoryName = categoryObj ? categoryObj.title : product.category || 'Chưa phân loại';
+                const pCats = Array.isArray(product.categories) ? product.categories : (product.category ? [product.category] : []);
+                const displayCategoryNames = pCats.length > 0
+                  ? pCats.map(c => {
+                      const slug = normalizeCategorySlug(c);
+                      const obj = CATEGORY_OPTIONS.find(opt => opt.slug === slug);
+                      return obj ? obj.title : c;
+                    }).join(', ')
+                  : 'Chưa phân loại';
+
                 const activeStatus = product.is_active === true || (product.is_active as any) === 1;
 
                 return (
@@ -661,11 +677,11 @@ export default function AdminProductsPage() {
                       )}
                       <div className="flex flex-1 flex-col justify-between overflow-hidden">
                         <div>
-                          <p className="line-clamp-2 text-sm font-semibold text-white">{product.title}</p>
+                          <p className="text-sm font-semibold text-white break-words">{product.title}</p>
                           <p className="font-mono text-[11px] text-neutral-500">#{product.id}</p>
                         </div>
-                        <span className="inline-block w-fit rounded bg-neutral-800 px-1.5 py-0.5 text-[10px] text-neutral-400">
-                          {displayCategoryName}
+                        <span className="inline-block w-fit rounded bg-neutral-800 px-1.5 py-0.5 text-[10px] text-neutral-400 break-words" title={displayCategoryNames}>
+                          📁 {displayCategoryNames}
                         </span>
                       </div>
                     </div>
@@ -721,26 +737,33 @@ export default function AdminProductsPage() {
               <table className="w-full text-left text-sm text-neutral-300">
                 <thead className="border-b border-neutral-800 bg-neutral-950/50 text-xs uppercase text-neutral-400">
                   <tr>
-                    <th className="p-4">Thao tác</th>
+                    <th className="p-4 whitespace-nowrap">Thao tác</th>
                     <th className="p-4">Sản phẩm</th>
                     <th className="p-4">Danh mục</th>
-                    <th className="p-4">Giá bán</th>
-                    <th className="p-4">Tồn kho</th>
-                    <th className="p-4 text-center">Trạng thái</th>
-                    <th className="p-4 text-right">Xóa bỏ</th>
+                    <th className="p-4 whitespace-nowrap">Giá bán</th>
+                    <th className="p-4 whitespace-nowrap">Tồn kho</th>
+                    <th className="p-4 text-center whitespace-nowrap">Trạng thái</th>
+                    <th className="p-4 text-right whitespace-nowrap">Xóa bỏ</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-800">
                   {filteredProducts.map((product) => {
                     const displayImage = product.featured_image_url || product.image_url;
-                    const categorySlug = normalizeCategorySlug(product.category);
-                    const categoryObj = CATEGORY_OPTIONS.find((c) => c.slug === categorySlug);
-                    const displayCategoryName = categoryObj ? categoryObj.title : product.category || 'Chưa phân loại';
+                    const pCats = Array.isArray(product.categories) ? product.categories : (product.category ? [product.category] : []);
+                    const displayCategoryNames = pCats.length > 0
+                      ? pCats.map(c => {
+                          const slug = normalizeCategorySlug(c);
+                          const obj = CATEGORY_OPTIONS.find(opt => opt.slug === slug);
+                          return obj ? obj.title : c;
+                        }).join(', ')
+                      : 'Chưa phân loại';
+
                     const activeStatus = product.is_active === true || (product.is_active as any) === 1;
 
                     return (
                       <tr key={product.id} className="transition hover:bg-neutral-800/50">
-                        <td className="p-4">
+                        {/* Thao tác (Không xuống dòng) */}
+                        <td className="p-4 whitespace-nowrap">
                           <button
                             onClick={() => handleOpenEdit(product)}
                             className="rounded bg-blue-500/10 px-3 py-1 text-xs font-semibold text-blue-400 hover:bg-blue-500/20"
@@ -748,34 +771,42 @@ export default function AdminProductsPage() {
                             Sửa Chi Tiết
                           </button>
                         </td>
-                        <td className="p-4">
+
+                        {/* Sản phẩm (Cho phép xuống dòng tên sản phẩm) */}
+                        <td className="p-4 max-w-xs">
                           <div className="flex items-center gap-3">
                             {displayImage ? (
                               <img
                                 src={displayImage}
                                 alt={product.title}
-                                className="h-12 w-12 rounded-lg border border-neutral-800 object-cover"
+                                className="h-12 w-12 shrink-0 rounded-lg border border-neutral-800 object-cover"
                               />
                             ) : (
-                              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-neutral-800 text-xs text-neutral-500">
+                              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-neutral-800 text-xs text-neutral-500">
                                 No img
                               </div>
                             )}
-                            <div>
-                              <p className="font-semibold text-white">{product.title}</p>
-                              <p className="font-mono text-xs text-neutral-500">#{product.id}</p>
+                            <div className="min-w-0">
+                              <p className="font-semibold text-white break-words">{product.title}</p>
+                              <p className="font-mono text-xs text-neutral-500 whitespace-nowrap">#{product.id}</p>
                             </div>
                           </div>
                         </td>
-                        <td className="p-4 text-xs font-medium text-neutral-400">
-                          <span className="rounded bg-neutral-800 px-2 py-1">
-                            {displayCategoryName}
+
+                        {/* Danh mục (Cho phép xuống dòng nhiều danh mục) */}
+                        <td className="p-4 text-xs font-medium text-neutral-400 max-w-xs">
+                          <span className="rounded bg-neutral-800 px-2 py-1 inline-block break-words">
+                            {displayCategoryNames}
                           </span>
                         </td>
-                        <td className="p-4 font-bold text-amber-400">
+
+                        {/* Giá bán (Không xuống dòng) */}
+                        <td className="p-4 font-bold text-amber-400 whitespace-nowrap">
                           {product.price ? product.price.toLocaleString('vi-VN') : 0} đ
                         </td>
-                        <td className="p-4">
+
+                        {/* Tồn kho (Không xuống dòng) */}
+                        <td className="p-4 whitespace-nowrap">
                           <span
                             className={`text-xs font-semibold ${
                               (product.stock ?? 0) > 0 ? 'text-green-400' : 'text-red-400'
@@ -785,8 +816,9 @@ export default function AdminProductsPage() {
                           </span>
                         </td>
 
-                        <td className="p-4 text-center">
-                          <div className="flex items-center justify-center gap-2">
+                        {/* Trạng thái (Không xuống dòng) */}
+                        <td className="p-4 text-center whitespace-nowrap">
+                          <div className="flex items-center justify-center gap-2 whitespace-nowrap">
                             <ProductStatusToggle
                               productId={product.id}
                               initialStatus={activeStatus}
@@ -797,7 +829,8 @@ export default function AdminProductsPage() {
                           </div>
                         </td>
 
-                        <td className="p-4 text-right">
+                        {/* Xóa bỏ (Không xuống dòng) */}
+                        <td className="p-4 text-right whitespace-nowrap">
                           <button
                             onClick={() => handleDelete(product.id)}
                             className="rounded bg-red-500/10 px-3 py-1 text-xs font-semibold text-red-400 hover:bg-red-500/20"
@@ -863,22 +896,45 @@ export default function AdminProductsPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
-                    <div>
-                      <label className="mb-1 block text-xs text-neutral-400">Danh mục *</label>
-                      <select
-                        required
-                        value={formData.category}
-                        onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                        className="w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-white focus:border-amber-500 focus:outline-none"
-                      >
-                        {CATEGORY_OPTIONS.map((cat) => (
-                          <option key={cat.slug} value={cat.slug}>
-                            {cat.title} ({cat.slug})
-                          </option>
-                        ))}
-                      </select>
+                  {/* CHỌN NHIỀU DANH MỤC (CHECKBOX GRID) */}
+                  <div>
+                    <label className="mb-1.5 block text-xs text-neutral-400 font-semibold">
+                      Danh mục sản phẩm (Chọn ít nhất 1 danh mục) *
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 rounded-lg border border-neutral-800 bg-neutral-950 p-3 max-h-48 overflow-y-auto">
+                      {CATEGORY_OPTIONS.map((cat) => {
+                        const isChecked = formData.categories.includes(cat.slug);
+                        return (
+                          <label
+                            key={cat.slug}
+                            className="flex items-center gap-2 text-xs cursor-pointer text-neutral-300 hover:text-white p-1 rounded hover:bg-neutral-900"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    categories: [...prev.categories, cat.slug],
+                                  }));
+                                } else {
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    categories: prev.categories.filter((s) => s !== cat.slug),
+                                  }));
+                                }
+                              }}
+                              className="rounded border-neutral-700 bg-neutral-900 text-amber-500 focus:ring-amber-500 h-4 w-4"
+                            />
+                            <span className="truncate" title={cat.title}>{cat.title}</span>
+                          </label>
+                        );
+                      })}
                     </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-1 sm:gap-4">
                     <div>
                       <label className="mb-1 block text-xs text-neutral-400">Mô tả Alt Ảnh Đại Diện</label>
                       <input
@@ -1114,7 +1170,7 @@ export default function AdminProductsPage() {
                   </div>
                 </div>
 
-                {/* 5. DANH SÁCH BIẾN THỂ (GỌN TRÊN 1 HÀNG NGANG SIÊU TIẾT KIỆM SPACE) */}
+                {/* 5. DANH SÁCH BIẾN THỂ */}
                 <div className="space-y-2 border-t border-neutral-800 pt-4">
                   <h3 className="font-semibold text-amber-500 text-xs sm:text-sm">
                     5. Biến thể đã sinh ({formData.variants.length})
@@ -1130,12 +1186,10 @@ export default function AdminProductsPage() {
                         key={vIdx}
                         className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-xs"
                       >
-                        {/* Tên biến thể */}
                         <span className="font-bold text-amber-400 shrink-0 min-w-[120px]">
                           #{vIdx + 1}: {variant.title || `Biến thể ${vIdx + 1}`}
                         </span>
 
-                        {/* Giá bán & Kho chung 1 dòng */}
                         <div className="flex items-center gap-2 shrink-0">
                           <div className="flex items-center gap-1">
                             <span className="text-[11px] text-neutral-400">Giá:</span>
@@ -1158,7 +1212,6 @@ export default function AdminProductsPage() {
                           </div>
                         </div>
 
-                        {/* Các Thuộc tính chỉnh sửa trực tiếp chung 1 dòng */}
                         <div className="flex flex-wrap items-center gap-1.5 flex-1">
                           {(variant.attributes || []).map((attr, aIdx) => (
                             <div key={aIdx} className="flex items-center gap-1 rounded bg-neutral-900 border border-neutral-800 px-1.5 py-0.5">
@@ -1173,7 +1226,6 @@ export default function AdminProductsPage() {
                           ))}
                         </div>
 
-                        {/* Nút Xóa */}
                         <button
                           type="button"
                           onClick={() => removeVariant(vIdx)}

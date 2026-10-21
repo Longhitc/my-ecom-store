@@ -26,8 +26,8 @@ function AdminMenu({ user }: { user: any }) {
   if (!allowedMenus.length) return null;
 
   return (
-    <div className="w-full border-b border-neutral-800 bg-neutral-900 px-2 py-1.5 text-xs text-white">
-      <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-1.5 sm:flex-row sm:items-center">
+    <div className="w-full border-b border-neutral-800 bg-neutral-900 px-2 py-2 text-xs text-white">
+      <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-2 sm:flex-row sm:items-center">
         
         {/* Dòng 1: Nhãn Quản trị nằm bên trái */}
         <div className="flex shrink-0 items-center gap-1 font-bold text-amber-400 text-[11px] sm:text-xs">
@@ -35,14 +35,14 @@ function AdminMenu({ user }: { user: any }) {
           <span>Quản trị : {user?.admin?.role_name || user?.admin?.roleName || 'Admin'}</span>
         </div>
 
-        {/* Dòng 2: Dãy Menu lọt gọn trong 1 dòng trên Mobile */}
-        <div className="flex items-center gap-1 sm:gap-1.5 rounded-lg bg-neutral-800/60 px-2 py-1 text-[10px] sm:text-xs font-medium w-full sm:w-auto justify-between sm:justify-start overflow-x-auto">
+        {/* Dòng 2: Dãy Menu dạng lưới (Grid) trên Mobile, chuyển thành Flex hàng ngang trên Desktop */}
+        <div className="grid grid-cols-3 sm:flex sm:flex-row items-center gap-1.5 rounded-lg bg-neutral-800/60 p-1.5 text-[11px] sm:text-xs font-medium w-full sm:w-auto justify-between">
           {allowedMenus.includes('orders') && (
             <Link 
               href="/admin/orders" 
-              className={`flex items-center gap-0.5 sm:gap-1 transition-colors whitespace-nowrap ${
+              className={`flex items-center justify-center gap-1 transition-colors py-1.5 px-2 rounded bg-neutral-700/40 sm:bg-transparent ${
                 pathname === '/admin/orders'
-                  ? 'text-amber-400 font-bold'
+                  ? 'text-amber-400 font-bold bg-neutral-700'
                   : 'text-neutral-300 hover:text-white'
               }`}
             >
@@ -51,16 +51,12 @@ function AdminMenu({ user }: { user: any }) {
             </Link>
           )}
 
-          {allowedMenus.includes('orders') && allowedMenus.includes('products') && (
-            <span className="text-neutral-600">|</span>
-          )}
-
           {allowedMenus.includes('products') && (
             <Link 
               href="/admin/products" 
-              className={`flex items-center gap-0.5 sm:gap-1 transition-colors whitespace-nowrap ${
+              className={`flex items-center justify-center gap-1 transition-colors py-1.5 px-2 rounded bg-neutral-700/40 sm:bg-transparent ${
                 pathname === '/admin/products'
-                  ? 'text-amber-400 font-bold'
+                  ? 'text-amber-400 font-bold bg-neutral-700'
                   : 'text-neutral-300 hover:text-white'
               }`}
             >
@@ -69,16 +65,26 @@ function AdminMenu({ user }: { user: any }) {
             </Link>
           )}
 
-          {allowedMenus.includes('products') && allowedMenus.includes('customers') && (
-            <span className="text-neutral-600">|</span>
+          {allowedMenus.includes('promotions') && (
+            <Link 
+              href="/admin/promotions" 
+              className={`flex items-center justify-center gap-1 transition-colors py-1.5 px-2 rounded bg-neutral-700/40 sm:bg-transparent ${
+                pathname?.startsWith('/admin/promotions')
+                  ? 'text-amber-400 font-bold bg-neutral-700'
+                  : 'text-neutral-300 hover:text-white'
+              }`}
+            >
+              <span>🔥</span>
+              <span>Khuyến mãi</span>
+            </Link>
           )}
 
           {allowedMenus.includes('customers') && (
             <Link 
               href="/admin/customers" 
-              className={`flex items-center gap-0.5 sm:gap-1 transition-colors whitespace-nowrap ${
+              className={`flex items-center justify-center gap-1 transition-colors py-1.5 px-2 rounded bg-neutral-700/40 sm:bg-transparent ${
                 pathname === '/admin/customers'
-                  ? 'text-amber-400 font-bold'
+                  ? 'text-amber-400 font-bold bg-neutral-700'
                   : 'text-neutral-300 hover:text-white'
               }`}
             >
@@ -87,16 +93,12 @@ function AdminMenu({ user }: { user: any }) {
             </Link>
           )}
 
-          {allowedMenus.includes('customers') && allowedMenus.includes('roles') && (
-            <span className="text-neutral-600">|</span>
-          )}
-
           {allowedMenus.includes('roles') && (
             <Link 
               href="/admin/roles" 
-              className={`flex items-center gap-0.5 sm:gap-1 transition-colors whitespace-nowrap ${
+              className={`flex items-center justify-center gap-1 transition-colors py-1.5 px-2 rounded bg-neutral-700/40 sm:bg-transparent ${
                 pathname === '/admin/roles'
-                  ? 'text-amber-400 font-bold'
+                  ? 'text-amber-400 font-bold bg-neutral-700'
                   : 'text-neutral-300 hover:text-white'
               }`}
             >
@@ -105,13 +107,11 @@ function AdminMenu({ user }: { user: any }) {
             </Link>
           )}
 
-          {/* Tab Chat ngắn gọn */}
-          <span className="text-neutral-600">|</span>
           <Link 
             href="/admin/chats" 
-            className={`flex items-center gap-0.5 sm:gap-1 transition-colors whitespace-nowrap ${
+            className={`flex items-center justify-center gap-1 transition-colors py-1.5 px-2 rounded bg-neutral-700/40 sm:bg-transparent ${
               pathname === '/admin/chats'
-                ? 'text-amber-400 font-bold'
+                ? 'text-amber-400 font-bold bg-neutral-700'
                 : 'text-neutral-300 hover:text-white'
             }`}
           >

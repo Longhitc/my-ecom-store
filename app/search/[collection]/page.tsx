@@ -38,34 +38,52 @@ async function getCollectionProducts(collection: string, sort?: string) {
     const { sortKey, reverse } =
       sorting.find((item) => item.slug === sort) || defaultSort;
 
-    // Query lấy dữ liệu từ Turso DB
-    const sql = `SELECT * FROM products ORDER BY created_at DESC`;
-    const result = await db.execute(sql);
-
     const crocsSubCategories = ['crocs-nam', 'crocs-nu', 'crocs-tre-em', 'crocs-unisex'];
 
-    // 1. Lọc sản phẩm ẩn & Lọc theo danh mục (collection)
+    // Truy vấn dữ liệu kết hợp với bảng trung gian product_categories
+    let sql = '';
+    let args: any[] = [];
+
+    if (collection === "search") {
+      sql = `
+        SELECT DISTINCT p.* FROM products p
+        ORDER BY p.created_at DESC
+      `;
+    } else if (collection === "co-san" || collection === "order") {
+      sql = `
+        SELECT DISTINCT p.* FROM products p
+        WHERE p.type = ?
+        ORDER BY p.created_at DESC
+      `;
+      args.push(collection);
+    } else if (collection === "gd-crocs") {
+      sql = `
+        SELECT DISTINCT p.* FROM products p
+        INNER JOIN product_categories pc ON p.id = pc.product_id
+        WHERE pc.category_code = 'gd-crocs' OR pc.category_code IN ('crocs-nam', 'crocs-nu', 'crocs-tre-em', 'crocs-unisex')
+        ORDER BY p.created_at DESC
+      `;
+    } else {
+      sql = `
+        SELECT DISTINCT p.* FROM products p
+        INNER JOIN product_categories pc ON p.id = pc.product_id
+        WHERE pc.category_code = ?
+        ORDER BY p.created_at DESC
+      `;
+      args.push(collection);
+    }
+
+    const result = await db.execute({ sql, args });
+
+    // 1. Lọc sản phẩm ẩn (is_active / status)
     let filteredRows = result.rows.filter((row: any) => {
-      // Bỏ sản phẩm ẩn
       if (row.is_active !== undefined && row.is_active !== null) {
         if (Number(row.is_active) === 0 || row.is_active === false) return false;
       }
       if (row.status && (row.status === 'hidden' || row.status === 'inactive')) {
         return false;
       }
-
-      // Lọc theo Collection
-      if (collection === "search") return true;
-
-      if (collection === "co-san" || collection === "order") {
-        return row.type === collection;
-      }
-
-      if (collection === "gd-crocs") {
-        return row.category === "gd-crocs" || crocsSubCategories.includes(row.category);
-      }
-
-      return row.category === collection;
+      return true;
     });
 
     // 2. Map dữ liệu chuẩn hóa UI
