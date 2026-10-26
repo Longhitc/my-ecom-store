@@ -6,7 +6,7 @@ import HomeHeroSlider from './HomeHeroSlider';
 async function getPromoProducts() {
   try {
     const result = await db.execute(`
-      SELECT p.id, p.title, p.featured_image_url as image_url, 
+      SELECT p.id, p.handle, p.title, p.featured_image_url as image_url, 
              MIN(p.min_price) as original_price,
              MIN(pi.promo_price) as promo_price, 
              pi.discount_value, pi.discount_type
@@ -19,6 +19,7 @@ async function getPromoProducts() {
 
     return result.rows.map((row: any) => ({
       id: String(row.id),
+      handle: String(row.handle || row.id),
       title: String(row.title || 'Sản phẩm'),
       originalPrice: `${Number(row.original_price ?? 0).toLocaleString('vi-VN')} đ`,
       promoPrice: `${Number(row.promo_price ?? 0).toLocaleString('vi-VN')} đ`,
@@ -90,7 +91,7 @@ export default async function HomePage() {
                 {promoProducts.map((item) => (
                   <Link
                     key={item.id}
-                    href={`/product/${item.id}`}
+                    href={`/product/${item.handle}`}
                     className="group relative flex flex-col justify-between overflow-hidden rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-black/40 p-2 transition-all hover:border-blue-600 shrink-0 w-[calc(50%-5px)] snap-start"
                   >
                     <span className="absolute top-2 left-2 z-10 rounded bg-red-600 px-1 py-0.2 text-[9px] font-bold text-white shadow">
@@ -111,7 +112,6 @@ export default async function HomePage() {
                       <span className="text-[11px] font-medium text-neutral-800 dark:text-white line-clamp-1">
                         {item.title}
                       </span>
-                      {/* Giá khuyến mãi và giá cũ đã được canh sang góc dưới bên phải (justify-end) */}
                       <div className="flex items-center justify-end gap-2">
                         <span className="text-xs text-neutral-400 line-through">
                           {item.originalPrice}

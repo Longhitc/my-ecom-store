@@ -1,6 +1,30 @@
 import { db } from 'lib/turso';
 import { NextResponse } from 'next/server';
 
+// THÊM HÀM GET NÀY VÀO ĐỂ TRANG CHI TIẾT GỌI ĐƯỢC
+export async function GET() {
+  try {
+    const promoResult = await db.execute(`
+      SELECT p.*, pi.product_id, pi.variant_id, pi.promo_price, pi.discount_value, pi.discount_type 
+      FROM promotions p
+      JOIN promotion_items pi ON p.id = pi.promotion_id
+      WHERE p.status = 'active'
+    `);
+
+    return NextResponse.json({
+      success: true,
+      promotions: promoResult.rows,
+    });
+  } catch (error: any) {
+    console.error('Lỗi khi lấy danh sách promotions:', error);
+    return NextResponse.json(
+      { success: false, error: error.message },
+      { status: 500 }
+    );
+  }
+}
+
+// Giữ nguyên hàm POST hiện tại của ông để tạo khuyến mãi
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -17,16 +41,13 @@ export async function POST(request: Request) {
     const now = new Date().toISOString();
     const status = 'active';
 
-    // 1. Lưu thông tin chung vào bảng `promotions`
     await db.execute({
       sql: `INSERT INTO promotions (id, name, start_date, end_date, status, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
       args: [promotionId, name, start_date, end_date, status, now],
     });
 
-    // 2. Duyệt qua từng sản phẩm và các biến thể để lưu vào bảng `promotion_items`
     for (const prod of items) {
       if (prod.variants && prod.variants.length > 0) {
-        // Nếu sản phẩm có các biến thể (size/màu), lưu từng biến thể
         for (const v of prod.variants) {
           const itemId = 'item_' + Math.random().toString(36).substring(2, 9) + Date.now();
           await db.execute({
@@ -44,7 +65,6 @@ export async function POST(request: Request) {
           });
         }
       } else {
-        // Nếu sản phẩm không có biến thể
         const itemId = 'item_' + Math.random().toString(36).substring(2, 9) + Date.now();
         await db.execute({
           sql: `INSERT INTO promotion_items (id, promotion_id, product_id, variant_id, discount_type, discount_value, promo_price, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,

@@ -9,14 +9,15 @@ export default function ProductPage({ params }: { params: Promise<{ handle: stri
   const { addToCart, setIsCartOpen } = useCart();
   
   const [product, setProduct] = useState<any>(null);
+  const [promotionsList, setPromotionsList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
 
-  // 1. Fetch dữ liệu sản phẩm từ DB
+  // 1. Fetch dữ liệu sản phẩm và danh sách khuyến mãi từ DB
   useEffect(() => {
-    async function fetchProduct() {
+    async function fetchData() {
       try {
         const res = await fetch('/api/admin/products', { cache: 'no-store' });
         if (!res.ok) {
@@ -32,11 +33,24 @@ export default function ProductPage({ params }: { params: Promise<{ handle: stri
 
         if (foundProduct) {
           const detailRes = await fetch(`/api/admin/products?id=${foundProduct.id}`, { cache: 'no-store' });
+          let targetProduct = foundProduct;
           if (detailRes.ok) {
             const detailData = await detailRes.json();
-            setProduct(detailData.product || foundProduct);
+            targetProduct = detailData.product || foundProduct;
+            setProduct(targetProduct);
           } else {
             setProduct(foundProduct);
+          }
+
+          // Fetch danh sách promotions
+          try {
+            const promoRes = await fetch('/api/admin/promotions', { cache: 'no-store' });
+            if (promoRes.ok) {
+              const promoData = await promoRes.json();
+              setPromotionsList(promoData.promotions || []);
+            }
+          } catch (e) {
+            console.error("Lỗi khi tải danh sách khuyến mãi:", e);
           }
         }
       } catch (err) {
@@ -46,10 +60,10 @@ export default function ProductPage({ params }: { params: Promise<{ handle: stri
       }
     }
 
-    fetchProduct();
+    fetchData();
   }, [resolvedParams.handle]);
 
-  // Lọc mảng ảnh sạch, tránh dính src=""
+  // Lọc mảng ảnh sạch
   const validImages: string[] = [];
   if (product) {
     if (Array.isArray(product.images)) {
@@ -136,12 +150,9 @@ export default function ProductPage({ params }: { params: Promise<{ handle: stri
     notFound();
   }
 
-  // Hàm so sánh linh hoạt không phân biệt HOA / thường và khoảng trắng
   const normalize = (str: any) => String(str || '').trim().toLowerCase();
 
-  // Tìm Variant khớp chính xác
   const selectedVariant = product.variants?.find((variant: any) => {
-    // 1. Nếu variant có cấu trúc selectedOptions
     if (variant.selectedOptions && Array.isArray(variant.selectedOptions)) {
       return variant.selectedOptions.every((sel: any) => {
         const userSelectedVal = selectedOptions[sel.name];
@@ -149,7 +160,6 @@ export default function ProductPage({ params }: { params: Promise<{ handle: stri
       });
     }
     
-    // 2. Nếu variant ghép bằng chuỗi title (vd: "Tím / m5")
     if (variant.title) {
       const selectedVals = Object.values(selectedOptions).map(normalize);
       const titleParts = variant.title.split('/').map(normalize);
@@ -159,7 +169,6 @@ export default function ProductPage({ params }: { params: Promise<{ handle: stri
     return false;
   }) || product.variants?.[0];
 
-  // Đọc số lượng kho từ tất cả các kiểu tên cột có thể có
   const stockQuantity = Number(
     selectedVariant?.quantity_available ?? 
     selectedVariant?.quantityAvailable ?? 
@@ -171,7 +180,30 @@ export default function ProductPage({ params }: { params: Promise<{ handle: stri
   );
 
   const isAvailable = stockQuantity > 0;
-  const currentPrice = selectedVariant?.amount ?? selectedVariant?.price ?? product.price ?? 0;
+  const originalPrice = Number(selectedVariant?.amount ?? selectedVariant?.price ?? product.price ?? 0);
+
+  // --- TÌM CHÍNH XÁC GIÁ KHUYẾN MÃI THEO BIẾN THỂ ĐANG CHỌN ---
+  let activePromoItem = null;
+  if (promotionsList.length > 0 && product) {
+    // 1. Ưu tiên tìm chính xác theo ID của biến thể đang chọn
+    if (selectedVariant?.id) {
+      activePromoItem = promotionsList.find(
+        (item: any) => 
+          String(item.product_id) === String(product.id) && 
+          String(item.variant_id) === String(selectedVariant.id)
+      );
+    }
+    // 2. Nếu biến thể đó không có trong promotion, tìm theo sản phẩm chung hoặc bất kỳ biến thể nào thuộc sản phẩm này
+    if (!activePromoItem) {
+      activePromoItem = promotionsList.find(
+        (item: any) => String(item.product_id) === String(product.id)
+      );
+    }
+  }
+
+  const promoPrice = activePromoItem?.promo_price ? Number(activePromoItem.promo_price) : null;
+  const finalPrice = promoPrice !== null && promoPrice < originalPrice ? promoPrice : originalPrice;
+  const hasDiscount = promoPrice !== null && promoPrice < originalPrice;
 
   const handleOptionChange = (optionName: string, value: string) => {
     setSelectedOptions((prev) => ({
@@ -187,7 +219,7 @@ export default function ProductPage({ params }: { params: Promise<{ handle: stri
       id: selectedVariant ? `${product.id}-${selectedVariant.id}` : product.id,
       handle: product.handle,
       title: `${product.title} ${selectedVariant?.title ? `(${selectedVariant.title})` : ''} ${!isAvailable ? '[Hàng Đặt Trước]' : ''}`,
-      price: Number(currentPrice),
+      price: Number(finalPrice),
       imageUrl: selectedImage || '',
       size: selectedOptions['Size'] || 'Mặc định',
       style: selectedOptions['Màu sắc'] || selectedOptions['Loại'] || selectedOptions['Phân loại'] || 'Mặc định',
@@ -196,6 +228,7 @@ export default function ProductPage({ params }: { params: Promise<{ handle: stri
 
     setIsCartOpen(true);
   };
+
   return (
     <div className="mx-auto max-w-screen-xl px-4 py-8 md:py-16 text-black dark:text-white">
       {/* Breadcrumb */}
@@ -206,7 +239,13 @@ export default function ProductPage({ params }: { params: Promise<{ handle: stri
       <div className="grid grid-cols-1 gap-12 md:grid-cols-2">
         {/* BÊN TRÁI: GALLERY HÌNH ẢNH */}
         <div className="space-y-4">
-          <div className="flex justify-center bg-neutral-100 dark:bg-neutral-900 rounded-lg p-6 border border-neutral-200 dark:border-neutral-800 min-h-[350px] items-center">
+          <div className="relative flex justify-center bg-neutral-100 dark:bg-neutral-900 rounded-lg p-6 border border-neutral-200 dark:border-neutral-800 min-h-[350px] items-center">
+            {hasDiscount && (
+              <span className="absolute top-4 left-4 z-10 rounded bg-red-600 px-2 py-1 text-xs font-bold text-white shadow">
+                {activePromoItem?.discount_type === 'percent' ? `-${activePromoItem.discount_value}%` : `-${Number(activePromoItem?.discount_value || 0).toLocaleString('vi-VN')}đ`}
+              </span>
+            )}
+
             {selectedImage ? (
               <img 
                 src={selectedImage} 
@@ -247,9 +286,22 @@ export default function ProductPage({ params }: { params: Promise<{ handle: stri
         <div className="flex flex-col justify-start space-y-6">
           <h1 className="text-4xl font-bold tracking-tight">{product.title}</h1>
           
-          {/* GIÁ SẢN PHẨM */}
-          <div className="text-2xl font-bold text-blue-600 dark:text-blue-500">
-            {Number(currentPrice).toLocaleString('vi-VN')} đ
+          {/* HIỂN THỊ GIÁ KHUYẾN MÃI VÀ GIÁ GỐC GẠCH NGANG */}
+          <div className="flex items-center gap-3">
+            {hasDiscount ? (
+              <>
+                <span className="text-3xl font-extrabold text-red-600">
+                  {finalPrice.toLocaleString('vi-VN')} đ
+                </span>
+                <span className="text-lg text-neutral-400 line-through">
+                  {originalPrice.toLocaleString('vi-VN')} đ
+                </span>
+              </>
+            ) : (
+              <span className="text-3xl font-bold text-blue-600 dark:text-blue-500">
+                {originalPrice.toLocaleString('vi-VN')} đ
+              </span>
+            )}
           </div>
           
           <hr className="border-neutral-200 dark:border-neutral-800" />
