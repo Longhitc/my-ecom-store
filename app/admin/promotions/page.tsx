@@ -7,6 +7,9 @@ interface Variant {
   name: string;
   price: number;
   stock: number;
+  discount_type?: 'percent' | 'amount';
+  discount_value?: number;
+  promo_price?: number;
 }
 
 interface ProductItem {
@@ -17,10 +20,9 @@ interface ProductItem {
   price: number;
   stock: number;
   variants: Variant[];
-  discount_type?: 'percent' | 'amount';
-  discount_value?: number;
-  promo_price?: number;
-  selected_variant_id?: string;
+  discount_type: 'percent' | 'amount';
+  discount_value: number;
+  promo_price: number;
 }
 
 export default function PromotionsPage() {
@@ -28,22 +30,24 @@ export default function PromotionsPage() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
-  // Lưới sản phẩm đã chọn cho chương trình
   const [selectedProducts, setSelectedProducts] = useState<ProductItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // State Modal chọn sản phẩm
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalProducts, setModalProducts] = useState<ProductItem[]>([]);
-  const [tempSelected, setTempSelected] = useState<Record<string, ProductItem>>({});
   
-  // State lọc & phân trang trong modal
+  const [modalConfigs, setModalConfigs] = useState<Record<string, {
+    product: ProductItem;
+    isChecked: boolean;
+    discount_type: 'percent' | 'amount';
+    discount_value: number;
+  }>>({});
+  
   const [keyword, setKeyword] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Fetch danh sách sản phẩm trong Modal
   const fetchModalProducts = async () => {
     setIsLoading(true);
     try {
@@ -74,59 +78,165 @@ export default function PromotionsPage() {
     fetchModalProducts();
   };
 
-  // Checkbox chọn/bỏ chọn sản phẩm trong Modal
-  const toggleSelectProduct = (prod: ProductItem) => {
-    setTempSelected((prev) => {
-      const updated = { ...prev };
-      if (updated[prod.id]) {
-        delete updated[prod.id];
-      } else {
-        updated[prod.id] = {
-          ...prod,
-          discount_type: 'percent',
-          discount_value: 0,
-          promo_price: prod.price,
-          selected_variant_id: prod.variants?.[0]?.id || undefined,
-        };
-      }
-      return updated;
+  const handleOpenModal = () => {
+    const initialMap: Record<string, any> = {};
+    selectedProducts.forEach(p => {
+      initialMap[p.id] = {
+        product: p,
+        isChecked: true,
+        discount_type: p.discount_type || 'percent',
+        discount_value: p.discount_value || 0,
+      };
+    });
+    setModalConfigs(initialMap);
+    setIsModalOpen(true);
+  };
+
+  const handleModalConfigChange = (prod: ProductItem, field: string, value: any) => {
+    setModalConfigs((prev) => {
+      const current = prev[prod.id] || {
+        product: prod,
+        isChecked: false,
+        discount_type: 'percent',
+        discount_value: 0,
+      };
+      return {
+        ...prev,
+        [prod.id]: {
+          ...current,
+          product: prod,
+          [field]: value,
+        },
+      };
     });
   };
 
-  // Bấm LƯU từ Modal -> Đưa vào Lưới chính
-  const handleSaveSelectedProducts = () => {
-    setSelectedProducts(Object.values(tempSelected));
+  const handleApplySelectedProducts = () => {
+    const newSelected: ProductItem[] = [];
+
+    Object.values(modalConfigs).forEach((config) => {
+      if (config.isChecked) {
+        const prod = config.product;
+        const dtype = config.discount_type || 'percent';
+        const dval = Number(config.discount_value) || 0;
+        const basePrice = prod.price || 0;
+
+        let finalPrice = basePrice;
+        if (dtype === 'percent') {
+          finalPrice = basePrice * (1 - dval / 100);
+        } else {
+          finalPrice = basePrice - dval;
+        }
+
+        const initializedVariants = (prod.variants || []).map((v) => {
+          const vPrice = v.price || 0;
+          let vFinal = vPrice;
+          if (dtype === 'percent') {
+            vFinal = vPrice * (1 - dval / 100);
+          } else {
+            vFinal = vPrice - dval;
+          }
+          return {
+            ...v,
+            discount_type: dtype,
+            discount_value: dval,
+            promo_price: Math.max(0, vFinal),
+          };
+        });
+
+        newSelected.push({
+          ...prod,
+          discount_type: dtype,
+          discount_value: dval,
+          promo_price: Math.max(0, finalPrice),
+          variants: initializedVariants,
+        });
+      }
+    });
+
+    setSelectedProducts(newSelected);
     setIsModalOpen(false);
   };
 
-  // Cập nhật giá trị giảm giá trên Lưới chính (Đã chuẩn hóa TypeScript 100%)
-  const updateDiscount = (index: number, field: string, value: any) => {
+  const updateProductDiscount = (index: number, field: 'discount_type' | 'discount_value', value: any) => {
     setSelectedProducts((prev) => {
       const copy = [...prev];
-      const item: any = { ...copy[index] };
+      const item = { ...copy[index] };
 
-      if (field === 'discount_type') item.discount_type = value as 'percent' | 'amount';
+      if (field === 'discount_type') item.discount_type = value;
       if (field === 'discount_value') item.discount_value = Number(value);
-      if (field === 'selected_variant_id') item.selected_variant_id = value;
 
-      // Tính lại giá sau khuyến mãi
-      let finalPrice = item.price;
+      const basePrice = item.price || 0;
+      let finalPrice = basePrice;
       if (item.discount_type === 'percent') {
-        finalPrice = item.price * (1 - (item.discount_value || 0) / 100);
+        finalPrice = basePrice * (1 - (item.discount_value || 0) / 100);
       } else {
-        finalPrice = item.price - (item.discount_value || 0);
+        finalPrice = basePrice - (item.discount_value || 0);
       }
       item.promo_price = Math.max(0, finalPrice);
 
-      copy[index] = item;
+      item.variants = (item.variants || []).map((v) => {
+        const vPrice = v.price || 0;
+        let vFinal = vPrice;
+        if (item.discount_type === 'percent') {
+          vFinal = vPrice * (1 - (item.discount_value || 0) / 100);
+        } else {
+          vFinal = vPrice - (item.discount_value || 0);
+        }
+        return {
+          ...v,
+          discount_type: item.discount_type,
+          discount_value: item.discount_value,
+          promo_price: Math.max(0, vFinal),
+        };
+      });
+
+      copy[index] = item as ProductItem;
       return copy;
     });
   };
 
-  // Gửi dữ liệu tạo chương trình lên Backend
+  const updateVariantDiscount = (prodIndex: number, varIndex: number, value: any) => {
+    setSelectedProducts((prev) => {
+      const copy = [...prev];
+      const item = { ...copy[prodIndex] };
+      const variants = [...(item.variants || [])];
+      
+      const targetVariant = variants[varIndex];
+      const v: Variant = {
+        id: targetVariant?.id || '',
+        name: targetVariant?.name || '',
+        price: targetVariant?.price || 0,
+        stock: targetVariant?.stock || 0,
+        discount_type: targetVariant?.discount_type,
+        discount_value: Number(value),
+        promo_price: targetVariant?.promo_price,
+      };
+
+      const vPrice = v.price || 0;
+      let vFinal = vPrice;
+      if (v.discount_type === 'percent') {
+        vFinal = vPrice * (1 - (v.discount_value || 0) / 100);
+      } else {
+        vFinal = vPrice - (v.discount_value || 0);
+      }
+      v.promo_price = Math.max(0, vFinal);
+
+      variants[varIndex] = v;
+      item.variants = variants;
+      copy[prodIndex] = item as ProductItem;
+      return copy;
+    });
+  };
+
   const handleSavePromotion = async () => {
     if (!promoName || !startDate || !endDate) {
       alert('Vui lòng nhập đầy đủ tên chương trình và thời gian!');
+      return;
+    }
+
+    if (selectedProducts.length === 0) {
+      alert('Vui lòng chọn sản phẩm và áp dụng khuyến mãi!');
       return;
     }
 
@@ -145,36 +255,35 @@ export default function PromotionsPage() {
 
       const data = await res.json();
       if (data.success) {
-        alert(data.message);
+        alert(data.message || 'Đã lưu chương trình khuyến mãi thành công!');
         setPromoName('');
         setStartDate('');
         setEndDate('');
         setSelectedProducts([]);
       } else {
-        alert(data.error || 'Có lỗi xảy ra');
+        alert(data.error || 'Có lỗi xảy ra.');
       }
     } catch (error) {
       console.error('Lỗi lưu:', error);
-      alert('Lỗi kết nối server');
+      alert('Lỗi kết nối server.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6 text-sm">
-      <div className="flex justify-between items-center">
-        <h1 className="text-xl font-bold">Quản Lý Chương Trình Khuyến Mãi</h1>
+    <div className="p-3 sm:p-6 max-w-7xl mx-auto space-y-4 sm:space-y-6 text-sm">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+        <h1 className="text-lg sm:text-xl font-bold">Quản Lý Chương Trình Khuyến Mãi</h1>
         <button
           onClick={handleSavePromotion}
           disabled={isSubmitting}
-          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded font-semibold text-xs shadow disabled:opacity-50 cursor-pointer"
+          className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded font-semibold text-xs shadow disabled:opacity-50 cursor-pointer"
         >
-          {isSubmitting ? 'Đang lưu...' : 'Lưu Chương Trình Khuyến Mãi'}
+          {isSubmitting ? 'Đang lưu...' : '💾 Lưu Chương Trình Khuyến Mãi'}
         </button>
       </div>
 
-      {/* 1. Phần Thông tin chung */}
       <div className="bg-white dark:bg-neutral-900 p-4 rounded-lg shadow border border-neutral-200 dark:border-neutral-800 space-y-4">
         <div>
           <label className="block text-xs font-semibold mb-1">Tên chương trình khuyến mãi</label>
@@ -209,121 +318,101 @@ export default function PromotionsPage() {
         </div>
       </div>
 
-      {/* 2. Phần Lưới Danh sách sản phẩm tham gia */}
       <div className="bg-white dark:bg-neutral-900 p-4 rounded-lg shadow border border-neutral-200 dark:border-neutral-800 space-y-4">
         <div className="flex justify-between items-center">
           <h2 className="text-sm font-bold">Sản phẩm áp dụng ({selectedProducts.length})</h2>
           <button
-            onClick={() => {
-              setTempSelected(
-                selectedProducts.reduce((acc, p) => ({ ...acc, [p.id]: p }), {})
-              );
-              setIsModalOpen(true);
-            }}
+            onClick={handleOpenModal}
             className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-2 rounded font-medium cursor-pointer"
           >
-            + Thêm sản phẩm
+            + Chọn & Cài đặt sản phẩm
           </button>
         </div>
 
-        {/* Bảng danh sách sản phẩm trong lưới */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
-            <thead>
-              <tr className="border-b dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300">
-                <th className="p-2.5">Sản phẩm</th>
-                <th className="p-2.5">Biến thể (Size/Màu)</th>
-                <th className="p-2.5">Giá bán gốc</th>
-                <th className="p-2.5">Loại giảm</th>
-                <th className="p-2.5">Mức giảm</th>
-                <th className="p-2.5">Giá sau KM</th>
-                <th className="p-2.5 text-center">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody>
-              {selectedProducts.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="text-center py-8 text-neutral-400">
-                    Chưa có sản phẩm nào được chọn. Bấm nút "+ Thêm sản phẩm" ở trên để chọn.
-                  </td>
-                </tr>
-              ) : (
-                selectedProducts.map((prod, idx) => (
-                  <tr key={prod.id} className="border-b dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
-                    <td className="p-2.5 flex items-center gap-2">
-                      <img src={prod.image || '/placeholder.png'} className="w-10 h-10 object-cover rounded border" />
-                      <div>
-                        <div className="font-semibold text-neutral-800 dark:text-white">{prod.name}</div>
-                        <div className="text-[10px] text-neutral-400">Mã: {prod.code || 'N/A'}</div>
-                      </div>
-                    </td>
-                    <td className="p-2.5">
-                      {prod.variants.length > 0 ? (
-                        <select
-                          value={prod.selected_variant_id || ''}
-                          onChange={(e) => updateDiscount(idx, 'selected_variant_id', e.target.value)}
-                          className="border dark:border-neutral-700 rounded px-1.5 py-1 text-xs bg-transparent"
-                        >
-                          {prod.variants.map((v) => (
-                            <option key={v.id} value={v.id} className="dark:bg-neutral-900">
-                              {v.name} (Kho: {v.stock})
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        <span className="text-neutral-400">Mặc định</span>
-                      )}
-                    </td>
-                    <td className="p-2.5 font-medium">{prod.price.toLocaleString('vi-VN')} đ</td>
-                    <td className="p-2.5">
+        {selectedProducts.length === 0 ? (
+          <div className="text-center py-8 text-neutral-400 text-xs border border-dashed rounded-lg dark:border-neutral-800">
+            Chưa có sản phẩm nào. Bấm nút "+ Chọn & Cài đặt sản phẩm" để bắt đầu.
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {selectedProducts.map((prod, prodIdx) => (
+              <div key={prod.id} className="p-3.5 border dark:border-neutral-800 rounded-lg bg-neutral-50 dark:bg-neutral-800/40 space-y-3">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b pb-3 dark:border-neutral-700/60">
+                  <div className="flex items-center gap-3">
+                    <img src={prod.image || '/placeholder.png'} className="w-12 h-12 object-cover rounded border shrink-0" />
+                    <div>
+                      <div className="font-bold text-neutral-800 dark:text-white text-xs sm:text-sm">{prod.name}</div>
+                      <div className="text-[10px] text-neutral-400">Mã: {prod.code || 'N/A'} | Giá gốc: {(prod.price || 0).toLocaleString('vi-VN')} đ</div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
+                    <div className="flex items-center gap-1.5">
                       <select
-                        value={prod.discount_type || 'percent'}
-                        onChange={(e) => updateDiscount(idx, 'discount_type', e.target.value)}
-                        className="border dark:border-neutral-700 rounded px-1.5 py-1 text-xs bg-transparent"
+                        value={prod.discount_type}
+                        onChange={(e) => updateProductDiscount(prodIdx, 'discount_type', e.target.value)}
+                        className="border dark:border-neutral-700 rounded px-2 py-1 text-xs bg-white dark:bg-neutral-900"
                       >
-                        <option value="percent" className="dark:bg-neutral-900">Giảm theo %</option>
-                        <option value="amount" className="dark:bg-neutral-900">Giảm VNĐ</option>
+                        <option value="percent">Giảm %</option>
+                        <option value="amount">Giảm VNĐ</option>
                       </select>
-                    </td>
-                    <td className="p-2.5">
                       <input
                         type="number"
-                        value={prod.discount_value || 0}
-                        onChange={(e) => updateDiscount(idx, 'discount_value', e.target.value)}
-                        className="w-20 border dark:border-neutral-700 rounded px-2 py-1 text-xs bg-transparent"
+                        value={prod.discount_value}
+                        onChange={(e) => updateProductDiscount(prodIdx, 'discount_value', e.target.value)}
+                        className="w-24 border dark:border-neutral-700 rounded px-2 py-1 text-xs bg-white dark:bg-neutral-900 font-semibold text-blue-600"
                       />
-                    </td>
-                    <td className="p-2.5 font-bold text-red-600">
-                      {prod.promo_price?.toLocaleString('vi-VN')} đ
-                    </td>
-                    <td className="p-2.5 text-center">
-                      <button
-                        onClick={() => setSelectedProducts(selectedProducts.filter((_, i) => i !== idx))}
-                        className="text-red-500 hover:underline text-xs cursor-pointer"
-                      >
-                        Xóa
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                    </div>
+                    <button
+                      onClick={() => setSelectedProducts(selectedProducts.filter((_, i) => i !== prodIdx))}
+                      className="text-red-500 hover:underline text-xs px-2 py-1 cursor-pointer font-medium"
+                    >
+                      Xóa
+                    </button>
+                  </div>
+                </div>
+
+                {prod.variants && prod.variants.length > 0 && (
+                  <div className="space-y-2 pl-0 sm:pl-14">
+                    <div className="text-[11px] font-semibold text-neutral-500">Chi tiết biến thể:</div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                      {prod.variants.map((v, varIdx) => (
+                        <div key={v.id} className="p-2 rounded border dark:border-neutral-700/60 bg-white dark:bg-neutral-900/60 flex items-center justify-between gap-2 text-xs">
+                          <div className="truncate">
+                            <div className="font-medium truncate">{v.name}</div>
+                            <div className="text-[10px] text-neutral-400">Gốc: {(v.price || 0).toLocaleString('vi-VN')} đ</div>
+                          </div>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <input
+                              type="number"
+                              value={v.discount_value || 0}
+                              onChange={(e) => updateVariantDiscount(prodIdx, varIdx, e.target.value)}
+                              className="w-16 border dark:border-neutral-700 rounded px-1.5 py-0.5 text-xs bg-transparent text-right"
+                            />
+                            <span className="font-bold text-red-600 w-20 text-right truncate">
+                              {(v.promo_price || 0).toLocaleString('vi-VN')} đ
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* 3. MODAL CHỌN SẢN PHẨM PHÂN TRANG */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-[999] bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-neutral-900 rounded-xl shadow-xl w-full max-w-3xl flex flex-col max-h-[85vh] border border-neutral-200 dark:border-neutral-800">
-            {/* Header Modal */}
+        <div className="fixed inset-0 z-[999] bg-black/50 flex items-center justify-center p-2 sm:p-4">
+          <div className="bg-white dark:bg-neutral-900 rounded-xl shadow-xl w-full max-w-4xl flex flex-col max-h-[90vh] border border-neutral-200 dark:border-neutral-800">
             <div className="p-4 border-b dark:border-neutral-800 flex justify-between items-center">
-              <h3 className="font-bold text-sm">Chọn sản phẩm tham gia khuyến mãi</h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-lg font-bold cursor-pointer">&times;</button>
+              <h3 className="font-bold text-sm">Chọn sản phẩm và cấu hình mức giảm giá</h3>
+              <button onClick={() => setIsModalOpen(false)} className="text-lg font-bold cursor-pointer px-2">&times;</button>
             </div>
 
-            {/* Bộ lọc tìm kiếm */}
-            <form onSubmit={handleSearch} className="p-4 border-b dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800/50 flex gap-2">
+            <form onSubmit={handleSearch} className="p-3 sm:p-4 border-b dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800/50 flex gap-2">
               <input
                 type="text"
                 placeholder="Tìm theo tên hoặc mã sản phẩm..."
@@ -331,62 +420,71 @@ export default function PromotionsPage() {
                 onChange={(e) => setKeyword(e.target.value)}
                 className="flex-1 border dark:border-neutral-700 rounded px-3 py-1.5 text-xs bg-white dark:bg-neutral-900"
               />
-              <button type="submit" className="bg-neutral-800 text-white px-4 py-1.5 rounded text-xs cursor-pointer">
+              <button type="submit" className="bg-neutral-800 text-white px-4 py-1.5 rounded text-xs cursor-pointer shrink-0">
                 Tìm kiếm
               </button>
             </form>
 
-            {/* Danh sách sản phẩm dạng bảng */}
-            <div className="flex-1 overflow-y-auto p-4">
+            <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-2.5">
               {isLoading ? (
                 <div className="text-center py-10 text-xs text-neutral-400">Đang tải sản phẩm...</div>
+              ) : modalProducts.length === 0 ? (
+                <div className="text-center py-10 text-xs text-neutral-400">Không tìm thấy sản phẩm phù hợp.</div>
               ) : (
-                <table className="w-full text-left text-xs">
-                  <thead>
-                    <tr className="border-b dark:border-neutral-800 text-neutral-500">
-                      <th className="p-2 w-10 text-center">Chọn</th>
-                      <th className="p-2">Sản phẩm</th>
-                      <th className="p-2">Giá bán</th>
-                      <th className="p-2">Tồn kho</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {modalProducts.map((prod) => {
-                      const isChecked = !!tempSelected[prod.id];
-                      return (
-                        <tr key={prod.id} className="border-b dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
-                          <td className="p-2 text-center">
-                            <input
-                              type="checkbox"
-                              checked={isChecked}
-                              onChange={() => toggleSelectProduct(prod)}
-                              className="cursor-pointer"
-                            />
-                          </td>
-                          <td className="p-2 flex items-center gap-2">
-                            <img src={prod.image || '/placeholder.png'} className="w-8 h-8 object-cover rounded border" />
-                            <div>
-                              <div className="font-medium text-neutral-800 dark:text-white">{prod.name}</div>
-                              <div className="text-[10px] text-neutral-400">{prod.code}</div>
-                            </div>
-                          </td>
-                          <td className="p-2 font-medium">{prod.price?.toLocaleString('vi-VN')} đ</td>
-                          <td className="p-2">{prod.stock}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                modalProducts.map((prod) => {
+                  const config = modalConfigs[prod.id] || { isChecked: false, discount_type: 'percent', discount_value: 0 };
+                  return (
+                    <div 
+                      key={prod.id} 
+                      className={`flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 rounded-lg border gap-3 transition-colors ${
+                        config.isChecked 
+                          ? 'border-blue-500 bg-blue-50/40 dark:bg-blue-950/20' 
+                          : 'border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 overflow-hidden w-full sm:w-auto">
+                        <input
+                          type="checkbox"
+                          checked={config.isChecked}
+                          onChange={(e) => handleModalConfigChange(prod, 'isChecked', e.target.checked)}
+                          className="cursor-pointer shrink-0 w-4 h-4"
+                        />
+                        <img src={prod.image || '/placeholder.png'} className="w-10 h-10 object-cover rounded border shrink-0" />
+                        <div className="truncate">
+                          <div className="font-medium text-neutral-800 dark:text-white text-xs truncate">{prod.name}</div>
+                          <div className="text-[10px] text-neutral-400">Mã: {prod.code || 'N/A'} | Gốc: {(prod.price || 0).toLocaleString('vi-VN')} đ</div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                        <select
+                          value={config.discount_type}
+                          onChange={(e) => handleModalConfigChange(prod, 'discount_type', e.target.value)}
+                          className="border dark:border-neutral-700 rounded px-2 py-1 text-xs bg-white dark:bg-neutral-900"
+                        >
+                          <option value="percent">Giảm %</option>
+                          <option value="amount">Giảm VNĐ</option>
+                        </select>
+                        <input
+                          type="number"
+                          value={config.discount_value}
+                          onChange={(e) => handleModalConfigChange(prod, 'discount_value', e.target.value)}
+                          placeholder="Nhập mức giảm"
+                          className="w-28 border dark:border-neutral-700 rounded px-2 py-1 text-xs bg-white dark:bg-neutral-900 font-semibold text-blue-600 text-right"
+                        />
+                      </div>
+                    </div>
+                  );
+                })
               )}
             </div>
 
-            {/* Phân trang & Footer Modal */}
-            <div className="p-4 border-t dark:border-neutral-800 flex justify-between items-center bg-neutral-50 dark:bg-neutral-800/50">
-              <div className="flex items-center gap-2 text-xs">
+            <div className="p-3 sm:p-4 border-t dark:border-neutral-800 flex flex-col sm:flex-row justify-between items-center gap-3 bg-neutral-50 dark:bg-neutral-800/50">
+              <div className="flex items-center gap-2 text-xs w-full sm:w-auto justify-between sm:justify-start">
                 <button
                   disabled={page <= 1}
                   onClick={() => setPage((p) => p - 1)}
-                  className="px-2 py-1 border dark:border-neutral-700 rounded disabled:opacity-50 cursor-pointer"
+                  className="px-2.5 py-1 border dark:border-neutral-700 rounded disabled:opacity-50 cursor-pointer bg-white dark:bg-neutral-900"
                 >
                   Trang trước
                 </button>
@@ -394,21 +492,21 @@ export default function PromotionsPage() {
                 <button
                   disabled={page >= totalPages}
                   onClick={() => setPage((p) => p + 1)}
-                  className="px-2 py-1 border dark:border-neutral-700 rounded disabled:opacity-50 cursor-pointer"
+                  className="px-2.5 py-1 border dark:border-neutral-700 rounded disabled:opacity-50 cursor-pointer bg-white dark:bg-neutral-900"
                 >
                   Trang sau
                 </button>
               </div>
 
-              <div className="flex gap-2">
-                <button onClick={() => setIsModalOpen(false)} className="px-3 py-1.5 border dark:border-neutral-700 rounded text-xs cursor-pointer">
+              <div className="flex gap-2 w-full sm:w-auto justify-end">
+                <button onClick={() => setIsModalOpen(false)} className="px-3 py-1.5 border dark:border-neutral-700 rounded text-xs cursor-pointer bg-white dark:bg-neutral-900">
                   Hủy
                 </button>
                 <button
-                  onClick={handleSaveSelectedProducts}
-                  className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold cursor-pointer"
+                  onClick={handleApplySelectedProducts}
+                  className="px-5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold cursor-pointer shadow"
                 >
-                  Lưu ({Object.keys(tempSelected).length})
+                  🚀 Áp dụng vào danh sách
                 </button>
               </div>
             </div>
