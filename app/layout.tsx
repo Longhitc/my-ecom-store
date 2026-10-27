@@ -77,7 +77,7 @@ export default async function RootLayout({
             <main>
               {children}
               <Toaster closeButton />
-            </main>
+            </main>         
 
             <CartDrawer />
             <ChatWidget />
