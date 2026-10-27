@@ -75,7 +75,7 @@ export default async function Footer() {
                 href="tel:0903035978" 
                 className="inline-flex items-center gap-1.5 font-extrabold text-blue-600 dark:text-blue-400 hover:underline text-sm bg-blue-50 dark:bg-blue-950/50 px-3 py-1.5 rounded-lg border border-blue-100 dark:border-blue-900/50 w-full justify-center"
               >
-                <span>📞</span> 0903 035 978
+                <span>📞</span> 0933 552 264
               </a>
             </div>
           </div>

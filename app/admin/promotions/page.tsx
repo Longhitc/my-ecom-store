@@ -25,6 +25,15 @@ interface ProductItem {
   promo_price: number;
 }
 
+interface PromoProductInfo {
+  product_id: string;
+  product_title: string;
+  product_image: string;
+  product_code: string;
+  discount_type: string;
+  discount_value: number;
+}
+
 interface PromotionProgram {
   id: string;
   name: string;
@@ -33,6 +42,7 @@ interface PromotionProgram {
   status: string;
   created_at: string;
   discount_summary?: string;
+  products: PromoProductInfo[];
 }
 
 export default function PromotionsPage() {
@@ -41,6 +51,10 @@ export default function PromotionsPage() {
 
   const [promotionsList, setPromotionsList] = useState<PromotionProgram[]>([]);
   const [isFetchingList, setIsFetchingList] = useState(false);
+
+  // State quản lý phóng to ảnh khi hover
+  const [hoveredImgUrl, setHoveredImgUrl] = useState<string | null>(null);
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
 
   // State cho Modal gia hạn
   const [isExtendModalOpen, setIsExtendModalOpen] = useState(false);
@@ -105,7 +119,23 @@ export default function PromotionsPage() {
               discount_summary: item.discount_value 
                 ? (item.discount_type === 'percent' ? `Giảm ${item.discount_value}%` : `Giảm ${Number(item.discount_value).toLocaleString('vi-VN')} đ`)
                 : 'N/A',
+              products: [],
             });
+          }
+
+          if (item.product_id) {
+            const promoObj = map.get(promoId)!;
+            const exists = promoObj.products.some((p) => p.product_id === item.product_id);
+            if (!exists) {
+              promoObj.products.push({
+                product_id: item.product_id,
+                product_title: item.product_title || 'Sản phẩm không tên',
+                product_image: item.product_image || '',
+                product_code: item.product_code || item.product_id,
+                discount_type: item.discount_type,
+                discount_value: item.discount_value,
+              });
+            }
           }
         });
 
@@ -124,7 +154,6 @@ export default function PromotionsPage() {
     }
   }, [activeTab]);
 
-  // Xử lý dừng chương trình ngay lập tức
   const handleStopPromotion = async (id: string) => {
     if (!confirm('Bạn có chắc muốn dừng chương trình này ngay lập tức? Sản phẩm sẽ trở về giá gốc.')) return;
 
@@ -147,7 +176,6 @@ export default function PromotionsPage() {
     }
   };
 
-  // Xử lý lưu gia hạn thời gian
   const handleSaveExtension = async () => {
     if (!selectedPromo || !newEndDate) {
       alert('Vui lòng chọn thời gian kết thúc mới!');
@@ -418,7 +446,24 @@ export default function PromotionsPage() {
   });
 
   return (
-    <div className="p-3 sm:p-6 max-w-7xl mx-auto space-y-4 sm:space-y-6 text-sm">
+    <div className="p-3 sm:p-6 max-w-7xl mx-auto space-y-4 sm:space-y-6 text-sm relative">
+      
+      {/* KHUNG POPUP HIỆN ẢNH LỚN KHI HOVER */}
+      {hoveredImgUrl && (
+        <div 
+          className="fixed z-[9999] pointer-events-none bg-white dark:bg-neutral-900 p-2 rounded-xl shadow-2xl border border-neutral-200 dark:border-neutral-700 w-48 h-48 flex items-center justify-center"
+          style={{
+            top: Math.min(mousePosition.y + 15, window.innerHeight - 210),
+            left: Math.min(mousePosition.x + 15, window.innerWidth - 210),
+          }}
+        >
+          <img 
+            src={hoveredImgUrl} 
+            className="w-full h-full object-contain rounded-lg"
+          />
+        </div>
+      )}
+
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b pb-4 dark:border-neutral-800">
         <div>
           <h1 className="text-base sm:text-xl font-bold">Quản Lý Chương Trình Khuyến Mãi</h1>
@@ -490,7 +535,7 @@ export default function PromotionsPage() {
                 {/* HIỂN THỊ DẠNG THẺ (CARD) CHO MOBILE */}
                 <div className="block md:hidden divide-y divide-neutral-200 dark:divide-neutral-800">
                   {filteredPromotions.map((promo, idx) => (
-                    <div key={`${promo.id}-${idx}`} className="p-3.5 space-y-2.5">
+                    <div key={`${promo.id}-${idx}`} className="p-3.5 space-y-3">
                       <div className="flex items-start justify-between gap-2">
                         <span className="font-bold text-neutral-900 dark:text-white text-xs">{promo.name}</span>
                         {promoStatusTab === 'active' && (
@@ -510,18 +555,39 @@ export default function PromotionsPage() {
                         )}
                       </div>
 
-                      <div className="flex justify-between items-center text-[11px] text-neutral-500">
-                        <span>Mức giảm:</span>
-                        <span className="font-bold text-blue-600">{promo.discount_summary}</span>
-                      </div>
-
                       <div className="text-[11px] text-neutral-600 dark:text-neutral-400 space-y-0.5 bg-neutral-50 dark:bg-neutral-800/40 p-2 rounded">
                         <div><strong className="text-neutral-500">Bắt đầu:</strong> {formatDateTime(promo.start_date)}</div>
                         <div><strong className="text-neutral-500">Kết thúc:</strong> {formatDateTime(promo.end_date)}</div>
                       </div>
 
+                      <div className="space-y-1.5 pt-1">
+                        <div className="text-[11px] font-bold text-neutral-700 dark:text-neutral-300">Sản phẩm áp dụng ({promo.products.length}):</div>
+                        <div className="space-y-1 max-h-40 overflow-y-auto">
+                          {promo.products.map((p, pIdx) => (
+                            <div key={pIdx} className="flex items-center gap-2.5 p-1.5 bg-neutral-50 dark:bg-neutral-800/60 rounded border dark:border-neutral-700/50">
+                              <img 
+                                src={p.product_image || '/placeholder.png'} 
+                                className="w-10 h-10 object-cover rounded-md shrink-0 border cursor-pointer" 
+                                onMouseEnter={(e) => {
+                                  setHoveredImgUrl(p.product_image || '/placeholder.png');
+                                  setMousePosition({ x: e.clientX, y: e.clientY });
+                                }}
+                                onMouseMove={(e) => {
+                                  setMousePosition({ x: e.clientX, y: e.clientY });
+                                }}
+                                onMouseLeave={() => setHoveredImgUrl(null)}
+                              />
+                              <div className="min-w-0 flex-1">
+                                <div className="text-xs font-semibold text-neutral-900 dark:text-white truncate">{p.product_title}</div>
+                                <div className="text-[11px] text-neutral-400 font-mono">#{p.product_code || 'N/A'}</div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
                       {promoStatusTab !== 'expired' && (
-                        <div className="flex items-center justify-end gap-2 pt-1">
+                        <div className="flex items-center gap-2 pt-2">
                           <button
                             onClick={() => {
                               setSelectedPromo(promo);
@@ -549,65 +615,96 @@ export default function PromotionsPage() {
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="bg-neutral-50 dark:bg-neutral-800/60 border-b dark:border-neutral-800 text-[11px] text-neutral-500 uppercase">
-                        <th className="p-3.5">Tên Chương Trình</th>
-                        <th className="p-3.5">Mức Giảm</th>
-                        <th className="p-3.5">Thời Gian Bắt Đầu</th>
-                        <th className="p-3.5">Thời Gian Kết Thúc</th>
-                        <th className="p-3.5 text-center">Trạng Thái</th>
-                        <th className="p-3.5 text-center">Thao Tác</th>
+                        <th className="p-3.5 w-[22%]">Tên Chương Trình</th>
+                        <th className="p-3.5 w-[32%]">Sản Phẩm Áp Dụng</th>
+                        <th className="p-3.5 w-[15%]">Thời Gian Bắt Đầu</th>
+                        <th className="p-3.5 w-[15%]">Thời Gian Kết Thúc</th>
+                        <th className="p-3.5 text-center w-[8%]">Trạng Thái</th>
+                        <th className="p-3.5 text-center w-[8%]">Thao Tác</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800 text-xs">
                       {filteredPromotions.map((promo, idx) => (
-                        <tr key={`${promo.id}-${idx}`} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/30">
-                          <td className="p-3.5 font-bold text-neutral-800 dark:text-white">{promo.name}</td>
-                          <td className="p-3.5 font-semibold text-blue-600">{promo.discount_summary}</td>
-                          <td className="p-3.5 text-neutral-600 dark:text-neutral-300">
+                        <tr key={`${promo.id}-${idx}`} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/30 align-top">
+                          <td className="p-3.5 font-bold text-neutral-800 dark:text-white">
+                            <div className="pt-1">{promo.name}</div>
+                          </td>
+                          <td className="p-3.5">
+                            <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
+                              {promo.products.map((p, pIdx) => (
+                                <div key={pIdx} className="flex items-center gap-3 p-2 bg-neutral-50 dark:bg-neutral-800/50 rounded-lg border dark:border-neutral-700/60">
+                                  {/* Icon nhỏ, khi rê chuột vào sẽ kích hoạt popup khung ảnh lớn */}
+                                  <img 
+                                    src={p.product_image || '/placeholder.png'} 
+                                    className="w-10 h-10 object-cover rounded-md shrink-0 border cursor-pointer hover:opacity-80 transition-opacity" 
+                                    onMouseEnter={(e) => {
+                                      setHoveredImgUrl(p.product_image || '/placeholder.png');
+                                      setMousePosition({ x: e.clientX, y: e.clientY });
+                                    }}
+                                    onMouseMove={(e) => {
+                                      setMousePosition({ x: e.clientX, y: e.clientY });
+                                    }}
+                                    onMouseLeave={() => setHoveredImgUrl(null)}
+                                  />
+                                  <div className="min-w-0 flex-1">
+                                    <div className="font-semibold text-neutral-900 dark:text-white truncate" title={p.product_title}>
+                                      {p.product_title}
+                                    </div>
+                                    <div className="text-[11px] text-neutral-400 font-mono">
+                                      #{p.product_code || 'N/A'}
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </td>
+                          <td className="p-3.5 text-neutral-600 dark:text-neutral-300 pt-3.5">
                             {formatDateTime(promo.start_date)}
                           </td>
-                          <td className="p-3.5 text-neutral-600 dark:text-neutral-300">
+                          <td className="p-3.5 text-neutral-600 dark:text-neutral-300 pt-3.5">
                             {formatDateTime(promo.end_date)}
                           </td>
-                          <td className="p-3.5 text-center">
+                          <td className="p-3.5 text-center pt-3.5">
                             {promoStatusTab === 'active' && (
-                              <span className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 px-2.5 py-1 rounded-full font-semibold text-[10px]">
+                              <span className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 px-2.5 py-1 rounded-full font-semibold text-[10px] whitespace-nowrap">
                                 Đang chạy
                               </span>
                             )}
                             {promoStatusTab === 'upcoming' && (
-                              <span className="bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 px-2.5 py-1 rounded-full font-semibold text-[10px]">
+                              <span className="bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 px-2.5 py-1 rounded-full font-semibold text-[10px] whitespace-nowrap">
                                 Sắp chạy
                               </span>
                             )}
                             {promoStatusTab === 'expired' && (
-                              <span className="bg-neutral-200 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-400 px-2.5 py-1 rounded-full font-semibold text-[10px]">
+                              <span className="bg-neutral-200 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-400 px-2.5 py-1 rounded-full font-semibold text-[10px] whitespace-nowrap">
                                 Đã kết thúc
                               </span>
                             )}
                           </td>
-                          <td className="p-3.5 text-center space-x-2">
-                            {promoStatusTab !== 'expired' && (
-                              <>
+                          <td className="p-3.5 text-center pt-3.5">
+                            {promoStatusTab !== 'expired' ? (
+                              <div className="flex items-center justify-center gap-1.5">
                                 <button
                                   onClick={() => {
                                     setSelectedPromo(promo);
                                     setNewEndDate(promo.end_date ? promo.end_date.slice(0, 16) : '');
                                     setIsExtendModalOpen(true);
                                   }}
-                                  className="bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-950/40 dark:text-blue-400 px-2.5 py-1 rounded text-xs font-semibold cursor-pointer"
+                                  className="bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-950/40 dark:text-blue-400 px-2.5 py-1.5 rounded text-xs font-semibold cursor-pointer whitespace-nowrap shadow-sm"
+                                  title="Gia hạn"
                                 >
                                   Gia hạn
                                 </button>
                                 <button
                                   onClick={() => handleStopPromotion(promo.id)}
-                                  className="bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-950/40 dark:text-red-400 px-2.5 py-1 rounded text-xs font-semibold cursor-pointer"
+                                  className="bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-950/40 dark:text-red-400 px-2.5 py-1.5 rounded text-xs font-semibold cursor-pointer whitespace-nowrap shadow-sm"
+                                  title="Dừng ngay"
                                 >
-                                  Dừng ngay
+                                  Dừng
                                 </button>
-                              </>
-                            )}
-                            {promoStatusTab === 'expired' && (
-                              <span className="text-neutral-400 italic">Không có thao tác</span>
+                              </div>
+                            ) : (
+                              <span className="text-neutral-400 italic">---</span>
                             )}
                           </td>
                         </tr>
@@ -727,7 +824,7 @@ export default function PromotionsPage() {
                         <img src={prod.image || '/placeholder.png'} className="w-12 h-12 object-cover rounded border shrink-0" />
                         <div>
                           <div className="font-bold text-neutral-800 dark:text-white text-xs sm:text-sm">{prod.name}</div>
-                          <div className="text-[10px] text-neutral-400">Mã: {prod.code || 'N/A'} | Giá gốc: {(prod.price || 0).toLocaleString('vi-VN')} đ</div>
+                          <div className="text-[11px] text-neutral-400 font-mono">#{prod.code || 'N/A'} | Giá gốc: {(prod.price || 0).toLocaleString('vi-VN')} đ</div>
                         </div>
                       </div>
 
@@ -840,7 +937,7 @@ export default function PromotionsPage() {
                         <img src={prod.image || '/placeholder.png'} className="w-10 h-10 object-cover rounded border shrink-0" />
                         <div className="truncate">
                           <div className="font-medium text-neutral-800 dark:text-white text-xs truncate">{prod.name}</div>
-                          <div className="text-[10px] text-neutral-400">Mã: {prod.code || 'N/A'} | Gốc: {(prod.price || 0).toLocaleString('vi-VN')} đ</div>
+                          <div className="text-[11px] text-neutral-400 font-mono">#{prod.code || 'N/A'} | Gốc: {(prod.price || 0).toLocaleString('vi-VN')} đ</div>
                         </div>
                       </div>
 

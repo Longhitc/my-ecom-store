@@ -1,13 +1,15 @@
 import { db } from 'lib/turso';
 import { NextResponse } from 'next/server';
 
-// 1. HÀM GET: Lấy toàn bộ danh sách promotions (Hỗ trợ hiển thị đúng các tab active, upcoming, expired)
+// 1. HÀM GET: Lấy danh sách promotions kèm theo thông tin chi tiết sản phẩm
 export async function GET() {
   try {
     const promoResult = await db.execute(`
-      SELECT p.*, pi.product_id, pi.variant_id, pi.promo_price, pi.discount_value, pi.discount_type 
+      SELECT p.*, pi.product_id, pi.variant_id, pi.promo_price, pi.discount_value, pi.discount_type,
+             prod.title as product_title, prod.featured_image_url as product_image, prod.id as product_code
       FROM promotions p
       LEFT JOIN promotion_items pi ON p.id = pi.promotion_id
+      LEFT JOIN products prod ON pi.product_id = prod.id
     `);
 
     return NextResponse.json({

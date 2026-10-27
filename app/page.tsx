@@ -2,22 +2,31 @@ import { db } from 'lib/turso';
 import Link from 'next/link';
 import HomeHeroSlider from './HomeHeroSlider';
 
-// Hàm fetch danh sách sản phẩm đang khuyến mãi (Đã lọc bỏ các chương trình hết hạn hoặc đã dừng)
+// Ép trang chủ không cache, luôn lấy dữ liệu mới nhất từ CSDL
+export const revalidate = 0;
+
+// Hàm fetch danh sách sản phẩm đang khuyến mãi (Lọc chuẩn xác theo giờ Việt Nam)
 async function getPromoProducts() {
   try {
-    const result = await db.execute(`
-      SELECT p.id, p.handle, p.title, p.featured_image_url as image_url, 
-             MIN(p.min_price) as original_price,
-             MIN(pi.promo_price) as promo_price, 
-             pi.discount_value, pi.discount_type
-      FROM promotion_items pi
-      JOIN promotions prm ON pi.promotion_id = prm.id
-      JOIN products p ON pi.product_id = p.id
-      WHERE prm.status = 'active' AND prm.end_date >= datetime('now')
-      GROUP BY p.id
-      ORDER BY pi.created_at DESC
-      LIMIT 10
-    `);
+    // Lấy thời gian hiện tại chuẩn giờ Việt Nam (GMT+7) dưới dạng chuỗi ISO chuẩn để so sánh
+    const nowVn = new Date().toLocaleString("sv-SE", { timeZone: "Asia/Ho_Chi_Minh" }).replace(" ", "T");
+
+    const result = await db.execute({
+      sql: `
+        SELECT p.id, p.handle, p.title, p.featured_image_url as image_url, 
+               MIN(p.min_price) as original_price,
+               MIN(pi.promo_price) as promo_price, 
+               pi.discount_value, pi.discount_type
+        FROM promotion_items pi
+        JOIN promotions prm ON pi.promotion_id = prm.id
+        JOIN products p ON pi.product_id = p.id
+        WHERE prm.status = 'active' AND prm.end_date >= ?
+        GROUP BY p.id
+        ORDER BY pi.created_at DESC
+        LIMIT 10
+      `,
+      args: [nowVn]
+    });
 
     return result.rows.map((row: any) => ({
       id: String(row.id),
@@ -163,7 +172,6 @@ export default async function HomePage() {
                     )}
                   </div>
                 </div>
-
                 <div className="flex flex-col gap-1 pt-2 text-left">
                   <span className="text-xs font-medium text-neutral-800 dark:text-white line-clamp-1">
                     {product.title}
