@@ -2,7 +2,7 @@ import { db } from 'lib/turso';
 import Link from 'next/link';
 import HomeHeroSlider from './HomeHeroSlider';
 
-// Hàm fetch danh sách sản phẩm đang khuyến mãi
+// Hàm fetch danh sách sản phẩm đang khuyến mãi (Đã lọc bỏ các chương trình hết hạn hoặc đã dừng)
 async function getPromoProducts() {
   try {
     const result = await db.execute(`
@@ -11,7 +11,9 @@ async function getPromoProducts() {
              MIN(pi.promo_price) as promo_price, 
              pi.discount_value, pi.discount_type
       FROM promotion_items pi
+      JOIN promotions prm ON pi.promotion_id = prm.id
       JOIN products p ON pi.product_id = p.id
+      WHERE prm.status = 'active' AND prm.end_date >= datetime('now')
       GROUP BY p.id
       ORDER BY pi.created_at DESC
       LIMIT 10

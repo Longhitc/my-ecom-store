@@ -1,14 +1,13 @@
 import { db } from 'lib/turso';
 import { NextResponse } from 'next/server';
 
-// THÊM HÀM GET NÀY VÀO ĐỂ TRANG CHI TIẾT GỌI ĐƯỢC
+// 1. HÀM GET: Lấy toàn bộ danh sách promotions (Hỗ trợ hiển thị đúng các tab active, upcoming, expired)
 export async function GET() {
   try {
     const promoResult = await db.execute(`
       SELECT p.*, pi.product_id, pi.variant_id, pi.promo_price, pi.discount_value, pi.discount_type 
       FROM promotions p
-      JOIN promotion_items pi ON p.id = pi.promotion_id
-      WHERE p.status = 'active'
+      LEFT JOIN promotion_items pi ON p.id = pi.promotion_id
     `);
 
     return NextResponse.json({
@@ -24,7 +23,7 @@ export async function GET() {
   }
 }
 
-// Giữ nguyên hàm POST hiện tại của ông để tạo khuyến mãi
+// 2. HÀM POST: Tạo mới chương trình khuyến mãi
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -92,5 +91,35 @@ export async function POST(request: Request) {
       { success: false, error: error.message || 'Lỗi server nội bộ' },
       { status: 500 }
     );
+  }
+}
+
+// 3. HÀM PUT: Cập nhật / Gia hạn thời gian hoặc Dừng chương trình khuyến mãi sớm
+export async function PUT(request: Request) {
+  try {
+    const body = await request.json();
+    const { id, end_date, status } = body;
+
+    if (!id) {
+      return NextResponse.json({ success: false, error: 'Thiếu ID chương trình khuyến mãi!' }, { status: 400 });
+    }
+
+    if (status === 'stop') {
+      const now = new Date().toISOString();
+      await db.execute({
+        sql: `UPDATE promotions SET end_date = ?, status = 'expired' WHERE id = ?`,
+        args: [now, id],
+      });
+    } else if (end_date) {
+      await db.execute({
+        sql: `UPDATE promotions SET end_date = ?, status = 'active' WHERE id = ?`,
+        args: [end_date, id],
+      });
+    }
+
+    return NextResponse.json({ success: true, message: 'Cập nhật chương trình thành công!' });
+  } catch (error: any) {
+    console.error('Lỗi cập nhật promotion:', error);
+    return NextResponse.json({ success: false, error: error.message || 'Lỗi server nội bộ' }, { status: 500 });
   }
 }
