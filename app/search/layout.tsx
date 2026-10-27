@@ -1,4 +1,3 @@
-import Footer from "components/layout/footer";
 import CategoryTree from "components/layout/search/category-tree";
 import FilterList from "components/layout/search/filter";
 import { sorting } from "lib/constants";
@@ -28,7 +27,7 @@ export default function SearchLayout({
           <FilterList list={sorting} title="Sort by" />
         </div>
       </div>
-      <Footer />
+      
     </>
   );
 }
