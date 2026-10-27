@@ -1,6 +1,7 @@
 import AutoPwaPopup from "components/AutoPwaPopup";
 import CartDrawer from "components/cart/CartDrawer";
 import ChatWidget from "components/ChatWidget";
+import Footer from "components/layout/footer"; // <-- Thêm dòng này để gọi file footer của ông
 import Navbar from "components/layout/navbar";
 import PwaRegister from "components/PwaRegister";
 import { AuthProvider } from 'context/auth-context';
@@ -78,6 +79,9 @@ export default async function RootLayout({
               {children}
               <Toaster closeButton />
             </main>         
+
+            {/* Thêm Footer vào đây để nó hiển thị đúng ở tất cả các trang */}
+            <Footer />
 
             <CartDrawer />
             <ChatWidget />
