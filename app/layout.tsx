@@ -1,7 +1,7 @@
 import AutoPwaPopup from "components/AutoPwaPopup";
 import CartDrawer from "components/cart/CartDrawer";
 import ChatWidget from "components/ChatWidget";
-import Footer from "components/layout/footer"; // <-- Thêm dòng này để gọi file footer của ông
+import Footer from "components/layout/footer";
 import Navbar from "components/layout/navbar";
 import PwaRegister from "components/PwaRegister";
 import { AuthProvider } from 'context/auth-context';
@@ -17,19 +17,22 @@ import { Toaster } from "sonner";
 // @ts-ignore
 import "./globals.css";
 
-const { SITE_NAME } = process.env;
-
+// Cấu hình tiêu đề chuẩn theo yêu cầu của anh
 export const metadata: Metadata = {
   metadataBase: new URL(baseUrl),
   title: {
-    default: SITE_NAME!,
-    template: `%s | ${SITE_NAME}`,
+    default: 'Đẹp & Xinh - Shop',
+    template: `%s | Đẹp & Xinh - Shop`,
   },
+  description: 'Hệ thống thời trang và giày dép, phụ kiện',
   robots: {
     follow: true,
     index: true,
   },
   manifest: '/manifest.json',
+  icons: {
+    icon: '/favicon.ico',
+  },
 };
 
 // Component con xử lý tự động bắt sự kiện update ngầm của Service Worker
@@ -63,7 +66,6 @@ export default async function RootLayout({
 }: {
   children: ReactNode;
 }) {
-  // Don't await the fetch, pass the Promise to the context provider
   const cart = getCart();
 
   return (
@@ -80,7 +82,6 @@ export default async function RootLayout({
               <Toaster closeButton />
             </main>         
 
-            {/* Thêm Footer vào đây để nó hiển thị đúng ở tất cả các trang */}
             <Footer />
 
             <CartDrawer />
