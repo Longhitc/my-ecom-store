@@ -45,9 +45,6 @@ export default function HomeHeroSlider() {
   return (
     <div className="group relative flex flex-col justify-between overflow-hidden rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900/50 p-3 shadow-sm">
       <div className="flex items-center justify-between mb-2">
-        <h2 className="text-sm font-bold text-neutral-800 dark:text-white">
-          📦 Hàng Có Sẵn
-        </h2>
         <Link href={currentSlide.link} className="text-xs text-blue-600 hover:underline font-semibold">
           Khám phá →
         </Link>

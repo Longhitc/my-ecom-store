@@ -62,12 +62,10 @@ export default function CategoryTree() {
   // 1. TRƯỜNG HỢP Ở TRANG SEARCH TỔNG (/search)
   if (pathname === '/search') {
     return (
-      <div className="order-first w-full flex-none md:w-[200px]">
-        <div className="w-full rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
-          <span className="block text-base font-bold text-white">
-            Tất cả sản phẩm
-          </span>
-        </div>
+      <div className="order-first w-full flex-none md:w-[80px] border-b border-neutral-200 dark:border-neutral-800 pb-2">
+        <h3 className="text-xs font-semibold tracking-wider uppercase text-neutral-900 dark:text-neutral-400 whitespace-nowrap text-center">
+          Tất cả sản phẩm
+        </h3>      
       </div>
     );
   }
