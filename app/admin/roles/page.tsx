@@ -2,6 +2,10 @@
 
 import { useEffect, useState } from 'react';
 
+// Cấu hình cache 30 phút để triệt tiêu hoàn toàn tình trạng ngốn quota Rows Read trên Turso DB
+let rolesCache: { data: any; timestamp: number } | null = null;
+const CACHE_TTL = 30 * 60 * 1000; // 30 phút
+
 interface Menu {
   code: string;
   name: string;
@@ -39,21 +43,38 @@ export default function AdminRolesPage() {
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
 
-  // State ô dò tìm và cấp quyền
   const [searchKeyword, setSearchKeyword] = useState('');
   const [selectedRole, setSelectedRole] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  // State cấu hình Menu cho Role
   const [activeRoleConfig, setActiveRoleConfig] = useState<string>('admin');
   const [rolePermissionsState, setRolePermissionsState] = useState<string[]>([]);
 
-  const fetchData = async () => {
+  const fetchData = async (forceRefresh = false) => {
+    const now = Date.now();
+    // Dùng cache trong vòng 30 phút để tiết kiệm tối đa lượt đọc database
+    if (!forceRefresh && rolesCache && now - rolesCache.timestamp < CACHE_TTL) {
+      const data = rolesCache.data;
+      setAvailableMenus(data.availableMenus || []);
+      setRoles(data.roles || []);
+      setPermissions(data.permissions || []);
+      setAdminUsers(data.adminUsers || []);
+      if (data.roles?.length > 0 && !selectedRole) {
+        setSelectedRole(data.roles[0].id);
+      }
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await fetch('/api/admin/roles');
       if (res.ok) {
         const data = await res.json();
+        
+        // Lưu cache 30 phút
+        rolesCache = { data, timestamp: Date.now() };
+
         setAvailableMenus(data.availableMenus || []);
         setRoles(data.roles || []);
         setPermissions(data.permissions || []);
@@ -81,7 +102,6 @@ export default function AdminRolesPage() {
     setRolePermissionsState(currentRolePerms);
   }, [activeRoleConfig, permissions]);
 
-  // Xử lý dò tìm & thêm Admin
   const handleAssignAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!searchKeyword.trim()) {
@@ -102,7 +122,8 @@ export default function AdminRolesPage() {
       if (res.ok) {
         alert(data.message);
         setSearchKeyword('');
-        fetchData();
+        rolesCache = null; // Xóa cache ngay khi có thao tác thêm mới
+        fetchData(true);
       } else {
         alert(`❌ ${data.error}`);
       }
@@ -114,7 +135,6 @@ export default function AdminRolesPage() {
     }
   };
 
-  // Tước quyền Admin
   const handleRevokeAdmin = async (customerId: string) => {
     if (!confirm('Bạn có chắc chắn muốn tước quyền Admin của người dùng này?')) return;
 
@@ -122,7 +142,8 @@ export default function AdminRolesPage() {
       const res = await fetch(`/api/admin/roles?customer_id=${customerId}`, { method: 'DELETE' });
       if (res.ok) {
         alert('Đã tước quyền Admin!');
-        fetchData();
+        rolesCache = null; // Xóa cache ngay khi tước quyền
+        fetchData(true);
       }
     } catch (err) {
       console.error(err);
@@ -146,7 +167,8 @@ export default function AdminRolesPage() {
 
       if (res.ok) {
         alert('Cập nhật menu được phép cho Vai trò thành công!');
-        fetchData();
+        rolesCache = null;
+        fetchData(true);
       } else {
         alert('Lưu thất bại!');
       }
@@ -160,10 +182,18 @@ export default function AdminRolesPage() {
   return (
     <div className="min-h-screen bg-neutral-950 p-3 sm:p-6 text-white">
       <div className="mx-auto max-w-6xl">
-        {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-xl sm:text-2xl font-bold">🔐 Phân quyền & Quản trị viên</h1>
-          <p className="text-xs sm:text-sm text-neutral-400">Dò tìm tài khoản khách hàng để cấp quyền quản trị</p>
+        <div className="mb-6 flex justify-between items-center">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold">🔐 Phân quyền & Quản trị viên</h1>
+            <p className="text-xs sm:text-sm text-neutral-400">Dò tìm tài khoản khách hàng để cấp quyền quản trị</p>
+          </div>
+          <button 
+            type="button" 
+            onClick={() => { rolesCache = null; fetchData(true); }}
+            className="rounded bg-neutral-800 px-3 py-1.5 text-xs text-neutral-300 hover:bg-neutral-700"
+          >
+            🔄 Làm mới
+          </button>
         </div>
 
         {/* Tabs */}
@@ -192,7 +222,6 @@ export default function AdminRolesPage() {
           <div className="py-20 text-center text-sm text-neutral-400">Đang tải dữ liệu...</div>
         ) : activeTab === 'admins' ? (
           <div className="space-y-6">
-            {/* KHUNG DÒ TÌM & THÊM ADMIN */}
             <form onSubmit={handleAssignAdmin} className="rounded-xl border border-neutral-800 bg-neutral-900 p-4 space-y-4">
               <h2 className="text-sm font-bold text-amber-400">🔍 Dò tìm tài khoản & Cấp quyền Admin</h2>
               
@@ -234,7 +263,6 @@ export default function AdminRolesPage() {
               </div>
             </form>
 
-            {/* DANH SÁCH NHỮNG NGƯỜI ĐÃ LÀ ADMIN */}
             <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-4 space-y-4">
               <h3 className="text-xs font-bold text-neutral-300 uppercase tracking-wider">
                 Danh sách Quản trị viên hiện tại
@@ -243,80 +271,47 @@ export default function AdminRolesPage() {
               {adminUsers.length === 0 ? (
                 <p className="text-xs text-neutral-500 py-4 text-center">Chưa có quản trị viên nào trong hệ thống.</p>
               ) : (
-                <>
-                  {/* MOBILE VIEW: DẠNG THẺ CARD (giống trang Sản phẩm) */}
-                  <div className="block sm:hidden space-y-3">
-                    {adminUsers.map((au) => (
-                      <div key={au.admin_id} className="rounded-lg border border-neutral-800 bg-neutral-950 p-3 space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="font-bold text-sm text-white">{au.name || 'N/A'}</span>
-                          <span className="rounded bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold text-amber-400 border border-amber-500/20">
-                            {au.role_name || au.role_id}
-                          </span>
-                        </div>
-                        
-                        <div className="text-xs space-y-0.5 pt-1 border-t border-neutral-800/60">
-                          <p className="font-mono text-amber-400">{au.phone || 'Chưa có SĐT'}</p>
-                          <p className="text-neutral-400 text-[11px]">{au.email || 'Chưa có Email'}</p>
-                        </div>
-
-                        <div className="pt-2 flex justify-end">
-                          <button
-                            type="button"
-                            onClick={() => handleRevokeAdmin(au.customer_id)}
-                            className="rounded bg-red-500/10 px-3 py-1 text-xs font-semibold text-red-400 border border-red-500/20 hover:bg-red-500/20"
-                          >
-                            Tước quyền Admin
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* DESKTOP VIEW: DẠNG BẢNG TABLE */}
-                  <div className="hidden sm:block overflow-x-auto">
-                    <table className="w-full text-left text-xs text-neutral-300">
-                      <thead className="border-b border-neutral-800 bg-neutral-950/50 uppercase text-neutral-400">
-                        <tr>
-                          <th className="p-3">Họ tên</th>
-                          <th className="p-3">Số điện thoại / Email</th>
-                          <th className="p-3">Vai trò</th>
-                          <th className="p-3 text-right">Thao tác</th>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs text-neutral-300">
+                    <thead className="border-b border-neutral-800 bg-neutral-950/50 uppercase text-neutral-400">
+                      <tr>
+                        <th className="p-3">Họ tên</th>
+                        <th className="p-3">Số điện thoại / Email</th>
+                        <th className="p-3">Vai trò</th>
+                        <th className="p-3 text-right">Thao tác</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-neutral-800">
+                      {adminUsers.map((au) => (
+                        <tr key={au.admin_id} className="hover:bg-neutral-800/40">
+                          <td className="p-3 font-semibold text-white">{au.name || 'N/A'}</td>
+                          <td className="p-3">
+                            <p className="font-mono text-amber-400">{au.phone || 'Chưa có SĐT'}</p>
+                            <p className="text-[10px] text-neutral-500">{au.email || 'Chưa có Email'}</p>
+                          </td>
+                          <td className="p-3">
+                            <span className="rounded bg-amber-500/10 px-2.5 py-1 font-semibold text-amber-400 border border-amber-500/20">
+                              {au.role_name || au.role_id}
+                            </span>
+                          </td>
+                          <td className="p-3 text-right">
+                            <button
+                              type="button"
+                              onClick={() => handleRevokeAdmin(au.customer_id)}
+                              className="rounded bg-red-500/10 px-2.5 py-1 font-semibold text-red-400 hover:bg-red-500/20"
+                            >
+                              Tước quyền Admin
+                            </button>
+                          </td>
                         </tr>
-                      </thead>
-                      <tbody className="divide-y divide-neutral-800">
-                        {adminUsers.map((au) => (
-                          <tr key={au.admin_id} className="hover:bg-neutral-800/40">
-                            <td className="p-3 font-semibold text-white whitespace-nowrap">{au.name || 'N/A'}</td>
-                            <td className="p-3">
-                              <p className="font-mono text-amber-400">{au.phone || 'Chưa có SĐT'}</p>
-                              <p className="text-[10px] text-neutral-500">{au.email || 'Chưa có Email'}</p>
-                            </td>
-                            <td className="p-3 whitespace-nowrap">
-                              <span className="rounded bg-amber-500/10 px-2.5 py-1 font-semibold text-amber-400 border border-amber-500/20">
-                                {au.role_name || au.role_id}
-                              </span>
-                            </td>
-                            <td className="p-3 text-right whitespace-nowrap">
-                              <button
-                                type="button"
-                                onClick={() => handleRevokeAdmin(au.customer_id)}
-                                className="rounded bg-red-500/10 px-2.5 py-1 font-semibold text-red-400 hover:bg-red-500/20"
-                              >
-                                Tước quyền Admin
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </div>
           </div>
         ) : (
-          /* TAB CẤU HÌNH PERMISSIONS */
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2 rounded-xl border border-neutral-800 bg-neutral-900 p-3">
               <h3 className="mb-2 text-xs font-bold text-amber-400">1. Chọn Vai trò</h3>
@@ -336,7 +331,6 @@ export default function AdminRolesPage() {
                 </button>
               ))}
             </div>
-
             <div className="md:col-span-2 rounded-xl border border-neutral-800 bg-neutral-900 p-4 space-y-4">
               <div className="flex items-center justify-between border-b border-neutral-800 pb-2">
                 <h3 className="text-xs font-bold text-amber-400">
