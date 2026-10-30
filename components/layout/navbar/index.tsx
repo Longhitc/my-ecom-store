@@ -27,16 +27,29 @@ function AdminMenu({ user }: { user: any }) {
 
   return (
     <div className="w-full border-b border-neutral-800 bg-neutral-900 px-2 py-1.5 text-xs text-white">
-      <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-1.5 sm:flex-row sm:items-center">
+      <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-1.5 sm:flex-row">
         
-        {/* Dòng 1: Nhãn Quản trị nằm bên trái */}
+        {/* Nhãn Quản trị nằm bên trái */}
         <div className="flex shrink-0 items-center gap-1 font-bold text-amber-400 text-[11px] sm:text-xs">
           <span>🛠️</span>
           <span>Quản trị : {user?.admin?.role_name || user?.admin?.roleName || 'Admin'}</span>
         </div>
 
-        {/* Dòng 2: Dãy Menu lọt gọn trong 1 dòng trên Mobile */}
-        <div className="grid w-full grid-cols-3 gap-1 rounded-lg bg-neutral-800/60 p-1 text-[10px] sm:text-xs font-medium sm:w-auto sm:flex sm:flex-wrap sm:items-center sm:gap-1.5">
+        {/* Dãy Menu: Mobile hiển thị 4 cột (grid-cols-4), PC hiển thị dàn hàng ngang sang phải (sm:flex) */}
+        <div className="grid w-full grid-cols-4 sm:flex sm:flex-wrap items-center justify-end gap-1 rounded-lg bg-neutral-800/60 p-1 text-[10px] sm:text-xs font-medium sm:w-auto">
+          
+          <Link 
+            href="/admin/dashboard" 
+            className={`flex items-center justify-center gap-0.5 sm:gap-1 rounded px-1.5 py-1 transition-colors whitespace-nowrap ${
+              pathname === '/admin/dashboard'
+                ? 'bg-neutral-700 text-amber-400 font-bold'
+                : 'text-neutral-300 hover:bg-neutral-700/50 hover:text-white'
+            }`}
+          >
+            <span>📊</span>
+            <span>Dashboard</span>
+          </Link>
+
           {allowedMenus.includes('orders') && (
             <Link 
               href="/admin/orders" 
@@ -154,7 +167,6 @@ export default function Navbar() {
   const { customer, logout } = useAuth();
   const [openMenu, setOpenMenu] = useState<string | null>(null);
 
-  // Mảng menu chung cho cả Desktop và Mobile, có sẵn "Trang Chủ" ở đầu tiên
   const menu: MenuItem[] = [
     { title: 'Trang Chủ', path: '/search' },
     { title: 'Thời Trang Nam', path: '/search/tt-nam' },
@@ -187,11 +199,9 @@ export default function Navbar() {
 
       <nav className="relative z-[100] flex items-center justify-between bg-white px-3 py-2.5 dark:bg-black sm:px-6">
         
-        {/* 1. KHỐI TRÁI: Menu Hamburger (mobile) + Logo + Menu Links (desktop) */}
         <div className="flex shrink-0 items-center gap-2 lg:gap-6">
           <div className="block flex-none md:hidden">
             <Suspense fallback={null}>
-              {/* Truyền trực tiếp mảng menu có Trang Chủ sang MobileMenu để ép hiển thị */}
               <MobileMenu menu={[
                 { title: 'Trang Chủ', path: '/search' },
                 ...menu.filter(item => item.path !== '/search')
@@ -210,7 +220,6 @@ export default function Navbar() {
             </div>
           </Link>
 
-          {/* Menu Desktop */}
           {menu.length ? (
             <ul className="hidden gap-4 text-sm md:flex md:items-center lg:gap-6">
               {menu.map((item) => {
@@ -274,7 +283,6 @@ export default function Navbar() {
           ) : null}
         </div>
 
-        {/* 2. KHỐI GIỮA: Ô tìm kiếm / Tên user Mobile */}
         <div className="hidden md:flex md:flex-1 md:justify-center md:px-4 lg:px-8">
           <div className="w-full max-w-xs xl:max-w-md">
             <Suspense fallback={<SearchSkeleton />}>
@@ -295,7 +303,6 @@ export default function Navbar() {
           </div>
         )}
 
-        {/* 3. KHỐI PHẢI */}
         <div className="flex shrink-0 items-center justify-end gap-1.5 sm:gap-3 text-xs">
           {customer ? (
             <div className="flex items-center gap-2">

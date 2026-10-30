@@ -43,33 +43,51 @@ async function getCollectionProducts(collection: string, sort?: string, page: nu
     const { sortKey, reverse } =
       sorting.find((item) => item.slug === sort) || defaultSort;
 
+    // Chuẩn hóa thời gian thực theo chuẩn GMT+7 (Asia/Ho_Chi_Minh)
+    const nowVn = new Date().toLocaleString("sv-SE", { timeZone: "Asia/Ho_Chi_Minh" }).replace(" ", "T");
+
+    let baseSelect = `
+      SELECT p.*, 
+             MIN(pi.promo_price) as promo_price, 
+             MAX(pi.discount_value) as discount_value, 
+             MAX(pi.discount_type) as discount_type,
+             MAX(CASE WHEN prm.status = 'active' AND prm.start_date <= ? AND prm.end_date >= ? THEN 1 ELSE 0 END) as is_promoted
+      FROM products p
+      LEFT JOIN promotion_items pi ON p.id = pi.product_id
+      LEFT JOIN promotions prm ON pi.promotion_id = prm.id
+    `;
+
     let sql = '';
-    let args: any[] = [];
+    let args: any[] = [nowVn, nowVn];
 
     if (collection === "search") {
       sql = `
-        SELECT DISTINCT p.* FROM products p
+        ${baseSelect}
+        GROUP BY p.id
         ORDER BY p.created_at DESC
       `;
     } else if (collection === "co-san" || collection === "order") {
       sql = `
-        SELECT DISTINCT p.* FROM products p
+        ${baseSelect}
         WHERE p.type = ?
+        GROUP BY p.id
         ORDER BY p.created_at DESC
       `;
       args.push(collection);
     } else if (collection === "gd-crocs") {
       sql = `
-        SELECT DISTINCT p.* FROM products p
+        ${baseSelect}
         INNER JOIN product_categories pc ON p.id = pc.product_id
         WHERE pc.category_code = 'gd-crocs' OR pc.category_code IN ('crocs-nam', 'crocs-nu', 'crocs-tre-em', 'crocs-unisex')
+        GROUP BY p.id
         ORDER BY p.created_at DESC
       `;
     } else {
       sql = `
-        SELECT DISTINCT p.* FROM products p
+        ${baseSelect}
         INNER JOIN product_categories pc ON p.id = pc.product_id
         WHERE pc.category_code = ?
+        GROUP BY p.id
         ORDER BY p.created_at DESC
       `;
       args.push(collection);
@@ -89,7 +107,27 @@ async function getCollectionProducts(collection: string, sort?: string, page: nu
 
     let products = filteredRows.map((row: any) => {
       const rawPrice = Number(row.min_price ?? row.price ?? 0);
-      const formattedPrice = `${rawPrice.toLocaleString('vi-VN')} đ`;
+      
+      // Logic kiểm tra khuyến mãi chuẩn GMT+7
+      const hasPromo = Number(row.is_promoted) === 1 && 
+                       row.promo_price !== null && 
+                       row.promo_price !== undefined && 
+                       Number(row.promo_price) < rawPrice;
+      
+      const originalPriceFormatted = `${rawPrice.toLocaleString('vi-VN')} đ`;
+      const promoPriceFormatted = hasPromo ? `${Number(row.promo_price).toLocaleString('vi-VN')} đ` : originalPriceFormatted;
+
+      let discountText = '';
+      if (hasPromo) {
+        if (row.discount_type === 'percent') {
+          discountText = `-${row.discount_value}%`;
+        } else if (row.discount_value) {
+          discountText = `-${Number(row.discount_value).toLocaleString('vi-VN')}đ`;
+        } else {
+          const calcPercent = Math.round(((rawPrice - Number(row.promo_price)) / rawPrice) * 100);
+          discountText = `-${calcPercent}%`;
+        }
+      }
 
       let imageUrl = row.featured_image_url || row.image_url || '';
 
@@ -108,8 +146,11 @@ async function getCollectionProducts(collection: string, sort?: string, page: nu
         id: String(row.id),
         handle: String(row.handle || row.id),
         title: String(row.title || row.name || 'Sản phẩm'),
-        rawPrice: rawPrice,
-        price: formattedPrice,
+        rawPrice: hasPromo ? Number(row.promo_price) : rawPrice,
+        originalPrice: originalPriceFormatted,
+        promoPrice: promoPriceFormatted,
+        hasPromo,
+        discount: discountText,
         imageUrl: imageUrl,
       };
     });
@@ -123,7 +164,6 @@ async function getCollectionProducts(collection: string, sort?: string, page: nu
     const totalProducts = products.length;
     const totalPages = Math.ceil(totalProducts / PAGE_SIZE) || 1;
     
-    // Cắt mảng lấy chính xác 18 sản phẩm cho trang hiện tại
     const startIndex = (page - 1) * PAGE_SIZE;
     const paginatedProducts = products.slice(startIndex, startIndex + PAGE_SIZE);
 
@@ -166,14 +206,20 @@ export default async function CategoryPage(props: {
       ) : (
         <>
           {/* Ép cứng lưới hiển thị chuẩn 3 cột */}
-          <Grid className="grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+          <Grid className="grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {products.map((product) => (
               <Link
                 key={product.id}
                 href={`/product/${product.handle}`}
-                className="group flex flex-col overflow-hidden rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-black transition-all hover:border-blue-600"
+                className="group relative flex flex-col justify-between overflow-hidden rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-black transition-all hover:border-blue-600 p-3"
               >
-                <div className="w-3/4 mx-auto pt-4">
+                {product.hasPromo && product.discount && (
+                  <span className="absolute top-3 left-3 z-10 rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-bold text-white shadow">
+                    {product.discount}
+                  </span>
+                )}
+
+                <div className="w-3/4 mx-auto pt-2">
                   <div className="relative aspect-square overflow-hidden rounded-md bg-neutral-100 dark:bg-neutral-900">
                     {product.imageUrl ? (
                       <img
@@ -188,13 +234,28 @@ export default async function CategoryPage(props: {
                     )}
                   </div>
                 </div>
-                <div className="flex items-center justify-between p-4">
+
+                <div className="mt-2 flex flex-col gap-1">
                   <span className="text-sm font-medium text-neutral-800 dark:text-white line-clamp-1">
                     {product.title}
                   </span>
-                  <span className="rounded-full bg-blue-600 px-3 py-1 text-xs font-semibold text-white whitespace-nowrap">
-                    {product.price}
-                  </span>
+                  
+                  {product.hasPromo ? (
+                    <div className="flex items-center justify-end gap-2">
+                      <span className="text-xs text-neutral-400 line-through">
+                        {product.originalPrice}
+                      </span>
+                      <span className="text-sm font-extrabold text-red-600">
+                        {product.promoPrice}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex justify-end">
+                      <span className="rounded-full bg-blue-600 px-3 py-1 text-xs font-semibold text-white whitespace-nowrap shadow-sm">
+                        {product.originalPrice}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </Link>
             ))}
