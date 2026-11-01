@@ -182,7 +182,7 @@ export default function AdminRolesPage() {
   return (
     <div className="min-h-screen bg-neutral-950 p-3 sm:p-6 text-white">
       <div className="mx-auto max-w-6xl">
-        <div className="mb-6 flex justify-between items-center">
+        <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <div>
             <h1 className="text-xl sm:text-2xl font-bold">🔐 Phân quyền & Quản trị viên</h1>
             <p className="text-xs sm:text-sm text-neutral-400">Dò tìm tài khoản khách hàng để cấp quyền quản trị</p>
@@ -190,7 +190,7 @@ export default function AdminRolesPage() {
           <button 
             type="button" 
             onClick={() => { rolesCache = null; fetchData(true); }}
-            className="rounded bg-neutral-800 px-3 py-1.5 text-xs text-neutral-300 hover:bg-neutral-700"
+            className="rounded bg-neutral-800 px-3 py-1.5 text-xs text-neutral-300 hover:bg-neutral-700 self-end sm:self-auto"
           >
             🔄 Làm mới
           </button>
@@ -271,43 +271,76 @@ export default function AdminRolesPage() {
               {adminUsers.length === 0 ? (
                 <p className="text-xs text-neutral-500 py-4 text-center">Chưa có quản trị viên nào trong hệ thống.</p>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs text-neutral-300">
-                    <thead className="border-b border-neutral-800 bg-neutral-950/50 uppercase text-neutral-400">
-                      <tr>
-                        <th className="p-3">Họ tên</th>
-                        <th className="p-3">Số điện thoại / Email</th>
-                        <th className="p-3">Vai trò</th>
-                        <th className="p-3 text-right">Thao tác</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-neutral-800">
-                      {adminUsers.map((au) => (
-                        <tr key={au.admin_id} className="hover:bg-neutral-800/40">
-                          <td className="p-3 font-semibold text-white">{au.name || 'N/A'}</td>
-                          <td className="p-3">
-                            <p className="font-mono text-amber-400">{au.phone || 'Chưa có SĐT'}</p>
-                            <p className="text-[10px] text-neutral-500">{au.email || 'Chưa có Email'}</p>
-                          </td>
-                          <td className="p-3">
-                            <span className="rounded bg-amber-500/10 px-2.5 py-1 font-semibold text-amber-400 border border-amber-500/20">
+                <>
+                  {/* Bảng hiển thị trên màn hình PC (md trở lên) */}
+                  <div className="hidden md:block overflow-x-auto">
+                    <table className="w-full text-left text-xs text-neutral-300">
+                      <thead className="border-b border-neutral-800 bg-neutral-950/50 uppercase text-neutral-400">
+                        <tr>
+                          <th className="p-3">Họ tên</th>
+                          <th className="p-3">Số điện thoại / Email</th>
+                          <th className="p-3">Vai trò</th>
+                          <th className="p-3 text-right">Thao tác</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-neutral-800">
+                        {adminUsers.map((au) => (
+                          <tr key={au.admin_id} className="hover:bg-neutral-800/40">
+                            <td className="p-3 font-semibold text-white">{au.name || 'N/A'}</td>
+                            <td className="p-3">
+                              <p className="font-mono text-amber-400">{au.phone || 'Chưa có SĐT'}</p>
+                              <p className="text-[10px] text-neutral-500">{au.email || 'Chưa có Email'}</p>
+                            </td>
+                            <td className="p-3">
+                              <span className="rounded bg-amber-500/10 px-2.5 py-1 font-semibold text-amber-400 border border-amber-500/20">
+                                {au.role_name || au.role_id}
+                              </span>
+                            </td>
+                            <td className="p-3 text-right">
+                              <button
+                                type="button"
+                                onClick={() => handleRevokeAdmin(au.customer_id)}
+                                className="rounded bg-red-500/20 px-3 py-1.5 font-semibold text-red-400 hover:bg-red-500/30 transition text-xs"
+                              >
+                                Tước quyền
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Dạng Card Stack tối ưu riêng cho Mobile (dưới md) */}
+                  <div className="grid grid-cols-1 gap-3 md:hidden">
+                    {adminUsers.map((au) => (
+                      <div key={au.admin_id} className="rounded-xl border border-neutral-800 bg-neutral-950 p-4 space-y-3 shadow">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <h4 className="font-bold text-white text-sm">{au.name || 'N/A'}</h4>
+                            <p className="font-mono text-xs text-amber-400 mt-0.5">{au.phone || 'Chưa có SĐT'}</p>
+                            <p className="text-[11px] text-neutral-500">{au.email || 'Chưa có Email'}</p>
+                          </div>
+                          <div>
+                            <span className="rounded bg-amber-500/10 px-2 py-1 text-[11px] font-semibold text-amber-400 border border-amber-500/20 whitespace-nowrap">
                               {au.role_name || au.role_id}
                             </span>
-                          </td>
-                          <td className="p-3 text-right">
-                            <button
-                              type="button"
-                              onClick={() => handleRevokeAdmin(au.customer_id)}
-                              className="rounded bg-red-500/10 px-2.5 py-1 font-semibold text-red-400 hover:bg-red-500/20"
-                            >
-                              Tước quyền Admin
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-end border-t border-neutral-800/80 pt-3">
+                          <button
+                            type="button"
+                            onClick={() => handleRevokeAdmin(au.customer_id)}
+                            className="rounded bg-red-500/20 px-3.5 py-1.5 font-semibold text-red-400 hover:bg-red-500/30 transition text-xs w-full sm:w-auto text-center"
+                          >
+                            Tước quyền
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
               )}
             </div>
           </div>
