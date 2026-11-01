@@ -8,6 +8,7 @@ import { AuthProvider } from 'context/auth-context';
 import { CartProvider } from 'context/CartContext';
 // @ts-ignore
 import { GeistSans } from "geist/font/sans";
+import { getStoreMenus } from "lib/menu"; // <-- Import hàm lấy menu động
 import { getCart } from "lib/shopify";
 import { baseUrl } from "lib/utils";
 import type { Metadata } from 'next';
@@ -67,6 +68,7 @@ export default async function RootLayout({
   children: ReactNode;
 }) {
   const cart = getCart();
+  const menuData = await getStoreMenus(); // <-- Lấy dữ liệu menu động từ Turso DB
 
   return (
     <html lang="en" className={GeistSans.variable}>
@@ -76,7 +78,7 @@ export default async function RootLayout({
       <body className="bg-neutral-50 text-black selection:bg-teal-300 dark:bg-neutral-900 dark:text-white dark:selection:bg-pink-500 dark:selection:text-white">
         <AuthProvider>
           <CartProvider>
-            <Navbar />
+            <Navbar menu={menuData} /> {/* <-- Truyền menu động vào Navbar */}
             <main>
               {children}
               <Toaster closeButton />

@@ -35,7 +35,7 @@ function AdminMenu({ user }: { user: any }) {
           <span>Quản trị : {user?.admin?.role_name || user?.admin?.roleName || 'Admin'}</span>
         </div>
 
-        {/* Dãy Menu: Mobile hiển thị 4 cột (grid-cols-4), PC hiển thị dàn hàng ngang sang phải (sm:flex) */}
+        {/* Dãy Menu: Mobile hiển thị cột, PC hiển thị dàn hàng ngang sang phải */}
         <div className="grid w-full grid-cols-4 sm:flex sm:flex-wrap items-center justify-end gap-1 rounded-lg bg-neutral-800/60 p-1 text-[10px] sm:text-xs font-medium sm:w-auto">
           
           <Link 
@@ -120,6 +120,19 @@ function AdminMenu({ user }: { user: any }) {
             </Link>
           )}
 
+          {/* Thêm mục quản lý Menu trang bán hàng */}
+          <Link 
+            href="/admin/store-menus" 
+            className={`flex items-center justify-center gap-0.5 sm:gap-1 rounded px-1.5 py-1 transition-colors whitespace-nowrap ${
+              pathname === '/admin/store-menus'
+                ? 'bg-neutral-700 text-amber-400 font-bold'
+                : 'text-neutral-300 hover:bg-neutral-700/50 hover:text-white'
+            }`}
+          >
+            <span>📑</span>
+            <span>Menu Shop</span>
+          </Link>
+
           <Link 
             href="/admin/chats" 
             className={`flex items-center justify-center gap-0.5 sm:gap-1 rounded px-1.5 py-1 transition-colors whitespace-nowrap ${
@@ -163,35 +176,13 @@ function SubMenuItem({ subItem, onClose }: { subItem: MenuItem; onClose: () => v
   );
 }
 
-export default function Navbar() {
+interface NavbarProps {
+  menu?: MenuItem[];
+}
+
+export default function Navbar({ menu = [] }: NavbarProps) {
   const { customer, logout } = useAuth();
   const [openMenu, setOpenMenu] = useState<string | null>(null);
-
-  const menu: MenuItem[] = [
-    { title: 'Trang Chủ', path: '/search' },
-    { title: 'Thời Trang Nam', path: '/search/tt-nam' },
-    {
-      title: 'Thời Trang Nữ',
-      path: '/search/tt-nu',
-      items: [
-        { title: 'Váy Nữ', path: '/search/vay-nu' },
-        { title: 'Áo Nữ', path: '/search/ao-nu' },
-        { title: 'Set & Bộ', path: '/search/set-bo' },
-      ],
-    },
-    { title: 'Thời Trang Trẻ Em', path: '/search/tt-te' },
-    {
-      title: 'Giày dép Crocs',
-      path: '/search/gd-crocs',
-      items: [
-        { title: 'Crocs Nam', path: '/search/crocs-nam' },
-        { title: 'Crocs Nữ', path: '/search/crocs-nu' },
-        { title: 'Crocs Trẻ Em', path: '/search/crocs-tre-em' },
-        { title: 'Crocs Unisex', path: '/search/crocs-unisex' },
-      ],
-    },
-    { title: 'Phụ Kiện', path: '/search/pk' },
-  ];
 
   return (
     <header className="relative z-[100] w-full max-w-full overflow-x-clip">
