@@ -1,4 +1,4 @@
-const CACHE_NAME = 'depvaxinh-v1.1.1'; // Mỗi lần update code lớn, anh chỉ cần tăng version này lên (v1.2, v2.0...)
+const CACHE_NAME = 'depvaxinh-v1.1.2'; // Mỗi lần update code lớn, anh chỉ cần tăng version này lên (v1.2, v2.0...)
 const urlsToCache = ['/', '/manifest.json'];
 
 self.addEventListener('install', (event) => {
