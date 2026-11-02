@@ -50,6 +50,10 @@ export default function AdminProductsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
 
+  // State quản lý phân trang (10 sản phẩm mỗi trang)
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -109,7 +113,6 @@ export default function AdminProductsPage() {
 
         if (optionsMap.length > 0) {
           setCategoryOptions(optionsMap);
-          // Nếu form đang trống categories thì set mặc định phần tử đầu tiên
           setFormData((prev) => ({
             ...prev,
             categories: prev.categories.length > 0 ? prev.categories : [optionsMap[0]!.slug],
@@ -164,7 +167,6 @@ export default function AdminProductsPage() {
     }
   };
 
-  // HÀM XÓA ẢNH TRÊN CLOUDINARY
   const deleteCloudinaryImage = async (url: string) => {
     if (!url || !url.includes('cloudinary.com')) return;
     try {
@@ -567,6 +569,7 @@ export default function AdminProductsPage() {
     }
   };
 
+  // Lọc sản phẩm theo tìm kiếm và danh mục
   const filteredProducts = products.filter((p) => {
     const matchesSearch =
       p.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -578,6 +581,16 @@ export default function AdminProductsPage() {
 
     return matchesSearch && matchesCategory;
   });
+
+  // Tính toán phân trang
+  const totalPages = Math.ceil(filteredProducts.length / pageSize) || 1;
+  const startIndex = (currentPage - 1) * pageSize;
+  const currentProducts = filteredProducts.slice(startIndex, startIndex + pageSize);
+
+  // Reset về trang 1 khi gõ tìm kiếm hoặc đổi danh mục
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, categoryFilter]);
 
   return (
     <div className="min-h-screen bg-neutral-950 p-3 sm:p-6 text-white">
@@ -642,7 +655,7 @@ export default function AdminProductsPage() {
           <>
             {/* GIAO DIỆN MOBILE */}
             <div className="grid grid-cols-1 gap-3 md:hidden">
-              {filteredProducts.map((product) => {
+              {currentProducts.map((product) => {
                 const displayImage = product.featured_image_url || product.image_url;
                 const pCats = Array.isArray(product.categories) ? product.categories : (product.category ? [product.category] : []);
                 const displayCategoryNames = pCats.length > 0
@@ -744,7 +757,7 @@ export default function AdminProductsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-800">
-                  {filteredProducts.map((product) => {
+                  {currentProducts.map((product) => {
                     const displayImage = product.featured_image_url || product.image_url;
                     const pCats = Array.isArray(product.categories) ? product.categories : (product.category ? [product.category] : []);
                     const displayCategoryNames = pCats.length > 0
@@ -759,7 +772,6 @@ export default function AdminProductsPage() {
 
                     return (
                       <tr key={product.id} className="transition hover:bg-neutral-800/50">
-                        {/* Thao tác (Không xuống dòng) */}
                         <td className="p-4 whitespace-nowrap">
                           <button
                             onClick={() => handleOpenEdit(product)}
@@ -769,7 +781,6 @@ export default function AdminProductsPage() {
                           </button>
                         </td>
 
-                        {/* Sản phẩm (Cho phép xuống dòng tên sản phẩm) */}
                         <td className="p-4 max-w-xs">
                           <div className="flex items-center gap-3">
                             {displayImage ? (
@@ -790,19 +801,16 @@ export default function AdminProductsPage() {
                           </div>
                         </td>
 
-                        {/* Danh mục (Cho phép xuống dòng nhiều danh mục) */}
                         <td className="p-4 text-xs font-medium text-neutral-400 max-w-xs">
                           <span className="rounded bg-neutral-800 px-2 py-1 inline-block break-words">
                             {displayCategoryNames}
                           </span>
                         </td>
 
-                        {/* Giá bán (Không xuống dòng) */}
                         <td className="p-4 font-bold text-amber-400 whitespace-nowrap">
                           {product.price ? product.price.toLocaleString('vi-VN') : 0} đ
                         </td>
 
-                        {/* Tồn kho (Không xuống dòng) */}
                         <td className="p-4 whitespace-nowrap">
                           <span
                             className={`text-xs font-semibold ${
@@ -813,7 +821,6 @@ export default function AdminProductsPage() {
                           </span>
                         </td>
 
-                        {/* Trạng thái (Không xuống dòng) */}
                         <td className="p-4 text-center whitespace-nowrap">
                           <div className="flex items-center justify-center gap-2 whitespace-nowrap">
                             <ProductStatusToggle
@@ -826,7 +833,6 @@ export default function AdminProductsPage() {
                           </div>
                         </td>
 
-                        {/* Xóa bỏ (Không xuống dòng) */}
                         <td className="p-4 text-right whitespace-nowrap">
                           <button
                             onClick={() => handleDelete(product.id)}
@@ -841,6 +847,43 @@ export default function AdminProductsPage() {
                 </tbody>
               </table>
             </div>
+
+            {/* THANH PHÂN TRANG (PAGINATION) */}
+            {totalPages > 1 && (
+              <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3 rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-3 text-xs text-neutral-400">
+                <div>
+                  Hiển thị từ <span className="font-semibold text-white">{startIndex + 1}</span> đến{' '}
+                  <span className="font-semibold text-white">
+                    {Math.min(startIndex + pageSize, filteredProducts.length)}
+                  </span>{' '}
+                  trong tổng số <span className="font-semibold text-white">{filteredProducts.length}</span> sản phẩm
+                </div>
+
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                    className="rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-1.5 font-medium text-white transition hover:bg-neutral-800 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    ⬅️ Trước
+                  </button>
+
+                  <div className="flex items-center gap-1 px-2">
+                    <span className="font-bold text-amber-400">{currentPage}</span>
+                    <span>/</span>
+                    <span>{totalPages}</span>
+                  </div>
+
+                  <button
+                    onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                    className="rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-1.5 font-medium text-white transition hover:bg-neutral-800 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    Sau ➡️
+                  </button>
+                </div>
+              </div>
+            )}
           </>
         )}
 
@@ -1248,7 +1291,6 @@ export default function AdminProductsPage() {
                     </button>
                   </div>
                 </div>
-
                 {/* Footer Buttons */}
                 <div className="flex justify-end gap-2 border-t border-neutral-800 pt-3">
                   <button

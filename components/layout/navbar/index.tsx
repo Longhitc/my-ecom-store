@@ -193,8 +193,7 @@ export default function Navbar({ menu = [] }: NavbarProps) {
   }, []);
 
   return (
-    /* Giảm khoảng cách xuống mb-2 hoặc mb-3 cho vừa mắt */
-    <header className="sticky top-0 z-[100] w-full max-w-full overflow-x-clip shadow-sm bg-white dark:bg-black mb-2 sm:mb-3">
+    <header suppressHydrationWarning className="sticky top-0 z-[100] w-full max-w-full overflow-x-clip shadow-sm bg-white dark:bg-black mb-2 sm:mb-3">
       <AdminMenu user={customer} isMounted={isMounted} />
 
       <nav className="relative z-[100] flex items-center justify-between px-3 py-2.5 sm:px-6">
@@ -247,7 +246,7 @@ export default function Navbar({ menu = [] }: NavbarProps) {
                           viewBox="0 0 24 24"
                           strokeWidth="1.5"
                           stroke="currentColor"
-className={`h-3.5 w-3.5 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+                          className={`h-3.5 w-3.5 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
                         >
                           <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
                         </svg>
@@ -286,7 +285,7 @@ className={`h-3.5 w-3.5 transition-transform duration-200 ${isOpen ? 'rotate-180
 
         {/* Khu vực mobile user */}
         <div className="flex flex-1 items-center justify-center px-1 md:hidden">
-          {customer ? (
+          {isMounted && customer ? (
             <Link
               href="/account"
               className="truncate text-center text-xs font-semibold text-neutral-800 transition-colors hover:text-amber-500 dark:text-neutral-200"
