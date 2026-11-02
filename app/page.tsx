@@ -1,3 +1,4 @@
+import ServiceWorkerUpdater from 'components/ServiceWorkerUpdater';
 import { db } from 'lib/turso';
 import Link from 'next/link';
 import HomeHeroSlider from './HomeHeroSlider';
@@ -187,6 +188,9 @@ export default async function HomePage() {
           </div>
         )}
       </section>
+
+      {/* Component tự động quét và cập nhật Service Worker ngầm cho khách hàng */}
+      <ServiceWorkerUpdater />
     </div>
   );
 }

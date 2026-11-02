@@ -1,25 +1,35 @@
-const CACHE_NAME = 'depvaxinh-v1';
+const CACHE_NAME = 'depvaxinh-v1.1.1'; // Mỗi lần update code lớn, anh chỉ cần tăng version này lên (v1.2, v2.0...)
 const urlsToCache = ['/', '/manifest.json'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(urlsToCache))
   );
-  self.skipWaiting();
+  self.skipWaiting(); // Ép bỏ qua trạng thái chờ để nhận bản mới ngay
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(clients.claim());
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          // Tự động quét và xóa sạch các cache cũ rác
+          if (cacheName !== CACHE_NAME) {
+            console.log('[ServiceWorker] Xóa cache cũ:', cacheName);
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    }).then(() => clients.claim()) // Chiếm quyền điều khiển ngay lập tức
+  );
 });
 
 self.addEventListener('fetch', (event) => {
-  // Chỉ xử lý các phương thức GET
   if (event.request.method !== 'GET') return;
 
   event.respondWith(
     caches.match(event.request).then((response) => {
       return response || fetch(event.request).catch(() => {
-        // Fallback an toàn khi offline hoặc lỗi kết nối mạng cục bộ
         return new Response('Network error happened', {
           status: 408,
           headers: { 'Content-Type': 'text/plain' },
@@ -55,10 +65,10 @@ self.addEventListener('push', (event) => {
     body: data.body,
     icon: '/icons/icon-192.png',
     badge: '/icons/icon-192.png',
-    vibrate: [300, 100, 300, 100, 300], // Rung mạnh để đánh thức thiết bị
-    tag: 'admin-chat-notification', // Gộp nhóm thông báo tránh tràn màn hình
+    vibrate: [300, 100, 300, 100, 300],
+    tag: 'admin-chat-notification',
     renotify: true,
-    requireInteraction: true, // Giữ thông báo trên màn hình khóa cho đến khi bấm vào
+    requireInteraction: true,
     data: { url: data.url }
   };
 
@@ -67,7 +77,6 @@ self.addEventListener('push', (event) => {
   );
 });
 
-// Xử lý khi bấm vào thông báo
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const targetUrl = event.notification.data?.url || '/admin/chats';

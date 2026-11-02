@@ -5,7 +5,7 @@ import LogoSquare from "components/logo-square";
 import { useAuth } from "context/auth-context";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import MobileMenu from "./mobile-menu";
 import Search, { SearchSkeleton } from "./search";
 
@@ -15,8 +15,11 @@ interface MenuItem {
   items?: MenuItem[];
 }
 
-function AdminMenu({ user }: { user: any }) {
+function AdminMenu({ user, isMounted }: { user: any; isMounted: boolean }) {
   const pathname = usePathname();
+  
+  if (!isMounted) return null;
+
   const isAdmin = user?.is_admin === true || Number(user?.is_admin) === 1;
   
   if (!isAdmin) return null;
@@ -183,10 +186,15 @@ interface NavbarProps {
 export default function Navbar({ menu = [] }: NavbarProps) {
   const { customer, logout } = useAuth();
   const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   return (
     <header className="relative z-[100] w-full max-w-full overflow-x-clip">
-      <AdminMenu user={customer} />
+      <AdminMenu user={customer} isMounted={isMounted} />
 
       <nav className="relative z-[100] flex items-center justify-between bg-white px-3 py-2.5 dark:bg-black sm:px-6">
         
@@ -282,8 +290,11 @@ export default function Navbar({ menu = [] }: NavbarProps) {
           </div>
         </div>
 
-        {customer && (
-          <div className="flex flex-1 items-center justify-center px-1 md:hidden">
+        {/* Cố định hiển thị trống khi chưa mount để khớp giữa server và client */}
+        <div className="flex flex-1 items-center justify-center px-1 md:hidden">
+          {!isMounted ? (
+            <div className="h-4 w-24 bg-neutral-800/10 dark:bg-neutral-800 rounded animate-pulse" />
+          ) : customer ? (
             <Link
               href="/account"
               className="truncate text-center text-xs font-semibold text-neutral-800 transition-colors hover:text-amber-500 dark:text-neutral-200"
@@ -291,11 +302,13 @@ export default function Navbar({ menu = [] }: NavbarProps) {
             >
               {customer.name}
             </Link>
-          </div>
-        )}
+          ) : null}
+        </div>
 
         <div className="flex shrink-0 items-center justify-end gap-1.5 sm:gap-3 text-xs">
-          {customer ? (
+          {!isMounted ? (
+            <div className="h-6 w-24 bg-neutral-800/10 dark:bg-neutral-800 rounded animate-pulse" />
+          ) : customer ? (
             <div className="flex items-center gap-2">
               <Link
                 href="/account"

@@ -3,76 +3,10 @@
 import ProductStatusToggle from 'components/admin/ProductStatusToggle';
 import { useEffect, useState } from 'react';
 
-// Cấu trúc Menu chuẩn của hệ thống
-const MENU_DATA = [
-  { title: 'Trang Chủ', path: '/search' },
-  { title: 'Thời Trang Nam', path: '/search/tt-nam' },
-  {
-    title: 'Thời Trang Nữ',
-    path: '/search/tt-nu',
-    items: [
-      { title: 'Váy Nữ', path: '/search/vay-nu' },
-      { title: 'Áo Nữ', path: '/search/ao-nu' },
-      { title: 'Set & Bộ', path: '/search/set-bo' },
-    ],
-  },
-  { title: 'Thời Trang Trẻ Em', path: '/search/tt-te' },
-  {
-    title: 'Giày dép Crocs',
-    path: '/search/gd-crocs',
-    items: [
-      { title: 'Crocs Nam', path: '/search/crocs-nam' },
-      { title: 'Crocs Nữ', path: '/search/crocs-nu' },
-      { title: 'Crocs Trẻ Em', path: '/search/crocs-tre-em' },
-      { title: 'Crocs Unisex', path: '/search/crocs-unisex' },
-    ],
-  },
-  { title: 'Phụ Kiện', path: '/search/pk' },
-];
-
 interface CategoryOption {
   title: string;
   slug: string;
 }
-
-const getCategoryOptions = (): CategoryOption[] => {
-  const options: CategoryOption[] = [];
-
-  MENU_DATA.forEach((item) => {
-    const slug = item.path.replace('/search/', '').replace('/search', '');
-    if (slug) {
-      options.push({ title: item.title, slug });
-    }
-    if (item.items) {
-      item.items.forEach((sub) => {
-        const subSlug = sub.path.replace('/search/', '').replace('/search', '');
-        if (subSlug) {
-          options.push({ title: `${item.title} > ${sub.title}`, slug: subSlug });
-        }
-      });
-    }
-  });
-
-  return options;
-};
-
-const CATEGORY_OPTIONS = getCategoryOptions();
-
-const normalizeCategorySlug = (rawCategory?: string): string => {
-  if (!rawCategory) return CATEGORY_OPTIONS[0]?.slug || 'tt-nam';
-
-  const cleanRaw = rawCategory.trim().toLowerCase();
-
-  const matchBySlug = CATEGORY_OPTIONS.find((c) => c.slug.toLowerCase() === cleanRaw);
-  if (matchBySlug) return matchBySlug.slug;
-
-  const matchByTitle = CATEGORY_OPTIONS.find(
-    (c) => c.title.toLowerCase() === cleanRaw || c.title.toLowerCase().endsWith(cleanRaw)
-  );
-  if (matchByTitle) return matchByTitle.slug;
-
-  return CATEGORY_OPTIONS[0]?.slug || 'tt-nam';
-};
 
 interface VariantAttribute {
   name: string;
@@ -111,6 +45,7 @@ interface DynamicOption {
 
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [categoryOptions, setCategoryOptions] = useState<CategoryOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
@@ -136,13 +71,71 @@ export default function AdminProductsPage() {
   const [formData, setFormData] = useState({
     title: '',
     handle: '',
-    categories: [CATEGORY_OPTIONS[0]?.slug || 'tt-nam'],
+    categories: [] as string[],
     featured_image_url: '',
     featured_image_alt: '',
     description: '',
     images: [''],
     variants: [] as Variant[],
   });
+
+  // HÀM LẤY DANH MỤC ĐỘNG TỪ BẢNG NAVIGATION_MENUS THÔNG QUA API STORE-MENUS
+  const fetchCategoriesFromMenus = async () => {
+    try {
+      const res = await fetch('/api/admin/store-menus');
+      const data = await res.json();
+      if (data.success && Array.isArray(data.data)) {
+        const rawMenus = data.data;
+        const optionsMap: CategoryOption[] = [];
+
+        // Lọc các menu cấp 1 (parent_id === null) và menu con (parent_id !== null)
+        const parentMenus = rawMenus.filter((m: any) => m.parent_id === null);
+
+        parentMenus.forEach((parent: any) => {
+          const parentSlug = parent.path ? parent.path.replace('/search/', '').replace('/search', '') : '';
+          if (parentSlug) {
+            optionsMap.push({ title: parent.title, slug: parentSlug });
+          }
+
+          // Tìm các menu con thuộc menu cha này
+          const subMenus = rawMenus.filter((m: any) => m.parent_id === parent.id);
+          subMenus.forEach((sub: any) => {
+            const subSlug = sub.path ? sub.path.replace('/search/', '').replace('/search', '') : '';
+            if (subSlug) {
+              optionsMap.push({ title: `${parent.title} > ${sub.title}`, slug: subSlug });
+            }
+          });
+        });
+
+        if (optionsMap.length > 0) {
+          setCategoryOptions(optionsMap);
+          // Nếu form đang trống categories thì set mặc định phần tử đầu tiên
+          setFormData((prev) => ({
+            ...prev,
+            categories: prev.categories.length > 0 ? prev.categories : [optionsMap[0]!.slug],
+          }));
+        }
+      }
+    } catch (err) {
+      console.error('Lỗi tải danh mục động từ menu shop:', err);
+    }
+  };
+
+  const normalizeCategorySlug = (rawCategory?: string): string => {
+    if (!rawCategory) return categoryOptions[0]?.slug || '';
+
+    const cleanRaw = rawCategory.trim().toLowerCase();
+
+    const matchBySlug = categoryOptions.find((c) => c.slug.toLowerCase() === cleanRaw);
+    if (matchBySlug) return matchBySlug.slug;
+
+    const matchByTitle = categoryOptions.find(
+      (c) => c.title.toLowerCase() === cleanRaw || c.title.toLowerCase().endsWith(cleanRaw)
+    );
+    if (matchByTitle) return matchByTitle.slug;
+
+    return categoryOptions[0]?.slug || cleanRaw;
+  };
 
   // HÀM UPLOAD ẢNH LÊN CLOUDINARY
   const uploadToCloudinary = async (file: File): Promise<string | null> => {
@@ -241,6 +234,7 @@ export default function AdminProductsPage() {
   };
 
   useEffect(() => {
+    fetchCategoriesFromMenus();
     fetchProducts();
   }, []);
 
@@ -275,7 +269,7 @@ export default function AdminProductsPage() {
     setFormData({
       title: '',
       handle: '',
-      categories: [CATEGORY_OPTIONS[0]?.slug || 'tt-nam'],
+      categories: categoryOptions.length > 0 ? [categoryOptions[0]!.slug] : [],
       featured_image_url: '',
       featured_image_alt: '',
       description: '',
@@ -341,14 +335,14 @@ export default function AdminProductsPage() {
 
           const rawCategories = Array.isArray(p.categories) && p.categories.length > 0
             ? p.categories
-            : [p.category || product.category || 'tt-nam'];
+            : [p.category || product.category || (categoryOptions[0]?.slug ?? '')];
 
           const loadedCategories = rawCategories.map((c: string) => normalizeCategorySlug(c));
 
           setFormData({
             title: p.title || '',
             handle: p.handle || '',
-            categories: loadedCategories.length > 0 ? loadedCategories : ['tt-nam'],
+            categories: loadedCategories.length > 0 ? loadedCategories : (categoryOptions[0] ? [categoryOptions[0].slug] : []),
             featured_image_url: p.featured_image_url || p.image_url || '',
             featured_image_alt: p.featured_image_alt || '',
             description: p.description || '',
@@ -596,7 +590,10 @@ export default function AdminProductsPage() {
           </div>
           <div className="flex gap-2">
             <button
-              onClick={fetchProducts}
+              onClick={() => {
+                fetchCategoriesFromMenus();
+                fetchProducts();
+              }}
               className="flex-1 sm:flex-none rounded-lg bg-neutral-800 px-3 py-2 text-xs font-medium text-white transition hover:bg-neutral-700 active:scale-95"
             >
               🔄 Tải lại
@@ -626,7 +623,7 @@ export default function AdminProductsPage() {
             className="w-full md:w-auto rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-amber-500 focus:outline-none"
           >
             <option value="ALL">Tất cả danh mục</option>
-            {CATEGORY_OPTIONS.map((cat) => (
+            {categoryOptions.map((cat) => (
               <option key={cat.slug} value={cat.slug}>
                 {cat.title} ({cat.slug})
               </option>
@@ -651,7 +648,7 @@ export default function AdminProductsPage() {
                 const displayCategoryNames = pCats.length > 0
                   ? pCats.map(c => {
                       const slug = normalizeCategorySlug(c);
-                      const obj = CATEGORY_OPTIONS.find(opt => opt.slug === slug);
+                      const obj = categoryOptions.find(opt => opt.slug === slug);
                       return obj ? obj.title : c;
                     }).join(', ')
                   : 'Chưa phân loại';
@@ -753,7 +750,7 @@ export default function AdminProductsPage() {
                     const displayCategoryNames = pCats.length > 0
                       ? pCats.map(c => {
                           const slug = normalizeCategorySlug(c);
-                          const obj = CATEGORY_OPTIONS.find(opt => opt.slug === slug);
+                          const obj = categoryOptions.find(opt => opt.slug === slug);
                           return obj ? obj.title : c;
                         }).join(', ')
                       : 'Chưa phân loại';
@@ -896,41 +893,45 @@ export default function AdminProductsPage() {
                     </div>
                   </div>
 
-                  {/* CHỌN NHIỀU DANH MỤC (CHECKBOX GRID) */}
+                  {/* CHỌN NHIỀU DANH MỤC (CHECKBOX GRID) ĐỘNG TỪ DB */}
                   <div>
                     <label className="mb-1.5 block text-xs text-neutral-400 font-semibold">
-                      Danh mục sản phẩm (Chọn ít nhất 1 danh mục) *
+                      Danh mục sản phẩm (Chọn ít nhất 1 danh mục từ Menu Shop) *
                     </label>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 rounded-lg border border-neutral-800 bg-neutral-950 p-3 max-h-48 overflow-y-auto">
-                      {CATEGORY_OPTIONS.map((cat) => {
-                        const isChecked = formData.categories.includes(cat.slug);
-                        return (
-                          <label
-                            key={cat.slug}
-                            className="flex items-center gap-2 text-xs cursor-pointer text-neutral-300 hover:text-white p-1 rounded hover:bg-neutral-900"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={isChecked}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setFormData((prev) => ({
-                                    ...prev,
-                                    categories: [...prev.categories, cat.slug],
-                                  }));
-                                } else {
-                                  setFormData((prev) => ({
-                                    ...prev,
-                                    categories: prev.categories.filter((s) => s !== cat.slug),
-                                  }));
-                                }
-                              }}
-                              className="rounded border-neutral-700 bg-neutral-900 text-amber-500 focus:ring-amber-500 h-4 w-4"
-                            />
-                            <span className="truncate" title={cat.title}>{cat.title}</span>
-                          </label>
-                        );
-                      })}
+                      {categoryOptions.length === 0 ? (
+                        <div className="text-xs text-neutral-500 col-span-3 text-center py-2">Đang tải danh mục từ cơ sở dữ liệu...</div>
+                      ) : (
+                        categoryOptions.map((cat) => {
+                          const isChecked = formData.categories.includes(cat.slug);
+                          return (
+                            <label
+                              key={cat.slug}
+                              className="flex items-center gap-2 text-xs cursor-pointer text-neutral-300 hover:text-white p-1 rounded hover:bg-neutral-900"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setFormData((prev) => ({
+                                      ...prev,
+                                      categories: [...prev.categories, cat.slug],
+                                    }));
+                                  } else {
+                                    setFormData((prev) => ({
+                                      ...prev,
+                                      categories: prev.categories.filter((s) => s !== cat.slug),
+                                    }));
+                                  }
+                                }}
+                                className="rounded border-neutral-700 bg-neutral-900 text-amber-500 focus:ring-amber-500 h-4 w-4"
+                              />
+                              <span className="truncate" title={cat.title}>{cat.title}</span>
+                            </label>
+                          );
+                        })
+                      )}
                     </div>
                   </div>
 
