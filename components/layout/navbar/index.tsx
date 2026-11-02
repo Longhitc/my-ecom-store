@@ -232,13 +232,14 @@ export default function Navbar({ menu = [] }: NavbarProps) {
                     onMouseEnter={() => hasChildren && setOpenMenu(item.title)}
                     onMouseLeave={() => hasChildren && setOpenMenu(null)}
                   >
-                    {hasChildren ? (
-                      <button 
-                        type="button"
-                        onClick={() => setOpenMenu(isOpen ? null : item.title)}
-                        className="flex items-center gap-1 whitespace-nowrap text-neutral-700 transition-colors hover:text-black dark:text-neutral-400 dark:hover:text-white"
-                      >
-                        {item.title}
+                    <Link
+                      href={item.path}
+                      prefetch={true}
+                      onClick={() => setOpenMenu(null)}
+                      className="flex items-center gap-1 whitespace-nowrap text-neutral-700 transition-colors hover:text-black dark:text-neutral-400 dark:hover:text-white"
+                    >
+                      {item.title}
+                      {hasChildren && (
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
                           fill="none"
@@ -249,16 +250,8 @@ export default function Navbar({ menu = [] }: NavbarProps) {
                         >
                           <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
                         </svg>
-                      </button>
-                    ) : (
-                      <Link
-                        href={item.path}
-                        prefetch={true}
-                        className="flex items-center gap-1 whitespace-nowrap text-neutral-700 transition-colors hover:text-black dark:text-neutral-400 dark:hover:text-white"
-                      >
-                        {item.title}
-                      </Link>
-                    )}
+                      )}
+                    </Link>
 
                     {hasChildren && isOpen && (
                       <div className="absolute left-0 top-full z-[9999] w-52 pt-1">
@@ -290,10 +283,10 @@ export default function Navbar({ menu = [] }: NavbarProps) {
           </div>
         </div>
 
-        {/* Cố định hiển thị trống khi chưa mount để khớp giữa server và client */}
+        {/* Khu vực mobile user */}
         <div className="flex flex-1 items-center justify-center px-1 md:hidden">
           {!isMounted ? (
-            <div className="h-4 w-24 bg-neutral-800/10 dark:bg-neutral-800 rounded animate-pulse" />
+            <div className="h-4 w-20 bg-neutral-200 dark:bg-neutral-800 rounded animate-pulse" />
           ) : customer ? (
             <Link
               href="/account"
@@ -307,7 +300,7 @@ export default function Navbar({ menu = [] }: NavbarProps) {
 
         <div className="flex shrink-0 items-center justify-end gap-1.5 sm:gap-3 text-xs">
           {!isMounted ? (
-            <div className="h-6 w-24 bg-neutral-800/10 dark:bg-neutral-800 rounded animate-pulse" />
+            <div className="h-6 w-24 bg-neutral-200 dark:bg-neutral-800 rounded animate-pulse" />
           ) : customer ? (
             <div className="flex items-center gap-2">
               <Link
@@ -347,7 +340,6 @@ export default function Navbar({ menu = [] }: NavbarProps) {
             <OpenCart />
           </div>
         </div>
-
       </nav>
     </header>
   );
