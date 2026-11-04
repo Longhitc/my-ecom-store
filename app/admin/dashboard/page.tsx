@@ -23,12 +23,13 @@ export default async function AdminDashboardPage() {
 
   let stats: StatItem[] = [];
   try {
+    // Đã cập nhật dùng COALESCE(client_uuid, customer_id) để đếm chuẩn cả khách vãng lai lẫn khách đăng nhập
     const result = await db.execute({
       sql: `
         SELECT 
           visit_date, 
           COUNT(id) as total_visits,
-          COUNT(DISTINCT customer_id) as unique_customers
+          COUNT(DISTINCT COALESCE(client_uuid, customer_id)) as unique_customers
         FROM customer_visit_logs
         WHERE visit_date >= ? AND visit_date <= ?
         GROUP BY visit_date
@@ -65,15 +66,14 @@ export default async function AdminDashboardPage() {
 
   const maxVal = Math.max(...stats.map((s) => s.totalVisits), 5);
   const svgWidth = 700;
-  const svgHeight = 210; // Tăng nhẹ chiều cao để chứa nhãn bên dưới SVG
+  const svgHeight = 210;
   
   const paddingX = 50; 
   const paddingY = 25;
 
   const usableWidth = svgWidth - paddingX * 2;
-  const usableHeight = svgHeight - paddingY - 40; // Trừ phần dành cho nhãn chữ
+  const usableHeight = svgHeight - paddingY - 40;
 
-  // Tính tọa độ khớp hoàn hảo 100% giữa chấm tròn và chữ
   const points = stats.map((item, index) => {
     const divider = stats.length > 1 ? stats.length - 1 : 1;
     const x = paddingX + (index / divider) * usableWidth;
@@ -138,7 +138,6 @@ export default async function AdminDashboardPage() {
                 </linearGradient>
               </defs>
 
-              {/* Các đường lưới ngang */}
               {[0, 0.5, 1].map((ratio, idx) => {
                 const y = paddingY + usableHeight * ratio;
                 const valLabel = Math.round(maxVal * (1 - ratio));
@@ -179,7 +178,6 @@ export default async function AdminDashboardPage() {
                 />
               )}
 
-              {/* Các chấm tròn và nhãn thứ/ngày nằm CHUẨN XÁC 100% ngay dưới từng điểm */}
               {points.map((pt, idx) => (
                 <g key={idx}>
                   <circle 
@@ -190,7 +188,6 @@ export default async function AdminDashboardPage() {
                     stroke="#10b981" 
                     strokeWidth="2.5" 
                   />
-                  {/* Nhãn Thứ nằm chuẩn ngay dưới chấm tròn */}
                   <text 
                     x={pt.x} 
                     y={paddingY + usableHeight + 20} 
@@ -201,7 +198,6 @@ export default async function AdminDashboardPage() {
                   >
                     {pt.dayOfWeek}
                   </text>
-                  {/* Nhãn Ngày tháng nằm dưới chữ Thứ */}
                   <text 
                     x={pt.x} 
                     y={paddingY + usableHeight + 32} 
@@ -216,7 +212,6 @@ export default async function AdminDashboardPage() {
             </svg>
           </div>
 
-          {/* 7 ô thống kê nằm gọn hàng ngang bên dưới */}
           <div className="grid grid-cols-3 sm:grid-cols-7 gap-2 pt-6">
             {stats.map((item, index) => (
               <div key={index} className="rounded-lg border border-neutral-800 bg-neutral-950/60 p-2 text-center space-y-0.5">
@@ -226,7 +221,6 @@ export default async function AdminDashboardPage() {
               </div>
             ))}
           </div>
-
         </div>
       </div>
     </div>

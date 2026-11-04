@@ -1,14 +1,26 @@
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
-import { db } from '../../../../lib/turso'; // Điều chỉnh đường dẫn dẫn đến file turso.ts của bạn nếu khác
+import { db } from '../../../../lib/turso';
 
 export async function GET() {
   try {
     const cookieStore = await cookies();
     const sessionCookie = cookieStore.get('customer_session');
+    
+    // 1. Lấy client_uuid từ cookie, nếu chưa có thì tự sinh ngay lập tức ở server
+    let clientUuid = cookieStore.get('shop_client_uuid')?.value;
+    let newGeneratedUuid = false;
+    if (!clientUuid) {
+      clientUuid = 'client_' + Math.random().toString(36).substring(2) + Date.now().toString(36);
+      newGeneratedUuid = true;
+    }
 
     if (!sessionCookie || !sessionCookie.value) {
-      return NextResponse.json({ customer: null }, { status: 200 });
+      const res = NextResponse.json({ customer: null }, { status: 200 });
+      if (newGeneratedUuid) {
+        res.cookies.set('shop_client_uuid', clientUuid, { path: '/', maxAge: 31536000 });
+      }
+      return res;
     }
 
     // Đọc thông tin khách hàng từ Cookie
@@ -22,14 +34,14 @@ export async function GET() {
         const now = new Date();
         const todayVn = now.toLocaleDateString("sv-SE", { timeZone: "Asia/Ho_Chi_Minh" });
 
-        // 1. Ghi nhận lượt visit mới (mỗi lần mở web/gọi api /me sẽ lưu 1 mốc thời gian)
+        // Ghi nhận lượt visit kèm theo clientUuid chắc chắn không bị NULL
         const logId = `visit_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
         await db.execute({
-          sql: `INSERT INTO customer_visit_logs (id, customer_id, visit_date, visit_time) VALUES (?, ?, ?, datetime('now', '+7 hours'))`,
-          args: [logId, basicCustomer.id, todayVn]
+          sql: `INSERT INTO customer_visit_logs (id, customer_id, client_uuid, visit_date, visit_time) VALUES (?, ?, ?, ?, datetime('now', '+7 hours'))`,
+          args: [logId, basicCustomer.id, clientUuid, todayVn]
         });
 
-        // 2. Tự động xóa các log cũ hơn 7 ngày trước để giữ database luôn gọn nhẹ
+        // Tự động xóa các log cũ hơn 7 ngày trước
         const d7DaysAgo = new Date();
         d7DaysAgo.setDate(d7DaysAgo.getDate() - 7);
         const cutoffDateStr = d7DaysAgo.toLocaleDateString("sv-SE", { timeZone: "Asia/Ho_Chi_Minh" });
@@ -39,7 +51,6 @@ export async function GET() {
           args: [cutoffDateStr]
         });
       } catch (logError) {
-        // Bắt lỗi ngầm ở phần log để không bao giờ làm ảnh hưởng đến việc hiển thị trang của khách
         console.error('Lỗi ghi log visit:', logError);
       }
     }
@@ -63,10 +74,7 @@ export async function GET() {
     let adminData = null;
 
     if (adminResult.rows.length > 0) {
-      // Ép kiểu cho dòng đầu tiên
       const firstRow = adminResult.rows[0] as Record<string, any>;
-
-      // Tách lấy danh sách các menu_code được cấp quyền
       const allowed_menus = adminResult.rows
         .map((row) => (row as Record<string, any>).menu_code as string)
         .filter(Boolean);
@@ -78,13 +86,19 @@ export async function GET() {
       };
     }
 
-    // Ghép object admin vào dữ liệu customer
     const customer = {
       ...basicCustomer,
       admin: adminData
     };
 
-    return NextResponse.json({ customer }, { status: 200 });
+    const response = NextResponse.json({ customer }, { status: 200 });
+    
+    // Nếu vừa tự sinh uuid ở server thì gán ngược lại cookie cho trình duyệt
+    if (newGeneratedUuid) {
+      response.cookies.set('shop_client_uuid', clientUuid, { path: '/', maxAge: 31536000 });
+    }
+
+    return response;
   } catch (error) {
     console.error('Lỗi lấy thông tin session:', error);
     return NextResponse.json({ customer: null }, { status: 200 });

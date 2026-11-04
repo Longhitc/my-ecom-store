@@ -1,8 +1,34 @@
 import { db } from '@/lib/turso';
 import { NextResponse } from 'next/server';
 
+// Tự động kiểm tra và thêm cột client_uuid vào bảng nếu chưa có
+async function ensureTableStructure() {
+  try {
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS customer_visit_logs (
+        id TEXT PRIMARY KEY,
+        customer_id TEXT,
+        client_uuid TEXT,
+        visit_date TEXT,
+        visit_time TEXT
+      );
+    `);
+    
+    // Đề phòng trường hợp bảng đã tồn tại từ trước nhưng chưa có cột client_uuid
+    try {
+      await db.execute(`ALTER TABLE customer_visit_logs ADD COLUMN client_uuid TEXT;`);
+    } catch (e) {
+      // Cột đã tồn tại thì bỏ qua lỗi
+    }
+  } catch (e) {
+    console.error('Error ensuring visit logs table structure:', e);
+  }
+}
+
 export async function GET() {
   try {
+    await ensureTableStructure();
+
     // Tạo danh sách 7 ngày gần nhất theo chuẩn giờ GMT+7 (Asia/Ho_Chi_Minh)
     const daysList: string[] = [];
     for (let i = 6; i >= 0; i--) {
@@ -15,13 +41,13 @@ export async function GET() {
     const startDate = daysList[0] as string;
     const endDate = daysList[daysList.length - 1] as string;
 
-    // Truy vấn dữ liệu từ bảng customer_visit_logs
+    // Truy vấn dữ liệu: Đếm tổng lượt truy cập và đếm số lượng khách phân biệt qua client_uuid (hoặc fallback về customer_id)
     const result = await db.execute({
       sql: `
         SELECT 
           visit_date, 
           COUNT(id) as total_visits,
-          COUNT(DISTINCT customer_id) as unique_customers
+          COUNT(DISTINCT COALESCE(client_uuid, customer_id)) as unique_customers
         FROM customer_visit_logs
         WHERE visit_date >= ? AND visit_date <= ?
         GROUP BY visit_date

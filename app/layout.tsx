@@ -8,7 +8,7 @@ import { AuthProvider } from 'context/auth-context';
 import { CartProvider } from 'context/CartContext';
 // @ts-ignore
 import { GeistSans } from "geist/font/sans";
-import { getStoreMenus } from "lib/menu"; // <-- Import hàm lấy menu động
+import { getStoreMenus } from "lib/menu";
 import { getCart } from "lib/shopify";
 import { baseUrl } from "lib/utils";
 import type { Metadata } from 'next';
@@ -18,7 +18,6 @@ import { Toaster } from "sonner";
 // @ts-ignore
 import "./globals.css";
 
-// Cấu hình tiêu đề chuẩn theo yêu cầu của anh
 export const metadata: Metadata = {
   metadataBase: new URL(baseUrl),
   title: {
@@ -36,7 +35,33 @@ export const metadata: Metadata = {
   },
 };
 
-// Component con xử lý tự động bắt sự kiện update ngầm của Service Worker
+// Component chạy ngầm tự động sinh client_uuid và ghi nhận lượt truy cập
+function VisitorTrackerScript() {
+  return (
+    <script
+      dangerouslySetInnerHTML={{
+        __html: `
+          (function() {
+            try {
+              let uuid = localStorage.getItem('shop_client_uuid');
+              if (!uuid) {
+                uuid = 'client_' + Math.random().toString(36).substring(2) + Date.now().toString(36);
+                localStorage.setItem('shop_client_uuid', uuid);
+              }
+              // Gửi request ngầm ghi nhận lượt truy cập
+              fetch('/api/admin/track-visit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ clientUuid: uuid })
+              }).catch(err => {});
+            } catch (e) {}
+          })();
+        `,
+      }}
+    />
+  );
+}
+
 function ServiceWorkerAutoUpdater() {
   return (
     <script
@@ -68,17 +93,18 @@ export default async function RootLayout({
   children: ReactNode;
 }) {
   const cart = getCart();
-  const menuData = await getStoreMenus(); // <-- Lấy dữ liệu menu động từ Turso DB
+  const menuData = await getStoreMenus();
 
   return (
     <html lang="en" className={GeistSans.variable}>
       <head>
         <ServiceWorkerAutoUpdater />
+        <VisitorTrackerScript />
       </head>
       <body className="bg-neutral-50 text-black selection:bg-teal-300 dark:bg-neutral-900 dark:text-white dark:selection:bg-pink-500 dark:selection:text-white">
         <AuthProvider>
           <CartProvider>
-            <Navbar menu={menuData} /> {/* <-- Truyền menu động vào Navbar */}
+            <Navbar menu={menuData} />
             <main>
               {children}
               <Toaster closeButton />
