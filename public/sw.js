@@ -1,45 +1,60 @@
-const CACHE_NAME = 'depvaxinh-v1.1.2'; // Mỗi lần update code lớn, anh chỉ cần tăng version này lên (v1.2, v2.0...)
+const CACHE_NAME = 'depvaxinh-v1.1.3'; // Tăng version lên khi có update lớn (v1.1.4, v1.2.0...)
 const urlsToCache = ['/', '/manifest.json'];
 
+// 1. Kích hoạt và ép Service Worker mới áp dụng ngay lập tức
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(urlsToCache))
   );
-  self.skipWaiting(); // Ép bỏ qua trạng thái chờ để nhận bản mới ngay
+  self.skipWaiting(); // Bỏ qua hàng chờ, kích hoạt ngay phiên bản mới
 });
 
+// 2. Tự động dọn dẹp toàn bộ cache cũ rác khi có version mới
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
-          // Tự động quét và xóa sạch các cache cũ rác
           if (cacheName !== CACHE_NAME) {
-            console.log('[ServiceWorker] Xóa cache cũ:', cacheName);
+            console.log('[ServiceWorker] Đã tự động xóa cache phiên bản cũ:', cacheName);
             return caches.delete(cacheName);
           }
         })
       );
-    }).then(() => clients.claim()) // Chiếm quyền điều khiển ngay lập tức
+    }).then(() => clients.claim()) // Chiếm quyền điều khiển toàn bộ tab ngay lập tức
   );
 });
 
+// 3. Chiến lược Fetch tự động: Ưu tiên lấy trực tiếp từ Server (Network-First)
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
+  const url = new URL(event.request.url);
+
+  // Bỏ qua tuyệt đối các request API để luôn đảm bảo dữ liệu Turso mới nhất
+  if (url.pathname.startsWith('/api/')) {
+    return;
+  }
+
+  // Luôn thử tải giao diện/code mới từ mạng trước
   event.respondWith(
-    caches.match(event.request).then((response) => {
-      return response || fetch(event.request).catch(() => {
-        return new Response('Network error happened', {
-          status: 408,
-          headers: { 'Content-Type': 'text/plain' },
+    fetch(event.request)
+      .then((networkResponse) => {
+        return networkResponse;
+      })
+      .catch(() => {
+        // Chỉ khi nào đứt mạng (Offline) thì mới dùng đến bản cache lưu lại
+        return caches.match(event.request).then((cachedResponse) => {
+          return cachedResponse || new Response('Lỗi kết nối mạng', {
+            status: 408,
+            headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+          });
         });
-      });
-    })
+      })
   );
 });
 
-// === XỬ LÝ WEB PUSH NOTIFICATION NỀN (BACKGROUND) ===
+// === XỬ LÝ THÔNG BÁO PUSH NỀN (BACKGROUND NOTIFICATION) ===
 self.addEventListener('push', (event) => {
   let data = { 
     title: '💬 Có tin nhắn mới từ khách hàng', 
