@@ -29,15 +29,21 @@ async function getPromoProducts() {
       args: [nowVn]
     });
 
-    return result.rows.map((row: any) => ({
-      id: String(row.id),
-      handle: String(row.handle || row.id),
-      title: String(row.title || 'Sản phẩm'),
-      originalPrice: `${Number(row.original_price ?? 0).toLocaleString('vi-VN')} đ`,
-      promoPrice: `${Number(row.promo_price ?? 0).toLocaleString('vi-VN')} đ`,
-      imageUrl: String(row.image_url || ''),
-      discount: row.discount_type === 'percent' ? `-${row.discount_value}%` : `-${Number(row.discount_value || 0).toLocaleString('vi-VN')}đ`,
-    }));
+    return result.rows.map((row: any) => {
+      // Làm tròn lên đến 1,000 VND cho giá khuyến mãi
+      const rawPromoPrice = Number(row.promo_price ?? 0);
+      const roundedPromoPrice = Math.ceil(rawPromoPrice / 1000) * 1000;
+
+      return {
+        id: String(row.id),
+        handle: String(row.handle || row.id),
+        title: String(row.title || 'Sản phẩm'),
+        originalPrice: `${Number(row.original_price ?? 0).toLocaleString('vi-VN')} đ`,
+        promoPrice: `${roundedPromoPrice.toLocaleString('vi-VN')} đ`,
+        imageUrl: String(row.image_url || ''),
+        discount: row.discount_type === 'percent' ? `-${row.discount_value}%` : `-${Number(row.discount_value || 0).toLocaleString('vi-VN')}đ`,
+      };
+    });
   } catch (error) {
     console.error('Lỗi truy vấn sản phẩm khuyến mãi:', error);
     return [];

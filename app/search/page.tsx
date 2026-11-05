@@ -47,23 +47,28 @@ async function getProducts(query?: string) {
       })
       .map((row: any) => {
         const rawPrice = Number(row.min_price ?? row.price ?? 0);
+        
+        // Làm tròn lên đến 1,000 VND cho giá khuyến mãi nếu có
+        const rawPromoPrice = row.promo_price !== null && row.promo_price !== undefined ? Number(row.promo_price) : 0;
+        const roundedPromoPrice = Math.ceil(rawPromoPrice / 1000) * 1000;
+
         // Chỉ bật cờ khuyến mãi khi is_promoted = 1 và có giá sale nhỏ hơn giá gốc
         const hasPromo = Number(row.is_promoted) === 1 && 
                          row.promo_price !== null && 
                          row.promo_price !== undefined && 
-                         Number(row.promo_price) < rawPrice;
+                         roundedPromoPrice < rawPrice;
         
         const originalPriceFormatted = `${rawPrice.toLocaleString('vi-VN')} đ`;
-        const promoPriceFormatted = hasPromo ? `${Number(row.promo_price).toLocaleString('vi-VN')} đ` : originalPriceFormatted;
+        const promoPriceFormatted = hasPromo ? `${roundedPromoPrice.toLocaleString('vi-VN')} đ` : originalPriceFormatted;
 
         let discountText = '';
         if (hasPromo) {
           if (row.discount_type === 'percent') {
             discountText = `-${row.discount_value}%`;
           } else if (row.discount_value) {
-            discountText = `-${Number(row.discount_value).toLocaleString('vi-VN')}đ`;
+            discountText = `-${Number(row.discount_value || 0).toLocaleString('vi-VN')}đ`;
           } else {
-            const calcPercent = Math.round(((rawPrice - Number(row.promo_price)) / rawPrice) * 100);
+            const calcPercent = Math.round(((rawPrice - roundedPromoPrice) / rawPrice) * 100);
             discountText = `-${calcPercent}%`;
           }
         }
