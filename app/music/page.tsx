@@ -106,21 +106,21 @@ export default function MusicPage() {
     : 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=600&auto=format&fit=crop';
 
   return (
-    <div className="container mx-auto px-4 py-8 min-h-[80vh] flex flex-col items-center justify-center">
+    <div className="container mx-auto px-3 py-6 min-h-[80vh] flex flex-col items-center justify-center">
       
-      {/* Khung chính lọt thỏm, chuẩn max-w-xl y hệt ảnh mẫu của anh */}
-      <div className="w-full max-w-xl bg-neutral-900 border border-neutral-800 rounded-3xl p-6 shadow-2xl flex flex-col items-center">
+      {/* Khung chính lọt thỏm chuẩn max-w-xl */}
+      <div className="w-full max-w-xl bg-neutral-900 border border-neutral-800 rounded-3xl p-4 sm:p-6 shadow-2xl flex flex-col items-center">
         
         {/* Tiêu đề trên cùng */}
-        <div className="flex items-center gap-2 mb-6 w-full justify-center">
+        <div className="flex items-center gap-2 mb-4 sm:mb-6 w-full justify-center">
           <span className="text-emerald-400 text-sm">🎵</span>
-          <span className="text-[11px] uppercase tracking-[0.25em] text-emerald-400 font-semibold">
+          <span className="text-[10px] sm:text-[11px] uppercase tracking-[0.2em] sm:tracking-[0.25em] text-emerald-400 font-semibold">
             VINTAGE VINYL EXPERIENCE
           </span>
         </div>
 
         {/* Bố cục 2 cột cân đối: Trái Ảnh bìa, Phải Đĩa than */}
-        <div className="grid grid-cols-2 gap-5 items-center w-full px-2">
+        <div className="grid grid-cols-2 gap-3 sm:gap-5 items-center w-full px-1">
           
           {/* Cột 1: Ảnh bìa Album */}
           <div className="w-full aspect-square rounded-2xl overflow-hidden shadow-lg border border-neutral-800 bg-neutral-950 relative">
@@ -134,7 +134,7 @@ export default function MusicPage() {
           {/* Cột 2: Đĩa than xoay tròn */}
           <div className="relative w-full aspect-square flex items-center justify-center">
             <div 
-              className={`w-40 h-40 sm:w-44 sm:h-44 rounded-full bg-gradient-to-tr from-neutral-950 via-neutral-900 to-neutral-950 border-[5px] border-neutral-950 shadow-2xl flex items-center justify-center relative transition-transform duration-500 ${
+              className={`w-36 h-36 sm:w-44 sm:h-44 rounded-full bg-gradient-to-tr from-neutral-950 via-neutral-900 to-neutral-950 border-[4px] sm:border-[5px] border-neutral-950 shadow-2xl flex items-center justify-center relative transition-transform duration-500 ${
                 isPlaying ? 'animate-spin' : ''
               }`}
               style={{ animationDuration: '4s' }}
@@ -145,32 +145,38 @@ export default function MusicPage() {
               <div className="absolute inset-9 rounded-full border border-neutral-800/30 pointer-events-none"></div>
 
               {/* Nhãn đĩa tâm màu xanh lá */}
-              <div className="w-14 h-14 rounded-full bg-emerald-600 border-2 border-neutral-900 flex flex-col items-center justify-center shadow-inner text-center p-0.5">
-                <span className="text-[7px] font-bold text-white uppercase tracking-tighter truncate w-full">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-emerald-600 border-2 border-neutral-900 flex flex-col items-center justify-center shadow-inner text-center p-0.5">
+                <span className="text-[7px] font-bold text-white uppercase tracking-tighter truncate w-full px-1">
                   {currentTrack?.album_title || 'VINYL'}
                 </span>
-                <div className="w-2.5 h-2.5 rounded-full bg-neutral-950 mt-0.5"></div>
+                <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-neutral-950 mt-0.5"></div>
               </div>
             </div>
           </div>
 
         </div>
 
-        {/* Thông tin bài hát & Album */}
-        <div className="text-center mt-6 mb-5 w-full px-2">
-          <h1 className="text-base font-bold text-white truncate">{currentTrack?.title}</h1>
-          <p className="text-xs text-neutral-400 mt-1">
-            <span className="text-emerald-400 font-medium">{currentTrack?.artist}</span> 
-            <span className="mx-1.5">•</span> 
-            <span>{currentTrack?.album_title}</span>
-          </p>
+        {/* Thông tin bài hát chính: Cho phép xuống dòng full tên, không bị cụt đuôi */}
+        <div className="text-center mt-5 mb-4 w-full px-2">
+          <h1 className="text-sm sm:text-base font-bold text-white px-2 tracking-wide leading-snug break-words">
+            {currentTrack?.title}
+          </h1>
+          <div className="flex items-center justify-center gap-1.5 text-xs text-neutral-400 mt-2 px-2 flex-wrap">
+            <span className="text-emerald-400 font-medium">
+              {currentTrack?.artist}
+            </span> 
+            <span className="text-neutral-600">•</span> 
+            <span>
+              {currentTrack?.album_title}
+            </span>
+          </div>
         </div>
 
-        {/* Bộ điều khiển (Controls): Nút lùi, Play tròn xanh ở giữa, Nút tiến */}
-        <div className="flex items-center justify-center gap-5 my-2">
+        {/* Bộ điều khiển (Controls) */}
+        <div className="flex items-center justify-center gap-4 sm:gap-5 my-1 sm:my-2">
           <button 
             onClick={handlePrev}
-            className="w-10 h-10 rounded-full bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center text-white text-sm transition-all transform active:scale-95 shadow-md"
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center text-white text-xs sm:text-sm transition-all transform active:scale-95 shadow-md"
             title="Bài trước"
           >
             ⏮
@@ -178,7 +184,7 @@ export default function MusicPage() {
 
           <button 
             onClick={togglePlay}
-            className="w-14 h-14 rounded-full bg-emerald-500 hover:bg-emerald-400 flex items-center justify-center text-neutral-950 font-bold transition-all transform active:scale-95 shadow-lg shadow-emerald-500/20 text-lg"
+            className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-emerald-500 hover:bg-emerald-400 flex items-center justify-center text-neutral-950 font-bold transition-all transform active:scale-95 shadow-lg shadow-emerald-500/20 text-base sm:text-lg"
             title={isPlaying ? 'Tạm dừng' : 'Phát nhạc'}
           >
             {isPlaying ? '⏸' : '▶'}
@@ -186,17 +192,19 @@ export default function MusicPage() {
           
           <button 
             onClick={handleNext}
-            className="w-10 h-10 rounded-full bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center text-white text-sm transition-all transform active:scale-95 shadow-md"
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center text-white text-xs sm:text-sm transition-all transform active:scale-95 shadow-md"
             title="Bài tiếp"
           >
             ⏭
           </button>
         </div>
 
-        {/* Danh sách bài hát (Playlist) bên dưới */}
-        <div className="w-full mt-5 border-t border-neutral-800/80 pt-4">
-          <h3 className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-2.5">Danh sách phát tuần tự trong Album</h3>
-          <ul className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+        {/* Danh sách bài hát (Playlist) bên dưới: Tách tên bài hát 1 dòng, tên ca sĩ 1 dòng riêng biệt */}
+        <div className="w-full mt-4 sm:mt-5 border-t border-neutral-800/80 pt-3 sm:pt-4">
+          <h3 className="text-[10px] sm:text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-2.5 px-1">
+            Danh sách phát tuần tự trong Album
+          </h3>
+          <ul className="space-y-2 max-h-44 overflow-y-auto pr-1">
             {tracks.map((t, idx) => (
               <li 
                 key={t.id}
@@ -205,22 +213,29 @@ export default function MusicPage() {
                   setIsPlaying(false);
                   setCurrentIndex(idx);
                 }}
-                className={`text-xs p-2.5 rounded-xl cursor-pointer transition-colors flex justify-between items-center ${
+                className={`text-xs p-3 rounded-xl cursor-pointer transition-colors flex items-center gap-3 ${
                   currentIndex === idx 
                     ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
                     : 'hover:bg-neutral-800/60 text-neutral-300'
                 }`}
               >
-                <div className="flex items-center gap-2 truncate pr-2">
-                  <span className="text-[10px] text-neutral-500 font-mono">0{idx + 1}</span>
-                  <span className="truncate font-medium">{t.title}</span>
+                <span className="text-[11px] text-neutral-500 font-mono shrink-0 font-bold">
+                  {idx < 9 ? `0${idx + 1}` : idx + 1}
+                </span>
+                
+                {/* Tách tên bài hát và tên ca sĩ thành 2 dòng rõ ràng */}
+                <div className="flex flex-col flex-1 min-w-0">
+                  <span className={`font-semibold text-xs tracking-wide leading-snug break-words ${currentIndex === idx ? 'text-emerald-400' : 'text-white'}`}>
+                    {t.title}
+                  </span>
+                  <span className="text-[10px] text-neutral-400 mt-0.5 truncate">
+                    {t.artist}
+                  </span>
                 </div>
-                <span className="text-[10px] text-neutral-500">{t.artist}</span>
               </li>
             ))}
           </ul>
         </div>
-
       </div>
     </div>
   );
