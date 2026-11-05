@@ -4,6 +4,7 @@ import ChatWidget from "components/ChatWidget";
 import Footer from "components/layout/footer";
 import Navbar from "components/layout/navbar";
 import PwaRegister from "components/PwaRegister";
+import VisitorTracker from "components/VisitorTracker"; // Import component VisitorTracker chuẩn
 import { AuthProvider } from 'context/auth-context';
 import { CartProvider } from 'context/CartContext';
 // @ts-ignore
@@ -34,33 +35,6 @@ export const metadata: Metadata = {
     icon: '/favicon.ico',
   },
 };
-
-// Component chạy ngầm tự động sinh client_uuid và ghi nhận lượt truy cập
-function VisitorTrackerScript() {
-  return (
-    <script
-      dangerouslySetInnerHTML={{
-        __html: `
-          (function() {
-            try {
-              let uuid = localStorage.getItem('shop_client_uuid');
-              if (!uuid) {
-                uuid = 'client_' + Math.random().toString(36).substring(2) + Date.now().toString(36);
-                localStorage.setItem('shop_client_uuid', uuid);
-              }
-              // Gửi request ngầm ghi nhận lượt truy cập
-              fetch('/api/admin/track-visit', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ clientUuid: uuid })
-              }).catch(err => {});
-            } catch (e) {}
-          })();
-        `,
-      }}
-    />
-  );
-}
 
 function ServiceWorkerAutoUpdater() {
   return (
@@ -99,11 +73,13 @@ export default async function RootLayout({
     <html lang="en" className={GeistSans.variable}>
       <head>
         <ServiceWorkerAutoUpdater />
-        <VisitorTrackerScript />
+        {/* Đã gỡ bỏ VisitorTrackerScript thừa thãi ở đây */}
       </head>
       <body className="bg-neutral-50 text-black selection:bg-teal-300 dark:bg-neutral-900 dark:text-white dark:selection:bg-pink-500 dark:selection:text-white">
         <AuthProvider>
           <CartProvider>
+            {/* Đưa VisitorTracker vào chạy ngầm chuẩn xác tại đây */}
+            <VisitorTracker />
             <Navbar menu={menuData} />
             <main>
               {children}

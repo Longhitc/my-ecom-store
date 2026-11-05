@@ -6,19 +6,19 @@ export async function GET() {
   try {
     const cookieStore = await cookies();
     const sessionCookie = cookieStore.get('customer_session');
+    const clientUuid = cookieStore.get('shop_client_uuid')?.value;
     
-    // 1. Lấy client_uuid từ cookie, nếu chưa có thì tự sinh ngay lập tức ở server
-    let clientUuid = cookieStore.get('shop_client_uuid')?.value;
+    let generatedUuid = clientUuid;
     let newGeneratedUuid = false;
-    if (!clientUuid) {
-      clientUuid = 'client_' + Math.random().toString(36).substring(2) + Date.now().toString(36);
+    if (!generatedUuid) {
+      generatedUuid = 'client_' + Math.random().toString(36).substring(2) + Date.now().toString(36);
       newGeneratedUuid = true;
     }
 
     if (!sessionCookie || !sessionCookie.value) {
       const res = NextResponse.json({ customer: null }, { status: 200 });
       if (newGeneratedUuid) {
-        res.cookies.set('shop_client_uuid', clientUuid, { path: '/', maxAge: 31536000 });
+        res.cookies.set('shop_client_uuid', generatedUuid, { path: '/', maxAge: 31536000 });
       }
       return res;
     }
@@ -27,31 +27,24 @@ export async function GET() {
     const basicCustomer = JSON.parse(sessionCookie.value);
 
     // ==========================================
-    // GHI NHẬN LOG TRUY CẬP (VISIT LOG) & DỌN DẸP 7 NGÀY
+    // CẬP NHẬT CUSTOMER_ID VÀO VISIT LOG NẾU ĐANG NULL
     // ==========================================
-    if (basicCustomer && basicCustomer.id) {
+    if (basicCustomer && basicCustomer.id && generatedUuid) {
       try {
         const now = new Date();
         const todayVn = now.toLocaleDateString("sv-SE", { timeZone: "Asia/Ho_Chi_Minh" });
 
-        // Ghi nhận lượt visit kèm theo clientUuid chắc chắn không bị NULL
-        const logId = `visit_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+        // Cập nhật customer_id vào các dòng log trong ngày của client_uuid này đang bị NULL
         await db.execute({
-          sql: `INSERT INTO customer_visit_logs (id, customer_id, client_uuid, visit_date, visit_time) VALUES (?, ?, ?, ?, datetime('now', '+7 hours'))`,
-          args: [logId, basicCustomer.id, clientUuid, todayVn]
+          sql: `
+            UPDATE customer_visit_logs 
+            SET customer_id = ? 
+            WHERE client_uuid = ? AND visit_date = ? AND (customer_id IS NULL OR customer_id = '')
+          `,
+          args: [basicCustomer.id, generatedUuid, todayVn]
         });
-
-        // Tự động xóa các log cũ hơn 7 ngày trước
-        const d7DaysAgo = new Date();
-        d7DaysAgo.setDate(d7DaysAgo.getDate() - 7);
-        const cutoffDateStr = d7DaysAgo.toLocaleDateString("sv-SE", { timeZone: "Asia/Ho_Chi_Minh" });
-
-        await db.execute({
-          sql: `DELETE FROM customer_visit_logs WHERE visit_date < ?`,
-          args: [cutoffDateStr]
-        });
-      } catch (logError) {
-        console.error('Lỗi ghi log visit:', logError);
+      } catch (updateError) {
+        console.error('Lỗi update customer_id vào visit log:', updateError);
       }
     }
     // ==========================================
@@ -93,9 +86,8 @@ export async function GET() {
 
     const response = NextResponse.json({ customer }, { status: 200 });
     
-    // Nếu vừa tự sinh uuid ở server thì gán ngược lại cookie cho trình duyệt
     if (newGeneratedUuid) {
-      response.cookies.set('shop_client_uuid', clientUuid, { path: '/', maxAge: 31536000 });
+      response.cookies.set('shop_client_uuid', generatedUuid, { path: '/', maxAge: 31536000 });
     }
 
     return response;
