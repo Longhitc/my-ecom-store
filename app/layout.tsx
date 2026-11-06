@@ -4,7 +4,8 @@ import ChatWidget from "components/ChatWidget";
 import Footer from "components/layout/footer";
 import Navbar from "components/layout/navbar";
 import PwaRegister from "components/PwaRegister";
-import VisitorTracker from "components/VisitorTracker"; // Import component VisitorTracker chuẩn
+import VisitorTracker from "components/VisitorTracker";
+import { AudioProvider } from 'context/AudioContext'; // <-- Import AudioProvider toàn cục
 import { AuthProvider } from 'context/auth-context';
 import { CartProvider } from 'context/CartContext';
 // @ts-ignore
@@ -73,25 +74,25 @@ export default async function RootLayout({
     <html lang="en" className={GeistSans.variable}>
       <head>
         <ServiceWorkerAutoUpdater />
-        {/* Đã gỡ bỏ VisitorTrackerScript thừa thãi ở đây */}
       </head>
       <body className="bg-neutral-50 text-black selection:bg-teal-300 dark:bg-neutral-900 dark:text-white dark:selection:bg-pink-500 dark:selection:text-white">
         <AuthProvider>
           <CartProvider>
-            {/* Đưa VisitorTracker vào chạy ngầm chuẩn xác tại đây */}
-            <VisitorTracker />
-            <Navbar menu={menuData} />
-            <main>
-              {children}
-              <Toaster closeButton />
-            </main>         
+            <AudioProvider> {/* <-- Bọc AudioProvider ôm trọn ứng dụng để duy trì nhạc ngầm */}
+              <VisitorTracker />
+              <Navbar menu={menuData} />
+              <main>
+                {children}
+                <Toaster closeButton />
+              </main>         
 
-            <Footer />
+              <Footer />
 
-            <CartDrawer />
-            <ChatWidget />
-            <PwaRegister />
-            <AutoPwaPopup />
+              <CartDrawer />
+              <ChatWidget />
+              <PwaRegister />
+              <AutoPwaPopup />
+            </AudioProvider>
           </CartProvider>
         </AuthProvider>
       </body>

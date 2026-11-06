@@ -1,46 +1,24 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-
-interface Track {
-  id: string;
-  title: string;
-  artist: string;
-  audio_url: string;
-  album_title: string;
-  cover_image?: string;
-  track_order: number;
-}
+import { useAudio } from '@/context/AudioContext';
+import { useState } from 'react';
 
 export default function MusicPage() {
-  const [tracks, setTracks] = useState<Track[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [loading, setLoading] = useState(true);
-  
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
+  const {
+    tracks,
+    currentIndex,
+    currentTrack,
+    isPlaying,
+    currentTime,
+    duration,
+    playTrack,
+    togglePlay,
+    handleNext,
+    handlePrev,
+    seekTo,
+  } = useAudio();
 
   const [showPlaylist, setShowPlaylist] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const progressBarRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    fetch('/api/music')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success && data.data.length > 0) {
-          setTracks(data.data);
-        }
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error('Lỗi fetch API music:', err);
-        setLoading(false);
-      });
-  }, []);
-
-  const currentTrack = tracks[currentIndex];
 
   const formatTime = (timeInSeconds: number) => {
     if (isNaN(timeInSeconds)) return '0:00';
@@ -49,89 +27,18 @@ export default function MusicPage() {
     return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
   };
 
-  useEffect(() => {
-    if (!currentTrack) return;
-
-    if (audioRef.current) {
-      audioRef.current.pause();
-    }
-
-    const audio = new Audio(currentTrack.audio_url);
-    audioRef.current = audio;
-
-    setCurrentTime(0);
-    setDuration(0);
-
-    audio.onloadedmetadata = () => {
-      setDuration(audio.duration);
-    };
-
-    audio.ontimeupdate = () => {
-      setCurrentTime(audio.currentTime);
-    };
-
-    audio.onended = () => {
-      setCurrentIndex((prev) => (prev + 1) % tracks.length);
-      setIsPlaying(true);
-    };
-
-    if (isPlaying) {
-      audio.play().catch((err) => console.error('Lỗi phát audio:', err));
-    }
-
-    return () => {
-      audio.pause();
-      audioRef.current = null;
-    };
-  }, [currentIndex, tracks]);
-
-  const togglePlay = () => {
-    if (!audioRef.current) return;
-
-    if (isPlaying) {
-      audioRef.current.pause();
-      setIsPlaying(false);
-    } else {
-      audioRef.current.play().catch((err) => console.error('Lỗi phát audio:', err));
-      setIsPlaying(true);
-    }
-  };
-
-  const handleNext = () => {
-    setCurrentIndex((prev) => (prev + 1) % tracks.length);
-    setIsPlaying(true);
-  };
-
-  const handlePrev = () => {
-    setCurrentIndex((prev) => (prev - 1 + tracks.length) % tracks.length);
-    setIsPlaying(true);
-  };
-
-  // Xử lý click/tua trên thanh progress tùy chỉnh
   const handleProgressBarClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!progressBarRef.current || !audioRef.current || !duration) return;
-    const rect = progressBarRef.current.getBoundingClientRect();
+    const rect = e.currentTarget.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
     const width = rect.width;
     const percentage = Math.max(0, Math.min(1, clickX / width));
-    const newTime = percentage * duration;
-    
-    audioRef.current.currentTime = newTime;
-    setCurrentTime(newTime);
+    seekTo(percentage * duration);
   };
-
-  if (loading) {
-    return (
-      <div className="container mx-auto px-4 py-12 min-h-[75vh] flex items-center justify-center text-emerald-400 font-serif">
-        <div className="animate-pulse tracking-widest">Đang tải giai điệu...</div>
-      </div>
-    );
-  }
 
   if (tracks.length === 0) {
     return (
       <div className="container mx-auto px-4 py-12 min-h-[75vh] flex items-center justify-center text-emerald-400 font-serif">
-        <div>Chưa có bài hát nào trong cơ sở dữ liệu.</div>
+        <div className="animate-pulse tracking-widest">Đang tải giai điệu...</div>
       </div>
     );
   }
@@ -140,7 +47,6 @@ export default function MusicPage() {
     ? currentTrack.cover_image 
     : 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=600&auto=format&fit=crop';
 
-  // Tính phần trăm tiến trình chạy của bài hát
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   return (
@@ -203,20 +109,17 @@ export default function MusicPage() {
           </div>
         </div>
 
-        {/* THANH TIẾN TRÌNH CHUẨN SPOTIFY (Màu đậm phía trước, mờ phía sau có nút tròn) */}
+        {/* Thanh tiến trình chuẩn Spotify */}
         <div className="w-full px-3 mt-3 mb-1">
           <div 
-            ref={progressBarRef}
             onClick={handleProgressBarClick}
             className="w-full h-1.5 bg-neutral-700/80 rounded-full cursor-pointer relative group flex items-center"
           >
-            {/* Phần thanh đã chạy qua (màu sáng/xanh) */}
             <div 
               className="h-full bg-emerald-400 rounded-full relative pointer-events-none transition-all duration-100"
               style={{ width: `${progressPercent}%` }}
             >
-              {/* Nút tròn ở đầu thanh */}
-              <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow-md opacity-0 group-hover:opacity-150 transition-opacity"></div>
+              <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity"></div>
             </div>
           </div>
 
@@ -273,7 +176,6 @@ export default function MusicPage() {
             </button>
           </div>
 
-          {/* Bài đang phát */}
           {currentTrack && (
             <div className="text-xs p-3 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-3">
               <span className="text-[11px] text-neutral-500 font-mono shrink-0 font-bold">
@@ -291,7 +193,7 @@ export default function MusicPage() {
           )}
         </div>
 
-        {/* POPUP OVERLAY DANH SÁCH BÀI HÁT */}
+        {/* Popup Playlist */}
         {showPlaylist && (
           <div className="absolute inset-0 bg-neutral-950/95 backdrop-blur-md z-20 p-4 sm:p-6 flex flex-col rounded-3xl animate-fadeIn">
             <div className="flex items-center justify-between pb-3 border-b border-neutral-800 mb-3">
@@ -304,7 +206,6 @@ export default function MusicPage() {
               <button
                 onClick={() => setShowPlaylist(false)}
                 className="w-8 h-8 rounded-full bg-neutral-800 hover:bg-neutral-700 text-neutral-300 flex items-center justify-center font-bold text-sm transition-colors"
-                title="Đóng"
               >
                 ✕
               </button>
@@ -315,8 +216,7 @@ export default function MusicPage() {
                 <li 
                   key={t.id}
                   onClick={() => {
-                    setCurrentIndex(idx);
-                    setIsPlaying(true);
+                    playTrack(idx);
                     setShowPlaylist(false);
                   }}
                   className={`text-xs p-3 rounded-xl cursor-pointer transition-colors flex items-center gap-3 ${
@@ -346,6 +246,7 @@ export default function MusicPage() {
             </ul>
           </div>
         )}
+
       </div>
     </div>
   );

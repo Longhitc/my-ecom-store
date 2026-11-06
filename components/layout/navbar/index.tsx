@@ -2,12 +2,12 @@
 
 import OpenCart from "components/cart/open-cart";
 import LogoSquare from "components/logo-square";
+import MiniPlayer from "components/MiniPlayer";
 import { useAuth } from "context/auth-context";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import MobileMenu from "./mobile-menu";
-import Search, { SearchSkeleton } from "./search";
 
 interface MenuItem {
   title: string;
@@ -32,13 +32,11 @@ function AdminMenu({ user, isMounted }: { user: any; isMounted: boolean }) {
     <div className="w-full border-b border-neutral-800 bg-neutral-900 px-2 py-1.5 text-xs text-white">
       <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-1.5 sm:flex-row">
         
-        {/* Nhãn Quản trị nằm bên trái */}
         <div className="flex shrink-0 items-center gap-1 font-bold text-amber-400 text-[11px] sm:text-xs">
           <span>🛠️</span>
           <span>Quản trị : {user?.admin?.role_name || user?.admin?.roleName || 'Admin'}</span>
         </div>
 
-        {/* Dãy Menu: Mobile hiển thị cột, PC hiển thị dàn hàng ngang sang phải */}
         <div className="grid w-full grid-cols-4 sm:flex sm:flex-wrap items-center justify-end gap-1 rounded-lg bg-neutral-800/60 p-1 text-[10px] sm:text-xs font-medium sm:w-auto">
           
           <Link 
@@ -123,7 +121,6 @@ function AdminMenu({ user, isMounted }: { user: any; isMounted: boolean }) {
             </Link>
           )}
 
-          {/* Thêm mục quản lý Menu trang bán hàng */}
           <Link 
             href="/admin/store-menus" 
             className={`flex items-center justify-center gap-0.5 sm:gap-1 rounded px-1.5 py-1 transition-colors whitespace-nowrap ${
@@ -193,12 +190,13 @@ export default function Navbar({ menu = [] }: NavbarProps) {
   }, []);
 
   return (
-    <header suppressHydrationWarning className="sticky top-0 z-[100] w-full max-w-full overflow-x-clip shadow-sm bg-white dark:bg-black mb-2 sm:mb-3">
+    <header suppressHydrationWarning className="sticky top-0 z-[100] w-full shadow-sm bg-white dark:bg-black mb-2 sm:mb-3">
       <AdminMenu user={customer} isMounted={isMounted} />
 
-      <nav className="relative z-[100] flex items-center justify-between px-3 py-2.5 sm:px-6">
+      <nav className="relative z-[100] flex items-center justify-between px-3 py-2.5 sm:px-4 w-full">
         
-        <div className="flex shrink-0 items-center gap-2 lg:gap-6">
+        {/* Cột Trái: Logo + Tên + Menu */}
+        <div className="flex shrink-0 items-center gap-2 lg:gap-4">
           <div className="block flex-none md:hidden">
             <Suspense fallback={null}>
               <MobileMenu menu={[
@@ -214,13 +212,13 @@ export default function Navbar({ menu = [] }: NavbarProps) {
             className="flex shrink-0 items-center justify-center"
           >
             <LogoSquare />
-            <div className="ml-2 hidden shrink-0 text-sm font-medium uppercase text-black dark:text-white xl:block">
-              Đẹp và Xinh Shop
+            <div className="ml-2 hidden shrink-0 text-xs font-bold uppercase text-black dark:text-white xl:block">
+              ĐẸP VÀ XINH SHOP
             </div>
           </Link>
 
           {menu.length ? (
-            <ul className="hidden gap-4 text-sm md:flex md:items-center lg:gap-6">
+            <ul className="hidden gap-2.5 text-sm md:flex md:items-center lg:gap-3">
               {menu.map((item) => {
                 const hasChildren = item.items && item.items.length > 0;
                 const isOpen = openMenu === item.title;
@@ -228,7 +226,7 @@ export default function Navbar({ menu = [] }: NavbarProps) {
                 return (
                   <li 
                     key={item.title} 
-                    className="relative z-[100] py-2"
+                    className="relative py-2"
                     onMouseEnter={() => hasChildren && setOpenMenu(item.title)}
                     onMouseLeave={() => hasChildren && setOpenMenu(null)}
                   >
@@ -236,7 +234,7 @@ export default function Navbar({ menu = [] }: NavbarProps) {
                       href={item.path}
                       prefetch={true}
                       onClick={() => setOpenMenu(null)}
-                      className="flex items-center gap-1 whitespace-nowrap text-neutral-700 transition-colors hover:text-black dark:text-neutral-400 dark:hover:text-white"
+                      className="flex items-center gap-1 whitespace-nowrap text-neutral-700 transition-colors hover:text-black dark:text-neutral-400 dark:hover:text-white text-xs lg:text-sm font-medium"
                     >
                       {item.title}
                       {hasChildren && (
@@ -254,7 +252,7 @@ export default function Navbar({ menu = [] }: NavbarProps) {
                     </Link>
 
                     {hasChildren && isOpen && (
-                      <div className="absolute left-0 top-full z-[9999] w-52 pt-1">
+                      <div className="absolute left-0 top-full z-[999999] w-52 pt-1">
                         <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white p-1.5 shadow-2xl dark:border-neutral-700 dark:bg-neutral-900">
                           <ul className="flex flex-col gap-1">
                             {item.items!.map((subItem) => (
@@ -275,15 +273,12 @@ export default function Navbar({ menu = [] }: NavbarProps) {
           ) : null}
         </div>
 
-        <div className="hidden md:flex md:flex-1 md:justify-center md:px-4 lg:px-8">
-          <div className="w-full max-w-xs xl:max-w-md">
-            <Suspense fallback={<SearchSkeleton />}>
-              <Search />
-            </Suspense>
-          </div>
+        {/* Khu vực giữa: MiniPlayer */}
+        <div className="hidden md:flex items-center justify-center shrink-0 px-1">
+          <MiniPlayer />
         </div>
 
-        {/* Khu vực mobile user */}
+        {/* Khu vực Mobile User */}
         <div className="flex flex-1 items-center justify-center px-1 md:hidden">
           {isMounted && customer ? (
             <Link
@@ -296,39 +291,41 @@ export default function Navbar({ menu = [] }: NavbarProps) {
           ) : null}
         </div>
 
-        <div className="flex shrink-0 items-center justify-end gap-1.5 sm:gap-3 text-xs">
+        {/* Cột Phải: Giỏ hàng hiển thị trọn vẹn */}
+        <div className="flex shrink-0 items-center justify-end gap-1.5 sm:gap-2 text-xs">
           {!isMounted ? (
             <div className="h-6 w-20" />
           ) : customer ? (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <Link
                 href="/account"
-                className="hidden md:inline-block max-w-[120px] truncate whitespace-nowrap font-medium text-neutral-800 transition-colors hover:text-amber-500 dark:text-neutral-200"
+                className="hidden md:inline-block max-w-[90px] truncate whitespace-nowrap font-medium text-neutral-800 transition-colors hover:text-amber-500 dark:text-neutral-200 text-xs"
                 title={customer.name}
               >
                 {customer.name}
               </Link>
               <button
                 onClick={logout}
-                className="rounded bg-red-500/10 px-2 py-1 text-[11px] font-medium text-red-600 transition-colors hover:bg-red-500/20 dark:bg-red-500/20 dark:text-red-400"
+                className="rounded bg-red-500/10 px-1.5 py-1 text-[10px] font-medium text-red-600 transition-colors hover:bg-red-500/20 dark:bg-red-500/20 dark:text-red-400"
               >
                 Thoát
               </button>
             </div>
           ) : (
             <>
-              <Link href="/register" className="whitespace-nowrap text-neutral-700 hover:text-black dark:text-neutral-300 dark:hover:text-white">
+              <Link href="/register" className="whitespace-nowrap text-neutral-700 hover:text-black dark:text-neutral-300 dark:hover:text-white text-xs">
                 Đăng ký
               </Link>
               <span className="text-neutral-300 dark:text-neutral-700">|</span>
-              <Link href="/login" className="whitespace-nowrap text-neutral-700 hover:text-black dark:text-neutral-300 dark:hover:text-white">
+              <Link href="/login" className="whitespace-nowrap text-neutral-700 hover:text-black dark:text-neutral-300 dark:hover:text-white text-xs">
                 Đăng nhập
               </Link>
             </>
           )}
           <Link
             href="/account"
-            className="flex items-center justify-center rounded-md border border-neutral-200 p-1.5 sm:p-2 text-black transition-colors hover:bg-neutral-100 dark:border-neutral-800 dark:text-white dark:hover:bg-neutral-800"
+            className="flex items-center justify-center rounded-md border border-neutral-200 p-1.5 text-black transition-colors hover:bg-neutral-100 dark:border-neutral-800 dark:text-white dark:hover:bg-neutral-800"
+            title="Tài khoản"
           >
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="h-4 w-4">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />

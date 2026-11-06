@@ -4,8 +4,8 @@ import { db } from 'lib/turso';
 import type { Metadata } from "next";
 import Link from 'next/link';
 
-// Cố định đúng 18 sản phẩm mỗi trang (6 hàng x 3 cột)
-const PAGE_SIZE = 18;
+// Cố định đúng 6 sản phẩm mỗi trang (2 hàng x 3 cột) để không bị dư hàng thứ 3 nửa vời
+const PAGE_SIZE = 6;
 
 export async function generateMetadata(props: {
   params: Promise<{ collection: string }>;
@@ -108,11 +108,9 @@ async function getCollectionProducts(collection: string, sort?: string, page: nu
     let products = filteredRows.map((row: any) => {
       const rawPrice = Number(row.min_price ?? row.price ?? 0);
       
-      // Làm tròn lên đến 1,000 VND cho giá khuyến mãi nếu có
       const rawPromoPrice = row.promo_price !== null && row.promo_price !== undefined ? Number(row.promo_price) : 0;
       const roundedPromoPrice = Math.ceil(rawPromoPrice / 1000) * 1000;
 
-      // Logic kiểm tra khuyến mãi chuẩn GMT+7
       const hasPromo = Number(row.is_promoted) === 1 && 
                        row.promo_price !== null && 
                        row.promo_price !== undefined && 
@@ -202,14 +200,14 @@ export default async function CategoryPage(props: {
   };
 
   return (
-    <section className="pb-12">
+    /* Thêm khoảng cách pt-6 để đẩy nội dung xuống đúng bằng khoảng trống anh khoanh đỏ */
+    <section className="pt-6 pb-12">
       {products.length === 0 ? (
         <p className="py-10 text-center text-neutral-400">
           Không tìm thấy sản phẩm nào trong danh mục này.
         </p>
       ) : (
         <>
-          {/* Ép cứng lưới hiển thị chuẩn 3 cột */}
           <Grid className="grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {products.map((product) => (
               <Link
