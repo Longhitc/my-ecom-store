@@ -1,4 +1,4 @@
-const CACHE_NAME = 'depvaxinh-v1.1.3'; // Tăng version lên khi có update lớn (v1.1.4, v1.2.0...)
+const CACHE_NAME = 'depvaxinh-v1.1.4'; // Tăng version lên khi có update lớn (v1.1.4, v1.2.0...)
 const urlsToCache = ['/', '/manifest.json'];
 
 // 1. Kích hoạt và ép Service Worker mới áp dụng ngay lập tức

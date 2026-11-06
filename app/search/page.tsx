@@ -12,12 +12,11 @@ async function getProducts(query?: string) {
   try {
     const nowVn = new Date().toLocaleString("sv-SE", { timeZone: "Asia/Ho_Chi_Minh" }).replace(" ", "T");
 
-    // Lấy tất cả sản phẩm, kết hợp thông tin khuyến mãi đang hoạt động chuẩn GMT+7
     let sql = `
       SELECT p.*, 
+             MIN(p.min_price) as original_price,
              MIN(pi.promo_price) as promo_price, 
-             MAX(pi.discount_value) as discount_value, 
-             MAX(pi.discount_type) as discount_type,
+             pi.discount_value, pi.discount_type,
              MAX(CASE WHEN prm.status = 'active' AND prm.start_date <= ? AND prm.end_date >= ? THEN 1 ELSE 0 END) as is_promoted
       FROM products p
       LEFT JOIN promotion_items pi ON p.id = pi.product_id
@@ -46,32 +45,24 @@ async function getProducts(query?: string) {
         return true;
       })
       .map((row: any) => {
-        const rawPrice = Number(row.min_price ?? row.price ?? 0);
+        const rawPrice = Number(row.original_price ?? row.min_price ?? row.price ?? 0);
         
-        // Làm tròn lên đến 1,000 VND cho giá khuyến mãi nếu có
-        const rawPromoPrice = row.promo_price !== null && row.promo_price !== undefined ? Number(row.promo_price) : 0;
+        const rawPromoPrice = Number(row.promo_price ?? 0);
         const roundedPromoPrice = Math.ceil(rawPromoPrice / 1000) * 1000;
 
-        // Chỉ bật cờ khuyến mãi khi is_promoted = 1 và có giá sale nhỏ hơn giá gốc
         const hasPromo = Number(row.is_promoted) === 1 && 
                          row.promo_price !== null && 
                          row.promo_price !== undefined && 
-                         roundedPromoPrice < rawPrice;
+                         roundedPromoPrice < rawPrice &&
+                         rawPrice > 0;
         
         const originalPriceFormatted = `${rawPrice.toLocaleString('vi-VN')} đ`;
         const promoPriceFormatted = hasPromo ? `${roundedPromoPrice.toLocaleString('vi-VN')} đ` : originalPriceFormatted;
 
-        let discountText = '';
-        if (hasPromo) {
-          if (row.discount_type === 'percent') {
-            discountText = `-${row.discount_value}%`;
-          } else if (row.discount_value) {
-            discountText = `-${Number(row.discount_value || 0).toLocaleString('vi-VN')}đ`;
-          } else {
-            const calcPercent = Math.round(((rawPrice - roundedPromoPrice) / rawPrice) * 100);
-            discountText = `-${calcPercent}%`;
-          }
-        }
+        // Sử dụng đúng chuẩn công thức khuyến mãi từ trang chủ
+        const discountText = row.discount_type === 'percent' 
+          ? `-${row.discount_value}%` 
+          : `-${Number(row.discount_value || 0).toLocaleString('vi-VN')}đ`;
 
         let imageUrl = row.featured_image_url || row.image_url || '';
 

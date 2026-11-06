@@ -4,8 +4,8 @@ import { db } from 'lib/turso';
 import type { Metadata } from "next";
 import Link from 'next/link';
 
-// Cố định đúng 6 sản phẩm mỗi trang (2 hàng x 3 cột) để không bị dư hàng thứ 3 nửa vời
-const PAGE_SIZE = 6;
+// Cố định 18 sản phẩm mỗi trang theo đúng yêu cầu
+const PAGE_SIZE = 18;
 
 export async function generateMetadata(props: {
   params: Promise<{ collection: string }>;
@@ -48,9 +48,9 @@ async function getCollectionProducts(collection: string, sort?: string, page: nu
 
     let baseSelect = `
       SELECT p.*, 
+             MIN(p.min_price) as original_price,
              MIN(pi.promo_price) as promo_price, 
-             MAX(pi.discount_value) as discount_value, 
-             MAX(pi.discount_type) as discount_type,
+             pi.discount_value, pi.discount_type,
              MAX(CASE WHEN prm.status = 'active' AND prm.start_date <= ? AND prm.end_date >= ? THEN 1 ELSE 0 END) as is_promoted
       FROM products p
       LEFT JOIN promotion_items pi ON p.id = pi.product_id
@@ -106,30 +106,24 @@ async function getCollectionProducts(collection: string, sort?: string, page: nu
     });
 
     let products = filteredRows.map((row: any) => {
-      const rawPrice = Number(row.min_price ?? row.price ?? 0);
+      const rawPrice = Number(row.original_price ?? row.min_price ?? row.price ?? 0);
       
-      const rawPromoPrice = row.promo_price !== null && row.promo_price !== undefined ? Number(row.promo_price) : 0;
+      const rawPromoPrice = Number(row.promo_price ?? 0);
       const roundedPromoPrice = Math.ceil(rawPromoPrice / 1000) * 1000;
 
       const hasPromo = Number(row.is_promoted) === 1 && 
                        row.promo_price !== null && 
                        row.promo_price !== undefined && 
-                       roundedPromoPrice < rawPrice;
-      
+                       roundedPromoPrice < rawPrice &&
+                       rawPrice > 0;
+
       const originalPriceFormatted = `${rawPrice.toLocaleString('vi-VN')} đ`;
       const promoPriceFormatted = hasPromo ? `${roundedPromoPrice.toLocaleString('vi-VN')} đ` : originalPriceFormatted;
 
-      let discountText = '';
-      if (hasPromo) {
-        if (row.discount_type === 'percent') {
-          discountText = `-${row.discount_value}%`;
-        } else if (row.discount_value) {
-          discountText = `-${Number(row.discount_value).toLocaleString('vi-VN')}đ`;
-        } else {
-          const calcPercent = Math.round(((rawPrice - roundedPromoPrice) / rawPrice) * 100);
-          discountText = `-${calcPercent}%`;
-        }
-      }
+      // Sử dụng đúng chuẩn công thức từ trang chủ
+      const discountText = row.discount_type === 'percent' 
+        ? `-${row.discount_value}%` 
+        : `-${Number(row.discount_value || 0).toLocaleString('vi-VN')}đ`;
 
       let imageUrl = row.featured_image_url || row.image_url || '';
 
@@ -200,7 +194,6 @@ export default async function CategoryPage(props: {
   };
 
   return (
-    /* Thêm khoảng cách pt-6 để đẩy nội dung xuống đúng bằng khoảng trống anh khoanh đỏ */
     <section className="pt-6 pb-12">
       {products.length === 0 ? (
         <p className="py-10 text-center text-neutral-400">
