@@ -2,8 +2,19 @@ import { db } from '@/lib/turso';
 import { headers } from 'next/headers';
 import { NextResponse } from 'next/server';
 
+// =========================================================================
+// RÀO CHẮN COOLDOWN 30 GIÂY ĐẦU TIÊN SAU KHI DEPLOY / REBOOT SERVER
+// =========================================================================
+const SERVER_START_TIME = Date.now();
+const COOLDOWN_PERIOD = 30 * 1000; // 30 giây
+
 export async function POST(request: Request) {
   try {
+    // Nếu request bắn đến trong vòng 30s đầu sau khi server khởi động -> Bỏ qua lập tức
+    if (Date.now() - SERVER_START_TIME < COOLDOWN_PERIOD) {
+      return NextResponse.json({ success: true, message: 'Ignored: Server just started' }, { status: 200 });
+    }
+
     const body = await request.json();
     const { clientUuid, customerId } = body;
 
@@ -14,26 +25,6 @@ export async function POST(request: Request) {
     // Lấy chuỗi User-Agent từ headers
     const headersList = await headers();
     const userAgent = headersList.get('user-agent') || '';
-
-    // =========================================================================
-    // 🛡️ BỘ LỌC CHẶN BOT / HEALTH CHECK / VERCEL SCRAPER TỰ ĐỘNG KHI DEPLOY
-    // =========================================================================
-    const lowerAgent = userAgent.toLowerCase();
-    if (
-      !userAgent.trim() ||
-      lowerAgent.includes('vercel-bot') ||
-      lowerAgent.includes('bot') ||
-      lowerAgent.includes('spider') ||
-      lowerAgent.includes('crawler') ||
-      lowerAgent.includes('healthcheck') ||
-      lowerAgent.includes('lighthouse') ||
-      lowerAgent.includes('axios') ||
-      lowerAgent.includes('node-fetch')
-    ) {
-      // Trả về thành công giả lập nhưng KHÔNG BAO GIỜ INSERT VÀO DATABASE
-      return NextResponse.json({ success: true, message: 'Bot ignored' }, { status: 200 });
-    }
-    // =========================================================================
 
     // Nhận diện nhanh OS
     let os = 'Unknown OS';
