@@ -15,6 +15,26 @@ export async function POST(request: Request) {
     const headersList = await headers();
     const userAgent = headersList.get('user-agent') || '';
 
+    // =========================================================================
+    // 🛡️ BỘ LỌC CHẶN BOT / HEALTH CHECK / VERCEL SCRAPER TỰ ĐỘNG KHI DEPLOY
+    // =========================================================================
+    const lowerAgent = userAgent.toLowerCase();
+    if (
+      !userAgent.trim() ||
+      lowerAgent.includes('vercel-bot') ||
+      lowerAgent.includes('bot') ||
+      lowerAgent.includes('spider') ||
+      lowerAgent.includes('crawler') ||
+      lowerAgent.includes('healthcheck') ||
+      lowerAgent.includes('lighthouse') ||
+      lowerAgent.includes('axios') ||
+      lowerAgent.includes('node-fetch')
+    ) {
+      // Trả về thành công giả lập nhưng KHÔNG BAO GIỜ INSERT VÀO DATABASE
+      return NextResponse.json({ success: true, message: 'Bot ignored' }, { status: 200 });
+    }
+    // =========================================================================
+
     // Nhận diện nhanh OS
     let os = 'Unknown OS';
     if (userAgent.includes('Windows')) os = 'Windows';
