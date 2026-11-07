@@ -1,4 +1,5 @@
 import { db } from '@/lib/turso';
+import { headers } from 'next/headers';
 import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
@@ -10,23 +11,43 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'Missing clientUuid' }, { status: 400 });
     }
 
-    // Lấy ngày giờ hiện tại theo múi giờ Việt Nam (GMT+7)
+    // Lấy chuỗi User-Agent từ headers
+    const headersList = await headers();
+    const userAgent = headersList.get('user-agent') || '';
+
+    // Nhận diện nhanh OS
+    let os = 'Unknown OS';
+    if (userAgent.includes('Windows')) os = 'Windows';
+    else if (userAgent.includes('Android')) os = 'Android';
+    else if (userAgent.includes('iPhone') || userAgent.includes('iPad')) os = 'iOS';
+    else if (userAgent.includes('Macintosh')) os = 'macOS';
+    else if (userAgent.includes('Linux')) os = 'Linux';
+
+    // Nhận diện nhanh Browser
+    let browser = 'Unknown Browser';
+    if (userAgent.includes('Edg/')) browser = 'Edge';
+    else if (userAgent.includes('SamsungBrowser/')) browser = 'Samsung Internet';
+    else if (userAgent.includes('Chrome/')) browser = 'Chrome';
+    else if (userAgent.includes('Safari/')) browser = 'Safari';
+    else if (userAgent.includes('Firefox/')) browser = 'Firefox';
+
+    // Lấy ngày giờ theo múi giờ Việt Nam (GMT+7)
     const nowVn = new Date();
     const dateStr = nowVn.toLocaleDateString("sv-SE", { timeZone: "Asia/Ho_Chi_Minh" });
     const timeStr = nowVn.toLocaleString("sv-SE", { timeZone: "Asia/Ho_Chi_Minh" }).replace("T", " ");
 
     const visitId = `visit_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
 
-    // Luôn luôn INSERT một dòng log mới cho mỗi lần truy cập
+    // Lưu vào cơ sở dữ liệu chỉ với 2 cột os và browser
     await db.execute({
       sql: `
-        INSERT INTO customer_visit_logs (id, client_uuid, customer_id, visit_date, visit_time) 
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO customer_visit_logs (id, client_uuid, customer_id, visit_date, visit_time, os, browser) 
+        VALUES (?, ?, ?, ?, ?, ?, ?)
       `,
-      args: [visitId, clientUuid, customerId || null, dateStr, timeStr],
+      args: [visitId, clientUuid, customerId || null, dateStr, timeStr, os, browser],
     });
 
-    // Tự động dọn dẹp các log cũ hơn 7 ngày trước
+    // Tự động dọn dẹp log cũ hơn 7 ngày
     const d7DaysAgo = new Date();
     d7DaysAgo.setDate(d7DaysAgo.getDate() - 7);
     const cutoffDateStr = d7DaysAgo.toLocaleDateString("sv-SE", { timeZone: "Asia/Ho_Chi_Minh" });
