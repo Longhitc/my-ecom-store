@@ -100,7 +100,7 @@ export default function MusicPage() {
                   </span>
                 </div>
 
-                {/* Bố cục 2 cột Trái/Phải (Giãn to ảnh và đĩa vinyl vừa vặn) */}
+                {/* Bố cục 2 cột Trái/Phải */}
                 <div className="grid grid-cols-2 gap-3 sm:gap-5 items-center w-full px-1">
                   <div className="w-full aspect-square rounded-2xl overflow-hidden shadow-lg border border-neutral-800 bg-neutral-950 relative max-h-[145px] sm:max-h-[185px] mx-auto">
                     <img 
@@ -192,7 +192,7 @@ export default function MusicPage() {
                 </div>
               </div>
 
-              {/* Danh sách phát tuần tự trong album (Được giãn đều và ôm sát mép đáy) */}
+              {/* Danh sách phát tuần tự trong album */}
               <div className="w-full mt-auto border-t border-neutral-800/80 pt-2 sm:pt-3 pb-1">
                 <div className="flex items-center justify-between w-full mb-1.5 sm:mb-2.5 px-1">
                   <h3 className="text-[10px] sm:text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">
@@ -285,7 +285,7 @@ export default function MusicPage() {
             </div>
           )}
 
-          {/* 2. MÀN HÌNH TRANG CHỦ (HOME) */}
+          {/* 2. MÀN HÌNH TRANG CHỦ (HOME) - Đã cho phép tên album hiển thị trọn vẹn cả dòng / xuống dòng */}
           {currentTab === 'home' && (
             <div className="w-full h-full flex flex-col animate-fadeIn p-1 text-white pb-16 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               <div className="flex items-center justify-between w-full mb-3 px-1 sticky top-0 bg-neutral-900/95 backdrop-blur py-1 z-10">
@@ -296,7 +296,7 @@ export default function MusicPage() {
               </div>
 
               <h3 className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider w-full text-left mb-1.5 px-1">Albums</h3>
-              <div className="grid grid-cols-2 gap-2.5 w-full mb-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 w-full mb-3">
                 {uniqueAlbums.map((album, idx) => (
                   <div 
                     key={idx}
@@ -305,12 +305,14 @@ export default function MusicPage() {
                       if (firstTrackIdx !== -1) playTrack(firstTrackIdx);
                       setCurrentTab('player');
                     }}
-                    className="bg-neutral-800/80 hover:bg-neutral-800 p-2 rounded-xl cursor-pointer flex items-center gap-2 transition-colors border border-neutral-700/50"
+                    className="bg-neutral-800/80 hover:bg-neutral-800 p-2.5 rounded-xl cursor-pointer flex items-center gap-3 transition-colors border border-neutral-700/50"
                   >
-                    <img src={album.cover} alt={album.title} className="w-9 h-9 rounded-lg object-cover" />
-                    <div className="flex flex-col min-w-0">
-                      <span className="text-[11px] font-bold truncate text-white">{album.title}</span>
-                      <span className="text-[9px] text-emerald-400 truncate">Album tuyển tập</span>
+                    <img src={album.cover} alt={album.title} className="w-10 h-10 rounded-lg object-cover shrink-0" />
+                    <div className="flex flex-col min-w-0 flex-1">
+                      <span className="text-[11px] font-bold text-white leading-snug break-words">
+                        {album.title}
+                      </span>
+                      <span className="text-[9px] text-emerald-400 mt-0.5">Album tuyển tập</span>
                     </div>
                   </div>
                 ))}
@@ -365,7 +367,7 @@ export default function MusicPage() {
               <div className="flex items-center justify-between w-full mb-3 px-1 sticky top-0 bg-neutral-900/95 backdrop-blur py-1 z-10">
                 <h2 className="text-xs font-bold text-emerald-400 uppercase tracking-widest">Thư Viện</h2>
               </div>
-              <div className="grid grid-cols-2 gap-2.5 w-full">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 w-full">
                 {uniqueAlbums.map((album, idx) => (
                   <div 
                     key={idx}
@@ -374,12 +376,14 @@ export default function MusicPage() {
                       if (firstTrackIdx !== -1) playTrack(firstTrackIdx);
                       setCurrentTab('player');
                     }}
-                    className="bg-neutral-800/80 hover:bg-neutral-800 p-2.5 rounded-xl cursor-pointer flex items-center gap-2.5 transition-colors border border-neutral-700/50"
+                    className="bg-neutral-800/80 hover:bg-neutral-800 p-2.5 rounded-xl cursor-pointer flex items-center gap-3 transition-colors border border-neutral-700/50"
                   >
-                    <img src={album.cover} alt={album.title} className="w-10 h-10 rounded-lg object-cover" />
-                    <div className="flex flex-col min-w-0">
-                      <span className="text-[11px] font-bold truncate text-white">{album.title}</span>
-                      <span className="text-[9px] text-emerald-400 truncate">Album tuyển tập</span>
+                    <img src={album.cover} alt={album.title} className="w-10 h-10 rounded-lg object-cover shrink-0" />
+                    <div className="flex flex-col min-w-0 flex-1">
+                      <span className="text-[11px] font-bold text-white leading-snug break-words">
+                        {album.title}
+                      </span>
+                      <span className="text-[9px] text-emerald-400 mt-0.5">Album tuyển tập</span>
                     </div>
                   </div>
                 ))}
