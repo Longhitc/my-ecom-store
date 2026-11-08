@@ -50,7 +50,6 @@ export default function MusicPage() {
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   return (
-    // Đã chỉnh py-2 để kéo dịch toàn bộ khung nhạc lên sát Navbar phía trên
     <div className="container mx-auto px-3 py-2 min-h-[80vh] flex flex-col items-center justify-start">
       
       <div className="w-full max-w-xl bg-neutral-900 border border-neutral-800 rounded-3xl p-4 sm:p-6 shadow-2xl flex flex-col items-center relative overflow-hidden">
@@ -100,20 +99,22 @@ export default function MusicPage() {
             {currentTrack?.title}
           </h1>
 
-          {/* Khu vực chạy chữ 1 dòng */}
-          <div className="w-full overflow-hidden whitespace-nowrap relative flex justify-start mt-1 px-2 [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)]">
-            <div className="inline-flex animate-one-way-marquee items-center">
-              {/* Vòng lặp 1 */}
-              <div className="inline-flex items-center gap-1.5 pr-12 text-xs font-medium">
-                <span className="text-emerald-400">{currentTrack?.artist}</span>
-                <span className="text-neutral-600">•</span>
-                <span className="text-neutral-400">{currentTrack?.album_title}</span>
-              </div>
-              {/* Vòng lặp 2 */}
-              <div className="inline-flex items-center gap-1.5 pr-12 text-xs font-medium">
-                <span className="text-emerald-400">{currentTrack?.artist}</span>
-                <span className="text-neutral-600">•</span>
-                <span className="text-neutral-400">{currentTrack?.album_title}</span>
+          {/* Khu vực chạy chữ: Fit center ban đầu, trượt vòng tròn 1 chiều liên tục mượt mà */}
+          <div className="w-full overflow-hidden whitespace-nowrap relative flex justify-center mt-1 px-4">
+            <div className="w-full max-w-[280px] sm:max-w-[320px] overflow-hidden relative text-center [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)]">
+              <div className="inline-flex animate-smooth-marquee items-center">
+                {/* Khối nội dung 1 */}
+                <div className="inline-flex items-center gap-1.5 pr-12 text-xs font-medium">
+                  <span className="text-emerald-400">{currentTrack?.artist}</span>
+                  <span className="text-neutral-600">•</span>
+                  <span className="text-neutral-400">{currentTrack?.album_title}</span>
+                </div>
+                {/* Khối nội dung 2 (bản sao nối tiếp để tạo vòng lặp tròn trĩnh không bị khựng) */}
+                <div className="inline-flex items-center gap-1.5 pr-12 text-xs font-medium">
+                  <span className="text-emerald-400">{currentTrack?.artist}</span>
+                  <span className="text-neutral-600">•</span>
+                  <span className="text-neutral-400">{currentTrack?.album_title}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -259,23 +260,20 @@ export default function MusicPage() {
 
       </div>
 
-      {/* CSS Keyframes chạy chữ một chiều */}
+      {/* CSS Keyframes: Trượt vòng tròn 1 chiều vô tận cực kỳ mượt mà, không giật cục */}
       <style jsx>{`
-        @keyframes oneWayMarquee {
-          0%, 12% { 
+        @keyframes smoothMarquee {
+          0% { 
             transform: translateX(0%); 
           }
-          78% { 
+          100% { 
             transform: translateX(-50%); 
           }
-          78.1%, 100% { 
-            transform: translateX(0%); 
-          }
         }
-        .animate-one-way-marquee {
+        .animate-smooth-marquee {
           display: inline-flex;
           white-space: nowrap;
-          animation: oneWayMarquee 10s linear infinite;
+          animation: smoothMarquee 12s linear infinite;
         }
       `}</style>
     </div>
