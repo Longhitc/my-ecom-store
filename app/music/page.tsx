@@ -50,7 +50,6 @@ export default function MusicPage() {
 
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
 
-  // Lấy danh sách các album độc nhất từ data tracks
   const uniqueAlbums = Array.from(
     new Map(tracks.map(t => [t.album_title || 'Tuyển tập', { title: t.album_title || 'Tuyển tập', cover: t.cover_image || albumCover }])).values()
   );
@@ -58,19 +57,19 @@ export default function MusicPage() {
   return (
     <div className="container mx-auto px-3 py-2 min-h-[80vh] flex flex-col items-center justify-start">
       
-      {/* Khung đen cố định chiều cao h-[630px] chuẩn player */}
-      <div className="w-full max-w-xl h-[630px] bg-neutral-900 border border-neutral-800 rounded-3xl p-4 sm:p-7 shadow-2xl flex flex-col items-center relative overflow-hidden">
+      {/* Khung tổng giữ nguyên chiều cao chuẩn: Mobile h-[495px], PC (sm:) h-[630px] */}
+      <div className="w-full max-w-xl h-[495px] sm:h-[630px] bg-neutral-900 border border-neutral-800 rounded-3xl p-3 sm:p-7 shadow-2xl flex flex-col items-center relative overflow-hidden transition-all duration-300">
         
         {/* NỘI DUNG BÊN TRONG KHUNG ĐEN */}
         <div className="w-full h-full flex flex-col relative overflow-hidden">
           
           {/* 1. GIAO DIỆN PLAYER */}
           {currentTab === 'player' && (
-            <div className="w-full h-full flex flex-col items-center animate-fadeIn justify-between pb-2">
+            <div className="w-full h-full flex flex-col items-center animate-fadeIn justify-between">
               <div className="w-full flex flex-col items-center">
                 
                 {/* Thanh "Đang phát từ Album" và nút mũi tên quay về trang chủ */}
-                <div className="flex items-center justify-between mb-3 w-full px-1">
+                <div className="flex items-center justify-between mb-2 sm:mb-3 w-full px-1">
                   <button 
                     onClick={() => setCurrentTab('home')}
                     className="text-neutral-300 hover:text-white p-1 rounded-full hover:bg-neutral-800 transition-colors flex items-center"
@@ -94,16 +93,16 @@ export default function MusicPage() {
                 </div>
 
                 {/* Tiêu đề VINTAGE VINYL EXPERIENCE */}
-                <div className="flex items-center gap-2 mb-3.5 w-full justify-center">
+                <div className="flex items-center gap-2 mb-2 sm:mb-3.5 w-full justify-center">
                   <span className="text-emerald-400 text-sm">🎵</span>
                   <span className="text-[10px] sm:text-[11px] uppercase tracking-[0.2em] sm:tracking-[0.25em] text-emerald-400 font-semibold">
                     VINTAGE VINYL EXPERIENCE
                   </span>
                 </div>
 
-                {/* Bố cục 2 cột Trái/Phải */}
-                <div className="grid grid-cols-2 gap-4 sm:gap-5 items-center w-full px-1">
-                  <div className="w-full aspect-square rounded-2xl overflow-hidden shadow-lg border border-neutral-800 bg-neutral-950 relative max-h-[185px] mx-auto">
+                {/* Bố cục 2 cột Trái/Phải (Giãn to ảnh và đĩa vinyl vừa vặn) */}
+                <div className="grid grid-cols-2 gap-3 sm:gap-5 items-center w-full px-1">
+                  <div className="w-full aspect-square rounded-2xl overflow-hidden shadow-lg border border-neutral-800 bg-neutral-950 relative max-h-[145px] sm:max-h-[185px] mx-auto">
                     <img 
                       src={albumCover} 
                       alt={currentTrack?.album_title}
@@ -111,9 +110,9 @@ export default function MusicPage() {
                     />
                   </div>
 
-                  <div className="relative w-full aspect-square flex items-center justify-center max-h-[185px]">
+                  <div className="relative w-full aspect-square flex items-center justify-center max-h-[145px] sm:max-h-[185px]">
                     <div 
-                      className={`w-36 h-36 sm:w-44 sm:h-44 rounded-full bg-gradient-to-tr from-neutral-950 via-neutral-900 to-neutral-950 border-[4px] sm:border-[5px] border-neutral-950 shadow-2xl flex items-center justify-center relative transition-transform duration-500 ${
+                      className={`w-30 h-30 sm:w-44 sm:h-44 rounded-full bg-gradient-to-tr from-neutral-950 via-neutral-900 to-neutral-950 border-[4px] sm:border-[5px] border-neutral-950 shadow-2xl flex items-center justify-center relative transition-transform duration-500 ${
                         isPlaying ? 'animate-spin' : ''
                       }`}
                       style={{ animationDuration: '4s' }}
@@ -122,7 +121,7 @@ export default function MusicPage() {
                       <div className="absolute inset-6 rounded-full border border-neutral-800/40 pointer-events-none"></div>
                       <div className="absolute inset-9 rounded-full border border-neutral-800/30 pointer-events-none"></div>
 
-                      <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-emerald-600 border-2 border-neutral-900 flex flex-col items-center justify-center shadow-inner text-center p-0.5">
+                      <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-full bg-emerald-600 border-2 border-neutral-900 flex flex-col items-center justify-center shadow-inner text-center p-0.5">
                         <span className="text-[7px] font-bold text-white uppercase tracking-tighter truncate w-full px-1">
                           {currentTrack?.album_title || 'VINYL'}
                         </span>
@@ -132,21 +131,21 @@ export default function MusicPage() {
                   </div>
                 </div>
 
-                {/* Thông tin bài hát & Tên ca sĩ (Tĩnh, không chạy chữ) */}
-                <div className="text-center mt-4 mb-2 w-full px-4">
-                  <h1 className="text-sm sm:text-base font-bold text-white px-2 tracking-wide leading-snug break-words">
+                {/* Thông tin bài hát & Tên ca sĩ */}
+                <div className="text-center mt-2.5 sm:mt-4 mb-2 sm:mb-2 w-full px-4">
+                  <h1 className="text-xs sm:text-base font-bold text-white px-2 tracking-wide leading-snug break-words">
                     {currentTrack?.title}
                   </h1>
 
-                  <div className="w-full flex justify-center mt-1 px-4">
-                    <span className="text-xs font-medium text-emerald-400 truncate max-w-[280px] sm:max-w-[320px]">
+                  <div className="w-full flex justify-center mt-0.5 sm:mt-1 px-4">
+                    <span className="text-[11px] sm:text-xs font-medium text-emerald-400 truncate max-w-[280px] sm:max-w-[320px]">
                       {currentTrack?.artist}
                     </span>
                   </div>
                 </div>
 
                 {/* Thanh tiến trình chuẩn Spotify */}
-                <div className="w-full px-3 mt-2 mb-2">
+                <div className="w-full px-3 mt-1.5 sm:mt-2 mb-2 sm:mb-2">
                   <div 
                     onClick={handleProgressBarClick}
                     className="w-full h-1.5 bg-neutral-700/80 rounded-full cursor-pointer relative group flex items-center"
@@ -159,17 +158,17 @@ export default function MusicPage() {
                     </div>
                   </div>
 
-                  <div className="flex justify-between items-center text-[11px] font-mono text-neutral-400 mt-1">
+                  <div className="flex justify-between items-center text-[10px] sm:text-[11px] font-mono text-neutral-400 mt-1">
                     <span>{formatTime(currentTime)}</span>
                     <span>{formatTime(duration)}</span>
                   </div>
                 </div>
 
                 {/* Bộ điều khiển */}
-                <div className="flex items-center justify-center gap-4 sm:gap-5 my-2">
+                <div className="flex items-center justify-center gap-4 sm:gap-5 my-1.5 sm:my-2">
                   <button 
                     onClick={handlePrev}
-                    className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center text-white text-xs sm:text-sm transition-all transform active:scale-95 shadow-md"
+                    className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center text-white text-xs sm:text-sm transition-all transform active:scale-95 shadow-md"
                     title="Bài trước"
                   >
                     ⏮
@@ -177,7 +176,7 @@ export default function MusicPage() {
 
                   <button 
                     onClick={togglePlay}
-                    className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-emerald-500 hover:bg-emerald-400 flex items-center justify-center text-neutral-950 font-bold transition-all transform active:scale-95 shadow-lg shadow-emerald-500/20 text-base sm:text-lg"
+                    className="w-11 h-11 sm:w-14 sm:h-14 rounded-full bg-emerald-500 hover:bg-emerald-400 flex items-center justify-center text-neutral-950 font-bold transition-all transform active:scale-95 shadow-lg shadow-emerald-500/20 text-sm sm:text-lg"
                     title={isPlaying ? 'Tạm dừng' : 'Phát nhạc'}
                   >
                     {isPlaying ? '⏸' : '▶'}
@@ -185,49 +184,49 @@ export default function MusicPage() {
                   
                   <button 
                     onClick={handleNext}
-                    className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center text-white text-xs sm:text-sm transition-all transform active:scale-95 shadow-md"
+                    className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center text-white text-xs sm:text-sm transition-all transform active:scale-95 shadow-md"
                     title="Bài tiếp"
                   >
                     ⏭
                   </button>
                 </div>
+              </div>
 
-                {/* Danh sách phát tuần tự trong album */}
-                <div className="w-full mt-3.5 border-t border-neutral-800/80 pt-3">
-                  <div className="flex items-center justify-between w-full mb-2.5 px-1">
-                    <h3 className="text-[10px] sm:text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">
-                      Danh sách phát tuần tự trong Album
-                    </h3>
-                    
-                    <button
-                      onClick={() => setShowPlaylist(true)}
-                      className="p-1.5 rounded-lg bg-neutral-800 hover:bg-emerald-500/20 hover:text-emerald-400 text-neutral-300 transition-colors flex items-center justify-center"
-                      title="Mở danh sách phát"
-                    >
-                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <rect x="5" y="4" width="14" height="4" rx="2" fill="currentColor" />
-                        <line x1="5" y1="12" x2="19" y2="12" strokeLinecap="round" />
-                        <line x1="5" y1="17" x2="19" y2="17" strokeLinecap="round" />
-                      </svg>
-                    </button>
-                  </div>
-
-                  {currentTrack && (
-                    <div className="text-xs p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-3">
-                      <span className="text-[11px] text-neutral-500 font-mono shrink-0 font-bold">
-                        {currentIndex < 9 ? `0${currentIndex + 1}` : currentIndex + 1}
-                      </span>
-                      <div className="flex flex-col flex-1 min-w-0">
-                        <span className="font-semibold text-xs tracking-wide leading-snug break-words text-emerald-400">
-                          {currentTrack.title}
-                        </span>
-                        <span className="text-[10px] text-neutral-400 mt-0.5 truncate">
-                          {currentTrack.artist}
-                        </span>
-                      </div>
-                    </div>
-                  )}
+              {/* Danh sách phát tuần tự trong album (Được giãn đều và ôm sát mép đáy) */}
+              <div className="w-full mt-auto border-t border-neutral-800/80 pt-2 sm:pt-3 pb-1">
+                <div className="flex items-center justify-between w-full mb-1.5 sm:mb-2.5 px-1">
+                  <h3 className="text-[10px] sm:text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">
+                    Danh sách phát tuần tự trong Album
+                  </h3>
+                  
+                  <button
+                    onClick={() => setShowPlaylist(true)}
+                    className="p-1 rounded-lg bg-neutral-800 hover:bg-emerald-500/20 hover:text-emerald-400 text-neutral-300 transition-colors flex items-center justify-center"
+                    title="Mở danh sách phát"
+                  >
+                    <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="5" y="4" width="14" height="4" rx="2" fill="currentColor" />
+                      <line x1="5" y1="12" x2="19" y2="12" strokeLinecap="round" />
+                      <line x1="5" y1="17" x2="19" y2="17" strokeLinecap="round" />
+                    </svg>
+                  </button>
                 </div>
+
+                {currentTrack && (
+                  <div className="text-xs p-2 sm:p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-3">
+                    <span className="text-[10px] sm:text-[11px] text-neutral-500 font-mono shrink-0 font-bold">
+                      {currentIndex < 9 ? `0${currentIndex + 1}` : currentIndex + 1}
+                    </span>
+                    <div className="flex flex-col flex-1 min-w-0">
+                      <span className="font-semibold text-xs tracking-wide leading-snug break-words text-emerald-400">
+                        {currentTrack.title}
+                      </span>
+                      <span className="text-[9px] sm:text-[10px] text-neutral-400 mt-0.5 truncate">
+                        {currentTrack.artist}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Popup Playlist */}
@@ -286,7 +285,7 @@ export default function MusicPage() {
             </div>
           )}
 
-          {/* 2. MÀN HÌNH TRANG CHỦ (HOME) - TẤT CẢ */}
+          {/* 2. MÀN HÌNH TRANG CHỦ (HOME) */}
           {currentTab === 'home' && (
             <div className="w-full h-full flex flex-col animate-fadeIn p-1 text-white pb-16 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               <div className="flex items-center justify-between w-full mb-3 px-1 sticky top-0 bg-neutral-900/95 backdrop-blur py-1 z-10">
