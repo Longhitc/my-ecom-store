@@ -24,7 +24,7 @@ interface AudioContextType {
   togglePlay: () => void;
   handleNext: () => void;
   handlePrev: () => void;
-  seekTo: (time: number) => void; // <-- Đảm bảo có dòng này
+  seekTo: (time: number) => void;
 }
 
 const AudioContext = createContext<AudioContextType | null>(null);
@@ -51,6 +51,57 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const currentTrack = tracks[currentIndex] || null;
+
+  // Cập nhật Media Session API để Android Auto trên ô tô hiển thị chuẩn Spotify (hình ảnh, tên bài hát, nghệ sĩ)
+  useEffect(() => {
+    if (!('mediaSession' in navigator)) return;
+
+    if (currentTrack) {
+      const artworkUrl = currentTrack.cover_image && currentTrack.cover_image.startsWith('http')
+        ? currentTrack.cover_image
+        : 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=512&auto=format&fit=crop';
+
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: currentTrack.title,
+        artist: currentTrack.artist,
+        album: currentTrack.album_title,
+        artwork: [
+          { src: artworkUrl, sizes: '96x96', type: 'image/jpeg' },
+          { src: artworkUrl, sizes: '128x128', type: 'image/jpeg' },
+          { src: artworkUrl, sizes: '192x192', type: 'image/jpeg' },
+          { src: artworkUrl, sizes: '256x256', type: 'image/jpeg' },
+          { src: artworkUrl, sizes: '512x512', type: 'image/jpeg' },
+        ],
+      });
+    }
+
+    navigator.mediaSession.setActionHandler('play', () => {
+      if (audioRef.current && currentTrack?.audio_url) {
+        audioRef.current.play().catch((err) => console.error('Lỗi play mediaSession:', err));
+        setIsPlaying(true);
+        setHasStarted(true);
+      }
+    });
+
+    navigator.mediaSession.setActionHandler('pause', () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        setIsPlaying(false);
+      }
+    });
+
+    navigator.mediaSession.setActionHandler('previoustrack', () => {
+      setHasStarted(true);
+      setCurrentIndex((prev) => (prev - 1 + tracks.length) % tracks.length);
+      setIsPlaying(true);
+    });
+
+    navigator.mediaSession.setActionHandler('nexttrack', () => {
+      setHasStarted(true);
+      setCurrentIndex((prev) => (prev + 1) % tracks.length);
+      setIsPlaying(true);
+    });
+  }, [currentTrack, tracks.length]);
 
   useEffect(() => {
     if (!currentTrack || !currentTrack.audio_url) return;
