@@ -273,7 +273,7 @@ export default function MusicPage() {
         .animate-smooth-marquee {
           display: inline-flex;
           white-space: nowrap;
-          animation: smoothMarquee 12s linear infinite;
+          animation: smoothMarquee 16s linear infinite;
         }
       `}</style>
     </div>
