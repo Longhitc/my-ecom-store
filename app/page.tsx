@@ -134,7 +134,7 @@ export default async function HomePage() {
                         <span className="text-xs text-neutral-400 line-through">
                           {item.originalPrice}
                         </span>
-                        <span className="text-sm font-extrabold text-red-600">
+                        <span className="text-sm font-semibold text-red-600">
                           {item.promoPrice}
                         </span>
                       </div>

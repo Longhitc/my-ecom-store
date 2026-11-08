@@ -240,7 +240,7 @@ export default async function CategoryPage(props: {
                       <span className="text-xs text-neutral-400 line-through">
                         {product.originalPrice}
                       </span>
-                      <span className="text-sm font-extrabold text-red-600">
+                      <span className="text-sm font-semibold text-red-600">
                         {product.promoPrice}
                       </span>
                     </div>

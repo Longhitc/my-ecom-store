@@ -50,12 +50,13 @@ export default function MusicPage() {
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   return (
-    <div className="container mx-auto px-3 py-6 min-h-[80vh] flex flex-col items-center justify-center">
+    // Đã chỉnh py-2 để kéo dịch toàn bộ khung nhạc lên sát Navbar phía trên
+    <div className="container mx-auto px-3 py-2 min-h-[80vh] flex flex-col items-center justify-start">
       
       <div className="w-full max-w-xl bg-neutral-900 border border-neutral-800 rounded-3xl p-4 sm:p-6 shadow-2xl flex flex-col items-center relative overflow-hidden">
         
         {/* Tiêu đề trên cùng */}
-        <div className="flex items-center gap-2 mb-4 sm:mb-6 w-full justify-center">
+        <div className="flex items-center gap-2 mb-3 sm:mb-4 w-full justify-center">
           <span className="text-emerald-400 text-sm">🎵</span>
           <span className="text-[10px] sm:text-[11px] uppercase tracking-[0.2em] sm:tracking-[0.25em] text-emerald-400 font-semibold">
             VINTAGE VINYL EXPERIENCE
@@ -94,23 +95,32 @@ export default function MusicPage() {
         </div>
 
         {/* Thông tin bài hát */}
-        <div className="text-center mt-5 mb-2 w-full px-2">
+        <div className="text-center mt-4 mb-1 w-full px-4">
           <h1 className="text-sm sm:text-base font-bold text-white px-2 tracking-wide leading-snug break-words">
             {currentTrack?.title}
           </h1>
-          <div className="flex items-center justify-center gap-1.5 text-xs text-neutral-400 mt-1.5 px-2 flex-wrap">
-            <span className="text-emerald-400 font-medium">
-              {currentTrack?.artist}
-            </span> 
-            <span className="text-neutral-600">•</span> 
-            <span>
-              {currentTrack?.album_title}
-            </span>
+
+          {/* Khu vực chạy chữ 1 dòng */}
+          <div className="w-full overflow-hidden whitespace-nowrap relative flex justify-start mt-1 px-2 [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)]">
+            <div className="inline-flex animate-one-way-marquee items-center">
+              {/* Vòng lặp 1 */}
+              <div className="inline-flex items-center gap-1.5 pr-12 text-xs font-medium">
+                <span className="text-emerald-400">{currentTrack?.artist}</span>
+                <span className="text-neutral-600">•</span>
+                <span className="text-neutral-400">{currentTrack?.album_title}</span>
+              </div>
+              {/* Vòng lặp 2 */}
+              <div className="inline-flex items-center gap-1.5 pr-12 text-xs font-medium">
+                <span className="text-emerald-400">{currentTrack?.artist}</span>
+                <span className="text-neutral-600">•</span>
+                <span className="text-neutral-400">{currentTrack?.album_title}</span>
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Thanh tiến trình chuẩn Spotify */}
-        <div className="w-full px-3 mt-3 mb-1">
+        <div className="w-full px-3 mt-2 mb-1">
           <div 
             onClick={handleProgressBarClick}
             className="w-full h-1.5 bg-neutral-700/80 rounded-full cursor-pointer relative group flex items-center"
@@ -123,14 +133,14 @@ export default function MusicPage() {
             </div>
           </div>
 
-          <div className="flex justify-between items-center text-[11px] font-mono text-neutral-400 mt-1.5">
+          <div className="flex justify-between items-center text-[11px] font-mono text-neutral-400 mt-1">
             <span>{formatTime(currentTime)}</span>
             <span>{formatTime(duration)}</span>
           </div>
         </div>
 
         {/* Bộ điều khiển */}
-        <div className="flex items-center justify-center gap-4 sm:gap-5 my-1 sm:my-2">
+        <div className="flex items-center justify-center gap-4 sm:gap-5 my-1">
           <button 
             onClick={handlePrev}
             className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center text-white text-xs sm:text-sm transition-all transform active:scale-95 shadow-md"
@@ -157,8 +167,8 @@ export default function MusicPage() {
         </div>
 
         {/* Phần bên dưới: Tiêu đề + Icon mở Playlist */}
-        <div className="w-full mt-4 sm:mt-5 border-t border-neutral-800/80 pt-3 sm:pt-4">
-          <div className="flex items-center justify-between w-full mb-2.5 px-1">
+        <div className="w-full mt-3 sm:mt-4 border-t border-neutral-800/80 pt-3">
+          <div className="flex items-center justify-between w-full mb-2 px-1">
             <h3 className="text-[10px] sm:text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">
               Danh sách phát tuần tự trong Album
             </h3>
@@ -177,7 +187,7 @@ export default function MusicPage() {
           </div>
 
           {currentTrack && (
-            <div className="text-xs p-3 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-3">
+            <div className="text-xs p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-3">
               <span className="text-[11px] text-neutral-500 font-mono shrink-0 font-bold">
                 {currentIndex < 9 ? `0${currentIndex + 1}` : currentIndex + 1}
               </span>
@@ -248,6 +258,26 @@ export default function MusicPage() {
         )}
 
       </div>
+
+      {/* CSS Keyframes chạy chữ một chiều */}
+      <style jsx>{`
+        @keyframes oneWayMarquee {
+          0%, 12% { 
+            transform: translateX(0%); 
+          }
+          78% { 
+            transform: translateX(-50%); 
+          }
+          78.1%, 100% { 
+            transform: translateX(0%); 
+          }
+        }
+        .animate-one-way-marquee {
+          display: inline-flex;
+          white-space: nowrap;
+          animation: oneWayMarquee 10s linear infinite;
+        }
+      `}</style>
     </div>
   );
 }

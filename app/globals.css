@@ -43,3 +43,15 @@ button {
 .animate-spin-slow {
   animation: spinSlow 6s linear infinite;
 }
+
+@keyframes continuous-marquee {
+  0% { transform: translateX(0%); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-marquee-text {
+  display: inline-block;
+  white-space: nowrap;
+  animation: continuous-marquee 8s linear infinite;
+  padding-left: 100%;
+}
