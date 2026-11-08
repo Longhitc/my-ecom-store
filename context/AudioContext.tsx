@@ -9,6 +9,7 @@ interface Track {
   audio_url: string;
   album_title: string;
   cover_image?: string;
+  album_id?: string;    // Thêm dòng này
   track_order: number;
 }
 
