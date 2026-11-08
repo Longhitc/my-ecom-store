@@ -8,7 +8,6 @@ import { Fragment, useEffect, useState } from "react";
 import { Bars3Icon } from "@heroicons/react/24/outline";
 import { Menu } from "lib/shopify/types";
 
-// Hàm hỗ trợ gán icon sinh động dựa theo tên hoặc đường dẫn menu
 function getMenuIcon(path: string, title: string) {
   const p = path.toLowerCase();
   const t = title.toLowerCase();
@@ -26,7 +25,12 @@ function getMenuIcon(path: string, title: string) {
   return '✦';
 }
 
-export default function MobileMenu({ menu }: { menu: Menu[] }) {
+interface MobileMenuProps {
+  menu: Menu[];
+  isAdmin?: boolean;
+}
+
+export default function MobileMenu({ menu, isAdmin = false }: MobileMenuProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [isOpen, setIsOpen] = useState(false);
@@ -52,6 +56,9 @@ export default function MobileMenu({ menu }: { menu: Menu[] }) {
   const toggleSubMenu = (title: string) => {
     setOpenSubMenus(prev => ({ ...prev, [title]: !prev[title] }));
   };
+
+  // ĐÚNG LOGIC: Có admin thì thụt xuống 145px, không có admin (khách) thì đẩy lên 64px để lấp lỗ thủng
+  const topClass = isAdmin ? "top-[145px] h-[calc(100%-145px)]" : "top-[64px] h-[calc(100%-64px)]";
 
   return (
     <>
@@ -84,10 +91,8 @@ export default function MobileMenu({ menu }: { menu: Menu[] }) {
             leaveFrom="translate-x-0"
             leaveTo="translate-x-[-100%]"
           >
-            {/* Đẩy vị trí top xuống thấp hơn một chút (145px) để nằm trọn vẹn ngay dưới thanh điều hướng */}
-            <Dialog.Panel className="fixed bottom-0 left-0 right-0 top-[145px] flex h-[calc(100%-145px)] w-full flex-col bg-white dark:bg-neutral-950 shadow-2xl overflow-y-auto border-t border-neutral-200 dark:border-neutral-800">
+            <Dialog.Panel className={`fixed bottom-0 left-0 right-0 ${topClass} flex w-full flex-col bg-white dark:bg-neutral-950 shadow-2xl overflow-y-auto border-t border-neutral-200 dark:border-neutral-800`}>
               
-              {/* Danh sách menu có padding-top vừa vặn để hiện trọn vẹn mục Trang Chủ */}
               <div className="p-4 pt-4 pb-12">
                 <ul className="flex w-full flex-col gap-2.5">
                   {menu.map((item: any) => {
@@ -132,7 +137,6 @@ export default function MobileMenu({ menu }: { menu: Menu[] }) {
                           )}
                         </div>
 
-                        {/* Menu con */}
                         {hasChildren && isSubOpen && (
                           <ul className="flex flex-col gap-1 px-3.5 pb-3.5 pt-1 border-t border-neutral-100 dark:border-neutral-900/80 bg-white dark:bg-black/40">
                             {item.items.map((subItem: any) => (

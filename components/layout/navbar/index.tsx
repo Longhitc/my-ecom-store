@@ -199,10 +199,18 @@ export default function Navbar({ menu = [] }: NavbarProps) {
         <div className="flex shrink-0 items-center gap-2 lg:gap-4">
           <div className="block flex-none md:hidden">
             <Suspense fallback={null}>
-              <MobileMenu menu={[
-                { title: 'Trang Chủ', path: '/search' },
-                ...menu.filter(item => item.path !== '/search')
-              ] as any} />
+              <MobileMenu 
+                isAdmin={Boolean(
+                  isMounted && 
+                  customer && 
+                  ((customer as any)?.is_admin === true || Number((customer as any)?.is_admin) === 1) && 
+                  ((customer as any)?.admin?.allowed_menus || (customer as any)?.admin?.allowedMenus || []).length > 0
+                )}
+                menu={[
+                  { title: 'Trang Chủ', path: '/search' },
+                  ...menu.filter(item => item.path !== '/search')
+                ] as any} 
+              />
             </Suspense>
           </div>
 
