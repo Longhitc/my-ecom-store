@@ -8,10 +8,27 @@ export const metadata: Metadata = {
   description: "Search for products in the store.",
 };
 
-async function getProducts(query?: string) {
+async function getProductsData(query?: string, page: number = 1, pageSize: number = 18) {
   try {
     const nowVn = new Date().toLocaleString("sv-SE", { timeZone: "Asia/Ho_Chi_Minh" }).replace(" ", "T");
+    const offset = (page - 1) * pageSize;
 
+    let whereClause = `WHERE 1=1`;
+    const countParams: any[] = [];
+    const queryParams: any[] = [nowVn, nowVn];
+
+    if (query) {
+      whereClause += ` AND (p.title LIKE ? OR p.name LIKE ?)`;
+      countParams.push(`%${query}%`, `%${query}%`);
+      queryParams.push(`%${query}%`, `%${query}%`);
+    }
+
+    // 1. Đếm tổng số lượng sản phẩm thỏa điều kiện để phân trang chính xác
+    const countSql = `SELECT COUNT(DISTINCT p.id) as total FROM products p ${whereClause}`;
+    const countResult = await db.execute({ sql: countSql, args: countParams });
+    const totalProducts = Number(countResult.rows[0]?.total || 0);
+
+    // 2. Query lấy đúng số lượng sản phẩm cho trang hiện tại (LIMIT & OFFSET)
     let sql = `
       SELECT p.*, 
              MIN(p.min_price) as original_price,
@@ -21,20 +38,17 @@ async function getProducts(query?: string) {
       FROM products p
       LEFT JOIN promotion_items pi ON p.id = pi.product_id
       LEFT JOIN promotions prm ON pi.promotion_id = prm.id
+      ${whereClause}
+      GROUP BY p.id
+      ORDER BY p.created_at DESC
+      LIMIT ? OFFSET ?
     `;
     
-    const params: any[] = [nowVn, nowVn];
+    queryParams.push(pageSize, offset);
 
-    if (query) {
-      sql += ` WHERE p.title LIKE ? OR p.name LIKE ?`;
-      params.push(`%${query}%`, `%${query}%`);
-    }
+    const result = await db.execute({ sql, args: queryParams });
 
-    sql += ` GROUP BY p.id ORDER BY p.created_at DESC`;
-
-    const result = await db.execute({ sql, args: params });
-
-    return result.rows
+    const products = result.rows
       .filter((row: any) => {
         if (row.is_active !== undefined && row.is_active !== null) {
           if (Number(row.is_active) === 0 || row.is_active === false) return false;
@@ -59,7 +73,6 @@ async function getProducts(query?: string) {
         const originalPriceFormatted = `${rawPrice.toLocaleString('vi-VN')} đ`;
         const promoPriceFormatted = hasPromo ? `${roundedPromoPrice.toLocaleString('vi-VN')} đ` : originalPriceFormatted;
 
-        // Sử dụng đúng chuẩn công thức khuyến mãi từ trang chủ
         const discountText = row.discount_type === 'percent' 
           ? `-${row.discount_value}%` 
           : `-${Number(row.discount_value || 0).toLocaleString('vi-VN')}đ`;
@@ -88,9 +101,11 @@ async function getProducts(query?: string) {
           imageUrl: imageUrl,
         };
       });
+
+    return { products, totalProducts };
   } catch (error) {
     console.error('Lỗi truy vấn sản phẩm từ Turso:', error);
-    return [];
+    return { products: [], totalProducts: 0 };
   }
 }
 
@@ -102,12 +117,8 @@ export default async function SearchPage(props: {
   const currentPage = Number(searchParams?.page) || 1;
   const pageSize = 18; // Cố định đúng 18 sản phẩm mỗi trang
 
-  const allProducts = await getProducts(query);
-  
-  const totalProducts = allProducts.length;
+  const { products: currentProducts, totalProducts } = await getProductsData(query, currentPage, pageSize);
   const totalPages = Math.ceil(totalProducts / pageSize) || 1;
-  const startIndex = (currentPage - 1) * pageSize;
-  const currentProducts = allProducts.slice(startIndex, startIndex + pageSize);
 
   const createPageUrl = (pageNumber: number) => {
     const params = new URLSearchParams();
@@ -208,7 +219,6 @@ export default async function SearchPage(props: {
                   </Link>
                 ))}
               </div>
-
               {currentPage < totalPages ? (
                 <Link
                   href={createPageUrl(currentPage + 1)}

@@ -3,13 +3,12 @@ import { db } from 'lib/turso';
 import Link from 'next/link';
 import HomeHeroSlider from './HomeHeroSlider';
 
-// Ép trang chủ không cache, luôn lấy dữ liệu mới nhất từ CSDL
-export const revalidate = 0;
+// Cấu hình ISR: Cache trang trong 60 giây để giảm tải cực lớn cho Turso DB, không bị tăng rows read phi mã
+export const revalidate = 60;
 
 // Hàm fetch danh sách sản phẩm đang khuyến mãi (Lọc chuẩn xác theo giờ Việt Nam)
 async function getPromoProducts() {
   try {
-    // Lấy thời gian hiện tại chuẩn giờ Việt Nam (GMT+7) dưới dạng chuỗi ISO chuẩn để so sánh
     const nowVn = new Date().toLocaleString("sv-SE", { timeZone: "Asia/Ho_Chi_Minh" }).replace(" ", "T");
 
     const result = await db.execute({
@@ -30,7 +29,6 @@ async function getPromoProducts() {
     });
 
     return result.rows.map((row: any) => {
-      // Làm tròn lên đến 1,000 VND cho giá khuyến mãi
       const rawPromoPrice = Number(row.promo_price ?? 0);
       const roundedPromoPrice = Math.ceil(rawPromoPrice / 1000) * 1000;
 
@@ -50,17 +48,22 @@ async function getPromoProducts() {
   }
 }
 
-// Hàm fetch sản phẩm nổi bật (Đã loại trừ các sản phẩm đang nằm trong Khuyến Mãi Hot)
+// Hàm fetch sản phẩm nổi bật (Tối ưu hóa điều kiện loại trừ ID an toàn và chuẩn xác)
 async function getFeaturedProducts(excludeIds: string[]) {
   try {
-    let query = `SELECT * FROM products`;
-    if (excludeIds.length > 0) {
-      const idsString = excludeIds.map(id => `'${id}'`).join(',');
-      query += ` WHERE id NOT IN (${idsString})`;
-    }
-    query += ` ORDER BY created_at DESC LIMIT 4`;
+    let sql = `SELECT * FROM products WHERE 1=1`;
+    const args: any[] = [];
 
-    const result = await db.execute(query);
+    if (excludeIds.length > 0) {
+      // Dùng placeholders (?) thay vì nối chuỗi trực tiếp để bảo mật và tối ưu execution plan
+      const placeholders = excludeIds.map(() => '?').join(',');
+      sql += ` AND id NOT IN (${placeholders})`;
+      args.push(...excludeIds);
+    }
+    
+    sql += ` ORDER BY created_at DESC LIMIT 4`;
+
+    const result = await db.execute({ sql, args });
 
     return result.rows.map((row: any) => ({
       id: String(row.id),
