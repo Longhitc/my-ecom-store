@@ -332,6 +332,82 @@ export default function ProductPage({ params }: { params: Promise<{ handle: stri
     }
   };
 
+  // Thành phần giao diện Đánh giá (Tái sử dụng cho cả Mobile và Desktop)
+  const reviewsSectionContent = (
+    <div className="border-t border-neutral-200 dark:border-neutral-800 pt-6 space-y-4">
+      <h2 className="text-lg font-bold">Đánh giá & Nhận xét sản phẩm</h2>
+
+      <div className="space-y-3">
+        <div className="flex items-center gap-3 p-3 bg-neutral-50 dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800">
+          <span className="text-2xl font-extrabold text-amber-500">{averageRating}</span>
+          <div>
+            <div className="flex text-amber-400 text-xs">★★★★★</div>
+            <span className="text-[11px] text-neutral-500">Dựa trên {reviews.length} lượt đánh giá</span>
+          </div>
+        </div>
+
+        {/* Form gửi đánh giá */}
+        <form onSubmit={handleAddReview} className="space-y-2.5 bg-neutral-50 dark:bg-neutral-900 p-3 rounded-xl border border-neutral-200 dark:border-neutral-800">
+          <h3 className="font-semibold text-[11px] uppercase tracking-wider text-neutral-400">Gửi đánh giá của bạn</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <input
+              type="text"
+              placeholder="Họ tên của bạn"
+              value={newReview.name}
+              onChange={(e) => setNewReview({ ...newReview, name: e.target.value })}
+              className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 rounded p-1.5 text-xs focus:outline-none focus:border-blue-500"
+            />
+            <select
+              value={newReview.rating}
+              onChange={(e) => setNewReview({ ...newReview, rating: Number(e.target.value) })}
+              className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 rounded p-1.5 text-xs focus:outline-none focus:border-blue-500"
+            >
+              <option value="5">⭐⭐⭐⭐⭐ (5/5 sao - Tuyệt vời)</option>
+              <option value="4">⭐⭐⭐⭐ (4/5 sao - Hài lòng)</option>
+              <option value="3">⭐⭐⭐ (3/5 sao - Bình thường)</option>
+              <option value="2">⭐⭐ (2/5 sao - Không ưng ý)</option>
+              <option value="1">⭐ (1/5 sao - Rất tệ)</option>
+            </select>
+          </div>
+          <textarea
+            rows={2}
+            placeholder="Nhận xét chi tiết về sản phẩm..."
+            value={newReview.comment}
+            onChange={(e) => setNewReview({ ...newReview, comment: e.target.value })}
+            className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 rounded p-1.5 text-xs focus:outline-none focus:border-blue-500"
+          />
+          <button
+            type="submit"
+            className="bg-black dark:bg-white text-white dark:text-black font-semibold px-3 py-1.5 rounded text-xs hover:opacity-80 transition"
+          >
+            Gửi nhận xét
+          </button>
+        </form>
+      </div>
+
+      {/* Danh sách bình luận */}
+      <div className="space-y-2.5">
+        <h3 className="font-semibold text-[11px] text-neutral-400 uppercase tracking-wider">Khách hàng nhận xét ({reviews.length})</h3>
+        {reviews.length === 0 ? (
+          <div className="text-xs text-neutral-500 italic py-2">Chưa có đánh giá nào cho sản phẩm này. Hãy là người đầu tiên đánh giá!</div>
+        ) : (
+          reviews.map((rev) => (
+            <div key={rev.id} className="p-2.5 rounded-lg border border-neutral-200 dark:border-neutral-800 space-y-1 bg-white dark:bg-neutral-950">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-xs">{rev.name}</span>
+                <span className="text-[10px] text-neutral-400">{rev.date}</span>
+              </div>
+              <div className="text-amber-400 text-xs">
+                {"★".repeat(Number(rev.rating || 5))}{"☆".repeat(5 - Number(rev.rating || 5))}
+              </div>
+              <p className="text-xs text-neutral-600 dark:text-neutral-300">{rev.comment}</p>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <div className="mx-auto max-w-screen-xl px-4 py-3 md:py-4 text-black dark:text-white">
       {/* Breadcrumb sát phía trên */}
@@ -339,10 +415,11 @@ export default function ProductPage({ params }: { params: Promise<{ handle: stri
         Home &gt; {product.title}
       </div>
 
-      <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
-        {/* LEFT COLUMN: IMAGE GALLERY + REVIEWS SECTION */}
-        <div className="space-y-6">
-          {/* IMAGE GALLERY */}
+      {/* CẤU TRÚC CHÍNH: DÙNG FLEX DIRECTION ĐỂ SẮP XẾP LẠI THỨ TỰ TRÊN MOBILE */}
+      <div className="flex flex-col md:grid md:grid-cols-2 md:gap-8">
+        
+        {/* KHU VỰC 1: HÌNH ẢNH SẢN PHẨM (Luôn hiển thị ở trên cùng trên cả mobile và desktop) */}
+        <div className="space-y-6 order-1">
           <div className="space-y-3">
             <div className="relative flex justify-center bg-neutral-100 dark:bg-neutral-900 rounded-lg p-4 border border-neutral-200 dark:border-neutral-800 min-h-[320px] items-center">
               {hasDiscount && (
@@ -387,83 +464,14 @@ export default function ProductPage({ params }: { params: Promise<{ handle: stri
             )}
           </div>
 
-          {/* ĐÁNH GIÁ & NHẬN XÉT SẢN PHẨM (Nằm gọn bên trái ngay dưới ảnh) */}
-          <div className="border-t border-neutral-200 dark:border-neutral-800 pt-4 space-y-4">
-            <h2 className="text-lg font-bold">Đánh giá & Nhận xét sản phẩm</h2>
-
-            <div className="space-y-3">
-              <div className="flex items-center gap-3 p-3 bg-neutral-50 dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800">
-                <span className="text-2xl font-extrabold text-amber-500">{averageRating}</span>
-                <div>
-                  <div className="flex text-amber-400 text-xs">★★★★★</div>
-                  <span className="text-[11px] text-neutral-500">Dựa trên {reviews.length} lượt đánh giá</span>
-                </div>
-              </div>
-
-              {/* Form gửi đánh giá */}
-              <form onSubmit={handleAddReview} className="space-y-2.5 bg-neutral-50 dark:bg-neutral-900 p-3 rounded-xl border border-neutral-200 dark:border-neutral-800">
-                <h3 className="font-semibold text-[11px] uppercase tracking-wider text-neutral-400">Gửi đánh giá của bạn</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <input
-                    type="text"
-                    placeholder="Họ tên của bạn"
-                    value={newReview.name}
-                    onChange={(e) => setNewReview({ ...newReview, name: e.target.value })}
-                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 rounded p-1.5 text-xs focus:outline-none focus:border-blue-500"
-                  />
-                  <select
-                    value={newReview.rating}
-                    onChange={(e) => setNewReview({ ...newReview, rating: Number(e.target.value) })}
-                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 rounded p-1.5 text-xs focus:outline-none focus:border-blue-500"
-                  >
-                    <option value="5">⭐⭐⭐⭐⭐ (5/5 sao - Tuyệt vời)</option>
-                    <option value="4">⭐⭐⭐⭐ (4/5 sao - Hài lòng)</option>
-                    <option value="3">⭐⭐⭐ (3/5 sao - Bình thường)</option>
-                    <option value="2">⭐⭐ (2/5 sao - Không ưng ý)</option>
-                    <option value="1">⭐ (1/5 sao - Rất tệ)</option>
-                  </select>
-                </div>
-                <textarea
-                  rows={2}
-                  placeholder="Nhận xét chi tiết về sản phẩm..."
-                  value={newReview.comment}
-                  onChange={(e) => setNewReview({ ...newReview, comment: e.target.value })}
-                  className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 rounded p-1.5 text-xs focus:outline-none focus:border-blue-500"
-                />
-                <button
-                  type="submit"
-                  className="bg-black dark:bg-white text-white dark:text-black font-semibold px-3 py-1.5 rounded text-xs hover:opacity-80 transition"
-                >
-                  Gửi nhận xét
-                </button>
-              </form>
-            </div>
-
-            {/* Danh sách bình luận */}
-            <div className="space-y-2.5">
-              <h3 className="font-semibold text-[11px] text-neutral-400 uppercase tracking-wider">Khách hàng nhận xét ({reviews.length})</h3>
-              {reviews.length === 0 ? (
-                <div className="text-xs text-neutral-500 italic py-2">Chưa có đánh giá nào cho sản phẩm này. Hãy là người đầu tiên đánh giá!</div>
-              ) : (
-                reviews.map((rev) => (
-                  <div key={rev.id} className="p-2.5 rounded-lg border border-neutral-200 dark:border-neutral-800 space-y-1 bg-white dark:bg-neutral-950">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-xs">{rev.name}</span>
-                      <span className="text-[10px] text-neutral-400">{rev.date}</span>
-                    </div>
-                    <div className="text-amber-400 text-xs">
-                      {"★".repeat(Number(rev.rating || 5))}{"☆".repeat(5 - Number(rev.rating || 5))}
-                    </div>
-                    <p className="text-xs text-neutral-600 dark:text-neutral-300">{rev.comment}</p>
-                  </div>
-                ))
-              )}
-            </div>
+          {/* ĐÁNH GIÁ SẢN PHẨM DÀNH RIÊNG CHO DESKTOP (Nằm bên trái dưới ảnh) */}
+          <div className="hidden md:block">
+            {reviewsSectionContent}
           </div>
         </div>
 
-        {/* RIGHT COLUMN: PRODUCT INFO */}
-        <div className="flex flex-col justify-start space-y-5">
+        {/* KHU VỰC 2: TÊN, GIÁ, MÔ TẢ, NÚT MUA HÀNG (Sẽ nhảy lên ngay dưới ảnh trên mobile nhờ order-2) */}
+        <div className="flex flex-col justify-start space-y-5 order-2 mt-6 md:mt-0">
           <h1 className="text-3xl font-bold tracking-tight">{product.title}</h1>
           
           {/* NÚT LIKE & SỐ LƯỢT THÍCH */}
@@ -584,6 +592,12 @@ export default function ProductPage({ params }: { params: Promise<{ handle: stri
             <p>{selectedVariant?.description || product.description}</p>
           </div>
         </div>
+
+        {/* KHU VỰC 3: ĐÁNH GIÁ SẢN PHẨM DÀNH RIÊNG CHO MOBILE (Nằm ở dưới cùng trên mobile nhờ order-3) */}
+        <div className="block md:hidden order-3 mt-6">
+          {reviewsSectionContent}
+        </div>
+
       </div>
     </div>
   );
