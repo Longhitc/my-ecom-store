@@ -90,20 +90,40 @@ export default function AdminMusicPage() {
     fetchData();
   }, []);
 
-  // Xử lý upload qua API Route server-side bảo mật
+  // Xử lý upload trực tiếp file MP3 từ Client lên Cloudinary, sau đó gọi API lưu Turso
   const uploadAndSaveTrack = async (file: File, trackData: { id: string; album_id: string; title: string; artist: string; track_order: number }) => {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('id', trackData.id);
-    formData.append('album_id', trackData.album_id);
-    formData.append('title', trackData.title);
-    formData.append('artist', trackData.artist);
-    formData.append('track_order', trackData.track_order.toString());
+    setUploadProgress('Đang tải file MP3 trực tiếp lên Cloudinary...');
+    
+    // 1. Upload thẳng file lên Cloudinary dùng unsigned preset 'my_music_preset' (Bỏ qua Vercel function size limit)
+    const cloudinaryFormData = new FormData();
+    cloudinaryFormData.append('file', file);
+    cloudinaryFormData.append('upload_preset', 'my_music_preset');
 
-    setUploadProgress('Đang xử lý tải file lên Cloudinary và lưu database...');
-    const res = await fetch('/api/admin/music/upload', {
+    const cloudinaryRes = await fetch(`https://api.cloudinary.com/v1_1/r9iziwqa/video/upload`, {
       method: 'POST',
-      body: formData,
+      body: cloudinaryFormData,
+    });
+
+    const cloudinaryData = await cloudinaryRes.json();
+    if (!cloudinaryRes.ok) {
+      throw new Error(cloudinaryData.error?.message || 'Upload Cloudinary thất bại');
+    }
+
+    const audioUrl = cloudinaryData.secure_url;
+
+    // 2. Gửi metadata và audio_url gọn nhẹ vào API lưu Turso
+    setUploadProgress('Đang lưu thông tin vào cơ sở dữ liệu Turso...');
+    const res = await fetch('/api/admin/music', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: trackData.id,
+        album_id: trackData.album_id || null,
+        title: trackData.title,
+        artist: trackData.artist,
+        audio_url: audioUrl,
+        track_order: trackData.track_order,
+      }),
     });
 
     const responseText = await res.text();
@@ -115,9 +135,10 @@ export default function AdminMusicPage() {
     }
 
     if (!res.ok || !data.success) {
-      throw new Error(data.error || 'Upload hoặc lưu dữ liệu thất bại');
+      throw new Error(data.error || 'Lưu database thất bại');
     }
-    return data.audio_url;
+
+    return audioUrl;
   };
 
   // Xử lý tạo Album mới khớp cấu trúc bảng albums
