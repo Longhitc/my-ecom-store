@@ -20,44 +20,51 @@ interface Track {
   track_order: number;
 }
 
-const ITEMS_PER_PAGE = 8; // Phân trang 8 bài 1 trang
+const ITEMS_PER_PAGE = 8;
 
 export default function AdminMusicPage() {
   const [albums, setAlbums] = useState<Album[]>([]);
   const [tracks, setTracks] = useState<(Track & { album_title?: string; cover_image?: string })[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState('');
+  const [loading, setLoading] = useState<boolean>(false);
+  const [uploading, setUploading] = useState<boolean>(false);
+  const [uploadProgress, setUploadProgress] = useState<string>('');
 
   // Form State (Thêm mới)
-  const [title, setTitle] = useState('');
-  const [artist, setArtist] = useState('');
-  const [albumId, setAlbumId] = useState('');
+  const [title, setTitle] = useState<string>('');
+  const [artist, setArtist] = useState<string>('');
+  const [albumId, setAlbumId] = useState<string>('');
   const [trackOrder, setTrackOrder] = useState<number>(1);
   const [audioFile, setAudioFile] = useState<File | null>(null);
 
   // State Tạo Album Mới
-  const [showNewAlbumModal, setShowNewAlbumModal] = useState(false);
-  const [newAlbumTitle, setNewAlbumTitle] = useState('');
-  const [newAlbumCover, setNewAlbumCover] = useState('');
-  const [creatingAlbum, setCreatingAlbum] = useState(false);
+  const [showNewAlbumModal, setShowNewAlbumModal] = useState<boolean>(false);
+  const [newAlbumTitle, setNewAlbumTitle] = useState<string>('');
+  const [newAlbumCover, setNewAlbumCover] = useState<string>('');
+  const [creatingAlbum, setCreatingAlbum] = useState<boolean>(false);
 
   // State Chỉnh Sửa Bài Hát
   const [editingTrack, setEditingTrack] = useState<Track | null>(null);
-  const [editTitle, setEditTitle] = useState('');
-  const [editArtist, setEditArtist] = useState('');
-  const [editAlbumId, setEditAlbumId] = useState('');
+  const [editTitle, setEditTitle] = useState<string>('');
+  const [editArtist, setEditArtist] = useState<string>('');
+  const [editAlbumId, setEditAlbumId] = useState<string>('');
   const [editTrackOrder, setEditTrackOrder] = useState<number>(1);
-  const [updatingTrack, setUpdatingTrack] = useState(false);
+  const [updatingTrack, setUpdatingTrack] = useState<boolean>(false);
 
   // Phân trang
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState<number>(1);
 
-  // Quản lý trạng thái đang phát để đồng bộ đĩa xoay trong thanh player
+  // Trạng thái phát nhạc và thời lượng từng bài
   const [playingTrackId, setPlayingTrackId] = useState<string | null>(null);
+  const [trackTimes, setTrackTimes] = useState<{ [key: string]: { currentTime: number; duration: number } }>({});
   const audioRefs = useRef<{ [key: string]: HTMLAudioElement | null }>({});
 
-  // Tải danh sách Album và Tracks từ API
+  const formatTime = (seconds: number): string => {
+    if (isNaN(seconds)) return '0:00';
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  };
+
   const fetchData = async () => {
     try {
       setLoading(true);
@@ -68,14 +75,11 @@ export default function AdminMusicPage() {
         const loadedTracks: (Track & { album_title?: string; cover_image?: string })[] = data.tracks || [];
 
         setAlbums(loadedAlbums);
-
-        // Sắp xếp danh sách bài hát theo track_order GIẢM DẦN
-        const sortedTracks = [...loadedTracks].sort((a, b) => (b.track_order || 0) - (a.track_order || 0));
+        const sortedTracks = [...loadedTracks].sort((a: Track, b: Track) => (b.track_order || 0) - (a.track_order || 0));
         setTracks(sortedTracks);
 
-        // Tự động tính track_order = max(track_order) + 1
         const maxOrder = loadedTracks.length > 0 
-          ? Math.max(...loadedTracks.map(t => Number(t.track_order) || 0)) 
+          ? Math.max(...loadedTracks.map((t: Track) => Number(t.track_order) || 0)) 
           : 0;
         setTrackOrder(maxOrder + 1);
       }
@@ -90,11 +94,9 @@ export default function AdminMusicPage() {
     fetchData();
   }, []);
 
-  // Xử lý upload trực tiếp file MP3 từ Client lên Cloudinary, sau đó gọi API lưu Turso
   const uploadAndSaveTrack = async (file: File, trackData: { id: string; album_id: string; title: string; artist: string; track_order: number }) => {
     setUploadProgress('Đang tải file MP3 trực tiếp lên Cloudinary...');
     
-    // 1. Upload thẳng file lên Cloudinary dùng unsigned preset 'my_music_preset' (Bỏ qua Vercel function size limit)
     const cloudinaryFormData = new FormData();
     cloudinaryFormData.append('file', file);
     cloudinaryFormData.append('upload_preset', 'my_music_preset');
@@ -111,7 +113,6 @@ export default function AdminMusicPage() {
 
     const audioUrl = cloudinaryData.secure_url;
 
-    // 2. Gửi metadata và audio_url gọn nhẹ vào API lưu Turso
     setUploadProgress('Đang lưu thông tin vào cơ sở dữ liệu Turso...');
     const res = await fetch('/api/admin/music', {
       method: 'POST',
@@ -126,14 +127,7 @@ export default function AdminMusicPage() {
       }),
     });
 
-    const responseText = await res.text();
-    let data;
-    try {
-      data = JSON.parse(responseText);
-    } catch (e) {
-      throw new Error(`Server trả về lỗi không phải JSON: ${responseText}`);
-    }
-
+    const data = await res.json();
     if (!res.ok || !data.success) {
       throw new Error(data.error || 'Lưu database thất bại');
     }
@@ -141,7 +135,6 @@ export default function AdminMusicPage() {
     return audioUrl;
   };
 
-  // Xử lý tạo Album mới khớp cấu trúc bảng albums
   const handleCreateAlbum = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newAlbumTitle.trim()) {
@@ -171,11 +164,9 @@ export default function AdminMusicPage() {
       const data = await res.json();
       const createdAlbum = data.album || newAlbumPayload;
 
-      setAlbums((prev) => [...prev, createdAlbum]);
+      setAlbums((prev: Album[]) => [...prev, createdAlbum]);
       setAlbumId(createdAlbum.id);
-      if (editingTrack) {
-        setEditAlbumId(createdAlbum.id);
-      }
+      if (editingTrack) setEditAlbumId(createdAlbum.id);
       
       setNewAlbumTitle('');
       setNewAlbumCover('');
@@ -191,11 +182,9 @@ export default function AdminMusicPage() {
         created_at: now,
         updated_at: now,
       };
-      setAlbums((prev) => [...prev, fallbackAlbum]);
+      setAlbums((prev: Album[]) => [...prev, fallbackAlbum]);
       setAlbumId(fallbackAlbum.id);
-      if (editingTrack) {
-        setEditAlbumId(fallbackAlbum.id);
-      }
+      if (editingTrack) setEditAlbumId(fallbackAlbum.id);
       setNewAlbumTitle('');
       setNewAlbumCover('');
       setShowNewAlbumModal(false);
@@ -204,7 +193,6 @@ export default function AdminMusicPage() {
     }
   };
 
-  // Xử lý submit thêm bài hát
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!audioFile || !title) {
@@ -214,7 +202,6 @@ export default function AdminMusicPage() {
 
     try {
       setUploading(true);
-
       const newTrackId = `track-${Date.now()}`;
       await uploadAndSaveTrack(audioFile, {
         id: newTrackId,
@@ -239,7 +226,6 @@ export default function AdminMusicPage() {
     }
   };
 
-  // Mở modal sửa bài hát
   const openEditModal = (track: Track) => {
     setEditingTrack(track);
     setEditTitle(track.title);
@@ -248,7 +234,6 @@ export default function AdminMusicPage() {
     setEditTrackOrder(Number(track.track_order) || 1);
   };
 
-  // Lưu thông tin cập nhật bài hát vào Turso
   const handleUpdateTrack = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingTrack || !editTitle.trim()) {
@@ -271,9 +256,7 @@ export default function AdminMusicPage() {
       });
 
       const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Cập nhật thất bại');
-      }
+      if (!res.ok || !data.success) throw new Error(data.error || 'Cập nhật thất bại');
 
       alert('Cập nhật bài hát thành công! ✅');
       setEditingTrack(null);
@@ -286,7 +269,6 @@ export default function AdminMusicPage() {
     }
   };
 
-  // Phân trang tính toán
   const totalPages = Math.ceil(tracks.length / ITEMS_PER_PAGE) || 1;
   const paginatedTracks = tracks.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
@@ -305,7 +287,7 @@ export default function AdminMusicPage() {
         </Link>
       </div>
 
-      {/* FORM THÊM BÀI HÁT - THU GỌN NGẮN GỌN */}
+      {/* FORM THÊM BÀI HÁT - GỌN GÀNG ĐÚNG 2 HÀNG TRÊN PC */}
       <form onSubmit={handleSubmit} className="rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-3 space-y-2.5 shadow-xs">
         <div className="flex items-center justify-between">
           <h2 className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500">Thêm bài hát mới</h2>
@@ -318,8 +300,22 @@ export default function AdminMusicPage() {
           </button>
         </div>
         
-        {/* Hàng 1: Album, Tên bài hát, Nghệ sĩ, Thứ tự */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 items-center">
+        {/* Đưa tất cả vào lưới 5 cột trên PC: [File MP3 (2 cột)] [Album] [Tên bài hát] [Nghệ sĩ] [Thứ tự] [Nút Upload] */}
+        <div className="grid grid-cols-1 sm:grid-cols-6 gap-2 items-end">
+          
+          {/* File MP3 chiếm 2 cột */}
+          <div className="sm:col-span-2">
+            <label className="block text-[10px] font-medium text-neutral-500 mb-0.5">File MP3 *</label>
+            <input
+              type="file"
+              accept="audio/*"
+              onChange={(e) => setAudioFile(e.target.files?.[0] || null)}
+              required
+              className="w-full text-[11px] text-neutral-500 file:mr-2 file:py-1.5 file:px-2.5 file:rounded file:border-0 file:text-[10px] file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700"
+            />
+          </div>
+
+          {/* Album */}
           <div>
             <label className="block text-[10px] font-medium text-neutral-500 mb-0.5">Album</label>
             <select
@@ -328,7 +324,7 @@ export default function AdminMusicPage() {
               className="w-full rounded border border-neutral-300 dark:border-neutral-700 bg-transparent px-2 py-1.5 text-xs text-neutral-800 dark:text-white"
             >
               <option value="">-- Trống --</option>
-              {albums.map((album) => (
+              {albums.map((album: Album) => (
                 <option key={album.id} value={album.id} className="dark:bg-neutral-900">
                   {album.album_title}
                 </option>
@@ -336,6 +332,7 @@ export default function AdminMusicPage() {
             </select>
           </div>
 
+          {/* Tên bài hát */}
           <div>
             <label className="block text-[10px] font-medium text-neutral-500 mb-0.5">Tên bài hát *</label>
             <input
@@ -348,6 +345,7 @@ export default function AdminMusicPage() {
             />
           </div>
 
+          {/* Nghệ sĩ */}
           <div>
             <label className="block text-[10px] font-medium text-neutral-500 mb-0.5">Nghệ sĩ</label>
             <input
@@ -359,39 +357,28 @@ export default function AdminMusicPage() {
             />
           </div>
 
-          <div>
-            <label className="block text-[10px] font-medium text-neutral-500 mb-0.5">Thứ tự (Auto)</label>
-            <input
-              type="number"
-              value={trackOrder}
-              disabled
-              className="w-full rounded border border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-800/50 px-2 py-1.5 text-xs text-neutral-500 font-semibold cursor-not-allowed"
-            />
-          </div>
-        </div>
+          {/* Thứ tự & Nút Upload gom chung cột cuối */}
+          <div className="flex gap-1.5 items-end">
+            <div className="w-14 shrink-0">
+              <label className="block text-[10px] font-medium text-neutral-500 mb-0.5">Thứ tự</label>
+              <input
+                type="number"
+                value={trackOrder}
+                disabled
+                className="w-full rounded border border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-800/50 px-1 py-1.5 text-xs text-neutral-500 font-semibold cursor-not-allowed text-center"
+              />
+            </div>
 
-        {/* Hàng 2: Chọn File MP3 và Nút Upload nằm chung 1 hàng ngang */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-end justify-between gap-2.5 pt-1">
-          <div className="flex-1 min-w-0">
-            <label className="block text-[10px] font-medium text-neutral-500 mb-0.5">File MP3 *</label>
-            <input
-              type="file"
-              accept="audio/*"
-              onChange={(e) => setAudioFile(e.target.files?.[0] || null)}
-              required
-              className="w-full text-[11px] text-neutral-500 file:mr-2 file:py-1.5 file:px-2.5 file:rounded file:border-0 file:text-[10px] file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700"
-            />
-          </div>
-
-          <div className="shrink-0">
             <button
               type="submit"
               disabled={uploading}
-              className="w-full sm:w-auto rounded bg-blue-600 px-4 py-1.5 text-xs font-bold text-white shadow hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              className="flex-1 rounded bg-blue-600 px-2.5 py-1.5 text-xs font-bold text-white shadow hover:bg-blue-700 disabled:opacity-50 transition-colors h-[31px] truncate"
+              title="Upload MP3"
             >
-              {uploading ? 'Đang xử lý...' : 'Upload MP3'}
+              {uploading ? '...' : 'Upload'}
             </button>
           </div>
+
         </div>
 
         {uploading && (
@@ -493,7 +480,7 @@ export default function AdminMusicPage() {
                   className="w-full rounded border border-neutral-300 dark:border-neutral-700 bg-transparent px-2.5 py-1.5 text-xs text-neutral-800 dark:text-white"
                 >
                   <option value="" className="dark:bg-neutral-900">-- Chưa phân loại Album --</option>
-                  {albums.map((album) => (
+                  {albums.map((album: Album) => (
                     <option key={album.id} value={album.id} className="dark:bg-neutral-900">
                       {album.album_title}
                     </option>
@@ -576,11 +563,11 @@ export default function AdminMusicPage() {
             <div className="grid grid-cols-1 gap-1.5">
               {paginatedTracks.map((track) => {
                 const isPlaying = playingTrackId === track.id;
+                const times = trackTimes[track.id] || { currentTime: 0, duration: 0 };
 
                 return (
                   <div key={track.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 px-2 py-1 shadow-2xs">
                     
-                    {/* 1. KHUNG BÊN TRÁI: ẢNH ALBUM VUÔNG NGUYÊN BẢN */}
                     <div className="flex items-center gap-2.5 min-w-0">
                       {track.cover_image ? (
                         <img src={track.cover_image} alt={track.album_title} className="w-8 h-8 rounded object-cover shrink-0" />
@@ -597,10 +584,9 @@ export default function AdminMusicPage() {
                       </div>
                     </div>
 
-                    {/* 2. KHUNG BÊN PHẢI: PLAYER + NÚT SỬA */}
-                    <div className="flex items-center gap-1.5 w-full sm:w-auto shrink-0 justify-between sm:justify-end">
+                    <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 justify-between sm:justify-end">
+                      
                       <div className="flex items-center gap-2 bg-neutral-100 dark:bg-neutral-800/80 px-2.5 py-1 rounded-md flex-1 sm:flex-initial justify-between">
-                        {/* Đĩa than mini có 2 vệt sáng xanh - hồng */}
                         <div 
                           className={`w-7 h-7 rounded-full bg-neutral-950 border border-neutral-700 shadow-sm flex items-center justify-center relative shrink-0 overflow-hidden ${
                             isPlaying ? 'animate-spin' : ''
@@ -609,18 +595,34 @@ export default function AdminMusicPage() {
                         >
                           <div className="absolute top-0 right-1 w-1.5 h-3 bg-gradient-to-b from-emerald-400 to-transparent rounded-full transform rotate-45"></div>
                           <div className="absolute bottom-0 left-1 w-1.5 h-3 bg-gradient-to-t from-pink-500 to-transparent rounded-full transform rotate-45"></div>
-
                           <div className="w-3 h-3 rounded-full bg-emerald-500 border border-neutral-900 flex items-center justify-center z-10 shadow-inner">
                             <div className="w-1 h-1 rounded-full bg-neutral-950"></div>
                           </div>
                         </div>
 
-                        {/* Thanh audio controls kích thước chuẩn gốc */}
+                        <div className="text-[11px] font-mono text-neutral-600 dark:text-neutral-300 shrink-0 select-none">
+                          {formatTime(times.currentTime)} / {formatTime(times.duration)}
+                        </div>
+
                         <audio
                           ref={(el) => { audioRefs.current[track.id] = el; }}
-                          controls
                           src={track.audio_url}
-                          className="h-7 w-[180px] sm:w-44 shrink-0"
+                          preload="metadata"
+                          className="hidden"
+                          onTimeUpdate={(e) => {
+                            const audio = e.currentTarget;
+                            setTrackTimes((prev) => ({
+                              ...prev,
+                              [track.id]: { currentTime: audio.currentTime, duration: audio.duration || 0 }
+                            }));
+                          }}
+                          onLoadedMetadata={(e) => {
+                            const audio = e.currentTarget;
+                            setTrackTimes((prev) => ({
+                              ...prev,
+                              [track.id]: { currentTime: audio.currentTime, duration: audio.duration || 0 }
+                            }));
+                          }}
                           onPlay={() => {
                             Object.keys(audioRefs.current).forEach((id) => {
                               if (id !== track.id && audioRefs.current[id]) {
@@ -630,19 +632,31 @@ export default function AdminMusicPage() {
                             setPlayingTrackId(track.id);
                           }}
                           onPause={() => {
-                            if (playingTrackId === track.id) {
-                              setPlayingTrackId(null);
-                            }
+                            if (playingTrackId === track.id) setPlayingTrackId(null);
                           }}
                           onEnded={() => {
-                            if (playingTrackId === track.id) {
-                              setPlayingTrackId(null);
-                            }
+                            if (playingTrackId === track.id) setPlayingTrackId(null);
                           }}
                         />
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const audio = audioRefs.current[track.id];
+                            if (!audio) return;
+                            if (isPlaying) {
+                              audio.pause();
+                            } else {
+                              audio.play();
+                            }
+                          }}
+                          className="w-6 h-6 rounded-full bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center text-xs shrink-0 shadow-xs"
+                          title={isPlaying ? "Tạm dừng" : "Phát nhạc"}
+                        >
+                          {isPlaying ? '⏸' : '▶'}
+                        </button>
                       </div>
 
-                      {/* Nút Sửa */}
                       <button
                         type="button"
                         onClick={() => openEditModal(track)}
@@ -658,18 +672,17 @@ export default function AdminMusicPage() {
               })}
             </div>
 
-            {/* Thanh điều hướng phân trang */}
             {totalPages > 1 && (
               <div className="flex items-center justify-center gap-1.5 pt-2">
                 <button
                   type="button"
-                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                  onClick={() => setCurrentPage((prev: number) => Math.max(prev - 1, 1))}
                   disabled={currentPage === 1}
                   className="rounded px-2.5 py-1 text-xs font-semibold border border-neutral-200 dark:border-neutral-800 disabled:opacity-40 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300"
                 >
                   ← Trước
                 </button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                {Array.from({ length: totalPages }, (_, i: number) => i + 1).map((page: number) => (
                   <button
                     key={page}
                     type="button"
@@ -685,7 +698,7 @@ export default function AdminMusicPage() {
                 ))}
                 <button
                   type="button"
-                  onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                  onClick={() => setCurrentPage((prev: number) => Math.min(prev + 1, totalPages))}
                   disabled={currentPage === totalPages}
                   className="rounded px-2.5 py-1 text-xs font-semibold border border-neutral-200 dark:border-neutral-800 disabled:opacity-40 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300"
                 >
