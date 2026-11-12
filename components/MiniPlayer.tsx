@@ -8,7 +8,8 @@ export default function MiniPlayer() {
   const router = useRouter();
   const { currentTrack, isPlaying, hasStarted, togglePlay, handleNext, handlePrev } = useAudio();
 
-  if (pathname === '/music' || !hasStarted || !currentTrack) {
+  // Thêm điều kiện loại trừ trang /music và /admin/music
+  if (pathname === '/music' || pathname === '/admin/music' || !hasStarted || !currentTrack) {
     return <div className="hidden md:block w-[240px]"></div>; 
   }
 

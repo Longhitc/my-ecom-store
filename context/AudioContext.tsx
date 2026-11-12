@@ -1,5 +1,6 @@
 'use client';
 
+import { usePathname } from 'next/navigation'; // Thêm import usePathname
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 
 interface Track {
@@ -9,7 +10,7 @@ interface Track {
   audio_url: string;
   album_title: string;
   cover_image?: string;
-  album_id?: string;    // Thêm dòng này
+  album_id?: string;
   track_order: number;
 }
 
@@ -31,6 +32,8 @@ interface AudioContextType {
 const AudioContext = createContext<AudioContextType | null>(null);
 
 export function AudioProvider({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname(); // Lấy đường dẫn hiện tại
+
   const [tracks, setTracks] = useState<Track[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -39,6 +42,16 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
   const [duration, setDuration] = useState(0);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // TỰ ĐỘNG DỪNG VÀ TẮT NHẠC KHI VÀO TRANG /admin/music
+  useEffect(() => {
+    if (pathname === '/admin/music') {
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+      setIsPlaying(false);
+    }
+  }, [pathname]);
 
   useEffect(() => {
     fetch('/api/music')
@@ -53,7 +66,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
 
   const currentTrack = tracks[currentIndex] || null;
 
-  // Cập nhật Media Session API để Android Auto trên ô tô hiển thị chuẩn Spotify (hình ảnh, tên bài hát, nghệ sĩ)
+  // Cập nhật Media Session API để Android Auto trên ô tô hiển thị chuẩn Spotify
   useEffect(() => {
     if (!('mediaSession' in navigator)) return;
 
@@ -77,6 +90,8 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
     }
 
     navigator.mediaSession.setActionHandler('play', () => {
+      // Chặn play ngầm nếu đang ở trang admin music
+      if (window.location.pathname === '/admin/music') return;
       if (audioRef.current && currentTrack?.audio_url) {
         audioRef.current.play().catch((err) => console.error('Lỗi play mediaSession:', err));
         setIsPlaying(true);
@@ -92,12 +107,14 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
     });
 
     navigator.mediaSession.setActionHandler('previoustrack', () => {
+      if (window.location.pathname === '/admin/music') return;
       setHasStarted(true);
       setCurrentIndex((prev) => (prev - 1 + tracks.length) % tracks.length);
       setIsPlaying(true);
     });
 
     navigator.mediaSession.setActionHandler('nexttrack', () => {
+      if (window.location.pathname === '/admin/music') return;
       setHasStarted(true);
       setCurrentIndex((prev) => (prev + 1) % tracks.length);
       setIsPlaying(true);
@@ -110,6 +127,9 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
     if (audioRef.current) {
       audioRef.current.pause();
     }
+
+    // Nếu đang đứng ở trang admin music thì tuyệt đối không khởi tạo/phát audio ngầm
+    if (window.location.pathname === '/admin/music') return;
 
     const audio = new Audio(currentTrack.audio_url);
     audioRef.current = audio;
@@ -129,15 +149,17 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
       audio.pause();
       audioRef.current = null;
     };
-  }, [currentIndex, tracks]);
+  }, [currentIndex, tracks, isPlaying]);
 
   const playTrack = (index: number) => {
+    if (pathname === '/admin/music') return;
     setCurrentIndex(index);
     setIsPlaying(true);
     setHasStarted(true);
   };
 
   const togglePlay = () => {
+    if (pathname === '/admin/music') return;
     if (!audioRef.current || !currentTrack?.audio_url) return;
     if (!hasStarted) setHasStarted(true);
 
@@ -151,12 +173,14 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
   };
 
   const handleNext = () => {
+    if (pathname === '/admin/music') return;
     if (!hasStarted) setHasStarted(true);
     setCurrentIndex((prev) => (prev + 1) % tracks.length);
     setIsPlaying(true);
   };
 
   const handlePrev = () => {
+    if (pathname === '/admin/music') return;
     if (!hasStarted) setHasStarted(true);
     setCurrentIndex((prev) => (prev - 1 + tracks.length) % tracks.length);
     setIsPlaying(true);
