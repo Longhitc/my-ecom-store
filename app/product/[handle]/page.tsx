@@ -2,7 +2,9 @@ import { db } from 'lib/turso';
 import type { Metadata } from 'next';
 import ProductDetailClient from './ProductDetailClient';
 
-// Hàm lấy thông tin sản phẩm từ CSDL Turso ở phía Server
+// QUAN TRỌNG: Cache lại metadata trong 1 giờ để Zalo Bot quét phản hồi trong tích tắc, không bị timeout
+export const revalidate = 3600;
+
 async function getProductForMetadata(handle: string) {
   try {
     const result = await db.execute({
@@ -16,7 +18,6 @@ async function getProductForMetadata(handle: string) {
   }
 }
 
-// Hàm sinh metadata động cho Zalo, Facebook (Open Graph Tags)
 export async function generateMetadata({
   params,
 }: {
@@ -32,7 +33,6 @@ export async function generateMetadata({
     };
   }
 
-  // Lấy ảnh sản phẩm làm hình thu nhỏ (Thumbnail) khi chia sẻ link
   let imageUrl = product.featured_image_url || product.image_url || '';
   if (!imageUrl && product.images) {
     try {
@@ -43,6 +43,11 @@ export async function generateMetadata({
     } catch (e) {
       imageUrl = '';
     }
+  }
+
+  const baseUrl = 'https://depvaxinhshop.vercel.app';
+  if (imageUrl && !imageUrl.startsWith('http')) {
+    imageUrl = `${baseUrl}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
   }
 
   const title = String(product.title || product.name || 'Sản phẩm mới');
