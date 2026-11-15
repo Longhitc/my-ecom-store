@@ -23,6 +23,7 @@ interface ProductItem {
   discount_type: 'percent' | 'amount';
   discount_value: number;
   promo_price: number;
+  isExisting?: boolean; // Đánh dấu sản phẩm đã có sẵn từ trước để khóa chỉnh % giảm
 }
 
 interface PromoProductInfo {
@@ -56,19 +57,25 @@ export default function PromotionsPage() {
   const [hoveredImgUrl, setHoveredImgUrl] = useState<string | null>(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
 
-  // State cho Modal gia hạn
-  const [isExtendModalOpen, setIsExtendModalOpen] = useState(false);
-  const [selectedPromo, setSelectedPromo] = useState<PromotionProgram | null>(null);
-  const [newEndDate, setNewEndDate] = useState('');
+  // State cho Modal Sửa chương trình (Active hoặc Upcoming)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingPromo, setEditingPromo] = useState<PromotionProgram | null>(null);
+  const [editPromoName, setEditPromoName] = useState('');
+  const [editStartDate, setEditStartDate] = useState('');
+  const [editEndDate, setEditEndDate] = useState('');
+  const [editSelectedProducts, setEditSelectedProducts] = useState<ProductItem[]>([]);
+  const [isUpdatingPromo, setIsUpdatingPromo] = useState(false);
 
+  // State form Tạo mới
   const [promoName, setPromoName] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-
   const [selectedProducts, setSelectedProducts] = useState<ProductItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Modal chọn sản phẩm dùng chung cho cả Tạo mới và Sửa
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [modalProducts, setModalProducts] = useState<ProductItem[]>([]);
   
   const [modalConfigs, setModalConfigs] = useState<Record<string, {
@@ -76,6 +83,7 @@ export default function PromotionsPage() {
     isChecked: boolean;
     discount_type: 'percent' | 'amount';
     discount_value: number;
+    isExisting?: boolean;
   }>>({});
   
   const [keyword, setKeyword] = useState('');
@@ -176,23 +184,71 @@ export default function PromotionsPage() {
     }
   };
 
-  const handleSaveExtension = async () => {
-    if (!selectedPromo || !newEndDate) {
-      alert('Vui lòng chọn thời gian kết thúc mới!');
+  // Mở Modal Sửa chương trình và nạp danh sách sản phẩm hiện tại
+  const openEditModal = (promo: PromotionProgram) => {
+    setEditingPromo(promo);
+    setEditPromoName(promo.name);
+    setEditStartDate(promo.start_date ? promo.start_date.slice(0, 16) : '');
+    setEditEndDate(promo.end_date ? promo.end_date.slice(0, 16) : '');
+
+    // Chuyển đổi sản phẩm đang có trong promo thành ProductItem (đánh dấu isExisting = true)
+    const mappedProducts: ProductItem[] = promo.products.map((p) => ({
+      id: p.product_id,
+      name: p.product_title,
+      code: p.product_code,
+      image: p.product_image,
+      price: 0,
+      stock: 0,
+      variants: [],
+      discount_type: (p.discount_type as 'percent' | 'amount') || 'percent',
+      discount_value: Number(p.discount_value) || 0,
+      promo_price: 0,
+      isExisting: true,
+    }));
+
+    setEditSelectedProducts(mappedProducts);
+    setIsEditModalOpen(true);
+  };
+
+  // Lưu thay đổi khi sửa chương trình (Active hoặc Upcoming)
+  const handleSaveEditPromo = async () => {
+    if (!editingPromo || !editPromoName.trim() || !editEndDate) {
+      alert('Vui lòng điền đầy đủ tên chương trình và thời gian kết thúc!');
       return;
     }
 
+    if (editSelectedProducts.length === 0) {
+      alert('Chương trình khuyến mãi phải có ít nhất 1 sản phẩm áp dụng!');
+      return;
+    }
+
+    const now = new Date().getTime();
+    const startMs = new Date(editingPromo.start_date).getTime();
+    const isCurrentlyActive = startMs <= now && editingPromo.status !== 'expired';
+
+    const payload: any = {
+      id: editingPromo.id,
+      name: editPromoName.trim(),
+      end_date: editEndDate,
+      items: editSelectedProducts, // Gửi danh sách sản phẩm đã cập nhật (thêm/bớt) lên API
+    };
+
+    if (!isCurrentlyActive) {
+      payload.start_date = editStartDate;
+    }
+
+    setIsUpdatingPromo(true);
     try {
       const res = await fetch('/api/admin/promotions', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: selectedPromo.id, end_date: newEndDate }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (data.success) {
-        alert('Gia hạn chương trình thành công!');
-        setIsExtendModalOpen(false);
-        setSelectedPromo(null);
+        alert('Cập nhật chương trình thành công!');
+        setIsEditModalOpen(false);
+        setEditingPromo(null);
         fetchPromotionsList();
       } else {
         alert(data.error || 'Có lỗi xảy ra.');
@@ -200,6 +256,8 @@ export default function PromotionsPage() {
     } catch (err) {
       console.error(err);
       alert('Lỗi kết nối server.');
+    } finally {
+      setIsUpdatingPromo(false);
     }
   };
 
@@ -233,16 +291,21 @@ export default function PromotionsPage() {
     fetchModalProducts();
   };
 
-  const handleOpenModal = () => {
+  const handleOpenModal = (mode: 'create' | 'edit') => {
+    setModalMode(mode);
+    const sourceList = mode === 'create' ? selectedProducts : editSelectedProducts;
     const initialMap: Record<string, any> = {};
-    selectedProducts.forEach(p => {
+
+    sourceList.forEach((p) => {
       initialMap[p.id] = {
         product: p,
         isChecked: true,
         discount_type: p.discount_type || 'percent',
         discount_value: p.discount_value || 0,
+        isExisting: p.isExisting || false,
       };
     });
+
     setModalConfigs(initialMap);
     setIsModalOpen(true);
   };
@@ -254,6 +317,7 @@ export default function PromotionsPage() {
         isChecked: false,
         discount_type: 'percent',
         discount_value: 0,
+        isExisting: false,
       };
       return {
         ...prev,
@@ -305,11 +369,16 @@ export default function PromotionsPage() {
           discount_value: dval,
           promo_price: Math.max(0, finalPrice),
           variants: initializedVariants,
+          isExisting: config.isExisting || false,
         });
       }
     });
 
-    setSelectedProducts(newSelected);
+    if (modalMode === 'create') {
+      setSelectedProducts(newSelected);
+    } else {
+      setEditSelectedProducts(newSelected);
+    }
     setIsModalOpen(false);
   };
 
@@ -579,7 +648,9 @@ export default function PromotionsPage() {
                               />
                               <div className="min-w-0 flex-1">
                                 <div className="text-xs font-semibold text-neutral-900 dark:text-white truncate">{p.product_title}</div>
-                                <div className="text-[11px] text-neutral-400 font-mono">#{p.product_code || 'N/A'}</div>
+                                <div className="text-[11px] text-neutral-400 font-mono">
+                                  #{p.product_code || 'N/A'} • <span className="text-red-500 font-semibold">{p.discount_type === 'percent' ? `-${p.discount_value}%` : `-${Number(p.discount_value).toLocaleString('vi-VN')}đ`}</span>
+                                </div>
                               </div>
                             </div>
                           ))}
@@ -589,14 +660,10 @@ export default function PromotionsPage() {
                       {promoStatusTab !== 'expired' && (
                         <div className="flex items-center gap-2 pt-2">
                           <button
-                            onClick={() => {
-                              setSelectedPromo(promo);
-                              setNewEndDate(promo.end_date ? promo.end_date.slice(0, 16) : '');
-                              setIsExtendModalOpen(true);
-                            }}
+                            onClick={() => openEditModal(promo)}
                             className="bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-950/40 dark:text-blue-400 px-3 py-1.5 rounded text-xs font-semibold cursor-pointer flex-1 text-center"
                           >
-                            Gia hạn
+                            Sửa
                           </button>
                           <button
                             onClick={() => handleStopPromotion(promo.id)}
@@ -633,7 +700,6 @@ export default function PromotionsPage() {
                             <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
                               {promo.products.map((p, pIdx) => (
                                 <div key={pIdx} className="flex items-center gap-3 p-2 bg-neutral-50 dark:bg-neutral-800/50 rounded-lg border dark:border-neutral-700/60">
-                                  {/* Icon nhỏ, khi rê chuột vào sẽ kích hoạt popup khung ảnh lớn */}
                                   <img 
                                     src={p.product_image || '/placeholder.png'} 
                                     className="w-10 h-10 object-cover rounded-md shrink-0 border cursor-pointer hover:opacity-80 transition-opacity" 
@@ -651,7 +717,7 @@ export default function PromotionsPage() {
                                       {p.product_title}
                                     </div>
                                     <div className="text-[11px] text-neutral-400 font-mono">
-                                      #{p.product_code || 'N/A'}
+                                      #{p.product_code || 'N/A'} • <span className="text-red-500 font-semibold">{p.discount_type === 'percent' ? `-${p.discount_value}%` : `-${Number(p.discount_value).toLocaleString('vi-VN')}đ`}</span>
                                     </div>
                                   </div>
                                 </div>
@@ -685,15 +751,11 @@ export default function PromotionsPage() {
                             {promoStatusTab !== 'expired' ? (
                               <div className="flex items-center justify-center gap-1.5">
                                 <button
-                                  onClick={() => {
-                                    setSelectedPromo(promo);
-                                    setNewEndDate(promo.end_date ? promo.end_date.slice(0, 16) : '');
-                                    setIsExtendModalOpen(true);
-                                  }}
+                                  onClick={() => openEditModal(promo)}
                                   className="bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-950/40 dark:text-blue-400 px-2.5 py-1.5 rounded text-xs font-semibold cursor-pointer whitespace-nowrap shadow-sm"
-                                  title="Gia hạn"
+                                  title="Chỉnh sửa"
                                 >
-                                  Gia hạn
+                                  Sửa
                                 </button>
                                 <button
                                   onClick={() => handleStopPromotion(promo.id)}
@@ -718,40 +780,140 @@ export default function PromotionsPage() {
         </div>
       )}
 
-      {/* MODAL GIA HẠN THỜI GIAN */}
-      {isExtendModalOpen && selectedPromo && (
-        <div className="fixed inset-0 z-[999] bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-neutral-900 rounded-xl shadow-xl w-full max-w-md p-5 space-y-4 border border-neutral-200 dark:border-neutral-800">
-            <div className="flex justify-between items-center border-b pb-3 dark:border-neutral-800">
-              <h3 className="font-bold text-sm">Gia hạn chương trình: {selectedPromo.name}</h3>
-              <button onClick={() => setIsExtendModalOpen(false)} className="text-lg font-bold cursor-pointer">&times;</button>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold mb-1">Thời gian kết thúc mới</label>
-              <input
-                type="datetime-local"
-                value={newEndDate}
-                onChange={(e) => setNewEndDate(e.target.value)}
-                className="w-full border dark:border-neutral-700 rounded px-3 py-2 text-xs bg-transparent"
-              />
-            </div>
-            <div className="flex justify-end gap-2 pt-2">
-              <button
-                onClick={() => setIsExtendModalOpen(false)}
-                className="px-3 py-1.5 border dark:border-neutral-700 rounded text-xs cursor-pointer"
-              >
-                Hủy
-              </button>
-              <button
-                onClick={handleSaveExtension}
-                className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold cursor-pointer shadow"
-              >
-                Lưu thay đổi
-              </button>
+      {/* MODAL SỬA CHƯƠNG TRÌNH (ACTIVE / UPCOMING) */}
+      {isEditModalOpen && editingPromo && (() => {
+        const nowMs = new Date().getTime();
+        const startMs = new Date(editingPromo.start_date).getTime();
+        const isCurrentlyActive = startMs <= nowMs && editingPromo.status !== 'expired';
+
+        return (
+          <div className="fixed inset-0 z-[999] bg-black/50 flex items-center justify-center p-2 sm:p-4">
+            <div className="bg-white dark:bg-neutral-900 rounded-xl shadow-xl w-full max-w-2xl flex flex-col max-h-[90vh] border border-neutral-200 dark:border-neutral-800">
+              <div className="p-4 border-b dark:border-neutral-800 flex justify-between items-center shrink-0">
+                <h3 className="font-bold text-sm">
+                  Chỉnh sửa chương trình: {editingPromo.name}
+                </h3>
+                <button onClick={() => setIsEditModalOpen(false)} className="text-lg font-bold cursor-pointer px-2">&times;</button>
+              </div>
+
+              <div className="p-4 overflow-y-auto space-y-4">
+                {/* Tên chương trình */}
+                <div>
+                  <label className="block text-xs font-semibold mb-1">Tên chương trình khuyến mãi *</label>
+                  <input
+                    type="text"
+                    value={editPromoName}
+                    onChange={(e) => setEditPromoName(e.target.value)}
+                    className="w-full border dark:border-neutral-700 rounded px-3 py-2 text-xs bg-transparent"
+                  />
+                </div>
+
+                {/* Thời gian bắt đầu & kết thúc */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold mb-1">
+                      Thời gian bắt đầu {isCurrentlyActive && <span className="text-neutral-400 font-normal">(Đang chạy không đổi)</span>}
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={editStartDate}
+                      disabled={isCurrentlyActive}
+                      onChange={(e) => setEditStartDate(e.target.value)}
+                      className={`w-full border dark:border-neutral-700 rounded px-3 py-2 text-xs bg-transparent ${isCurrentlyActive ? 'opacity-60 cursor-not-allowed bg-neutral-100 dark:bg-neutral-800' : ''}`}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold mb-1">
+                      Thời gian kết thúc *
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={editEndDate}
+                      onChange={(e) => setEditEndDate(e.target.value)}
+                      className="w-full border dark:border-neutral-700 rounded px-3 py-2 text-xs bg-transparent"
+                    />
+                  </div>
+                </div>
+
+                {/* Danh sách sản phẩm áp dụng (Thêm hoặc xóa bớt) */}
+                <div className="space-y-2.5 border-t dark:border-neutral-800 pt-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold">
+                      Sản phẩm áp dụng ({editSelectedProducts.length})
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenModal('edit')}
+                      className="bg-blue-600 hover:bg-blue-700 text-white text-[11px] px-2.5 py-1.5 rounded font-semibold cursor-pointer"
+                    >
+                      + Thêm sản phẩm
+                    </button>
+                  </div>
+
+                  <div className="p-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded text-[11px] text-amber-800 dark:text-amber-300">
+                    ⚠️ Lưu ý: Có thể thêm mới hoặc xóa bớt sản phẩm, nhưng không thể chỉnh sửa % giảm của các sản phẩm đã tạo từ trước.
+                  </div>
+
+                  {editSelectedProducts.length === 0 ? (
+                    <div className="text-center py-6 text-xs text-neutral-400 border border-dashed rounded dark:border-neutral-800">
+                      Chưa có sản phẩm nào. Vui lòng bấm &quot;+ Thêm sản phẩm&quot;.
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                      {editSelectedProducts.map((prod, idx) => (
+                        <div key={prod.id} className="flex items-center justify-between gap-2 p-2.5 rounded-lg border dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800/40">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <img src={prod.image || '/placeholder.png'} className="w-10 h-10 object-cover rounded border shrink-0" />
+                            <div className="min-w-0">
+                              <div className="text-xs font-semibold truncate">{prod.name}</div>
+                              <div className="text-[11px] text-neutral-400 font-mono flex items-center gap-2">
+                                <span>#{prod.code || 'N/A'}</span>
+                                <span className="text-red-500 font-bold">
+                                  {prod.discount_type === 'percent' ? `Giảm ${prod.discount_value}%` : `Giảm ${Number(prod.discount_value).toLocaleString('vi-VN')}đ`}
+                                </span>
+                                {prod.isExisting ? (
+                                  <span className="text-[10px] bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 px-1.5 py-0.5 rounded">Đã khóa mức giảm</span>
+                                ) : (
+                                  <span className="text-[10px] bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 px-1.5 py-0.5 rounded">Mới thêm</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => setEditSelectedProducts(editSelectedProducts.filter((_, i) => i !== idx))}
+                            className="text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 px-2.5 py-1 rounded text-xs font-semibold cursor-pointer shrink-0"
+                          >
+                            Xóa
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="p-4 border-t dark:border-neutral-800 flex justify-end gap-2 shrink-0 bg-neutral-50 dark:bg-neutral-800/30">
+                <button
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="px-3 py-1.5 border dark:border-neutral-700 rounded text-xs cursor-pointer bg-white dark:bg-neutral-900"
+                >
+                  Hủy
+                </button>
+                <button
+                  onClick={handleSaveEditPromo}
+                  disabled={isUpdatingPromo}
+                  className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold cursor-pointer shadow disabled:opacity-50"
+                >
+                  {isUpdatingPromo ? 'Đang lưu...' : '💾 Lưu thay đổi'}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* FORM TẠO MỚI */}
       {activeTab === 'create' && (
@@ -804,7 +966,7 @@ export default function PromotionsPage() {
             <div className="flex justify-between items-center">
               <h2 className="text-sm font-bold">Sản phẩm áp dụng ({selectedProducts.length})</h2>
               <button
-                onClick={handleOpenModal}
+                onClick={() => handleOpenModal('create')}
                 className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-2 rounded font-medium cursor-pointer"
               >
                 + Chọn & Cài đặt sản phẩm
@@ -813,7 +975,7 @@ export default function PromotionsPage() {
 
             {selectedProducts.length === 0 ? (
               <div className="text-center py-8 text-neutral-400 text-xs border border-dashed rounded-lg dark:border-neutral-800">
-                Chưa có sản phẩm nào. Bấm nút "+ Chọn & Cài đặt sản phẩm" để bắt đầu.
+                Chưa có sản phẩm nào. Bấm nút &quot;+ Chọn & Cài đặt sản phẩm&quot; để bắt đầu.
               </div>
             ) : (
               <div className="space-y-4">
@@ -888,9 +1050,9 @@ export default function PromotionsPage() {
         </div>
       )}
 
-      {/* MODAL CHỌN SẢN PHẨM */}
+      {/* MODAL CHỌN SẢN PHẨM (DÙNG CHUNG CHO TẠO MỚI VÀ SỬA) */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-[999] bg-black/50 flex items-center justify-center p-2 sm:p-4">
+        <div className="fixed inset-0 z-[1000] bg-black/50 flex items-center justify-center p-2 sm:p-4">
           <div className="bg-white dark:bg-neutral-900 rounded-xl shadow-xl w-full max-w-4xl flex flex-col max-h-[90vh] border border-neutral-200 dark:border-neutral-800">
             <div className="p-4 border-b dark:border-neutral-800 flex justify-between items-center">
               <h3 className="font-bold text-sm">Chọn sản phẩm và cấu hình mức giảm giá</h3>
@@ -917,7 +1079,10 @@ export default function PromotionsPage() {
                 <div className="text-center py-10 text-xs text-neutral-400">Không tìm thấy sản phẩm phù hợp.</div>
               ) : (
                 modalProducts.map((prod) => {
-                  const config = modalConfigs[prod.id] || { isChecked: false, discount_type: 'percent', discount_value: 0 };
+                  const config = modalConfigs[prod.id] || { isChecked: false, discount_type: 'percent', discount_value: 0, isExisting: false };
+                  // Nếu đang ở chế độ Sửa và sản phẩm này đã có từ trước -> khóa chỉnh % giảm giá
+                  const lockDiscount = modalMode === 'edit' && config.isExisting;
+
                   return (
                     <div 
                       key={prod.id} 
@@ -936,7 +1101,9 @@ export default function PromotionsPage() {
                         />
                         <img src={prod.image || '/placeholder.png'} className="w-10 h-10 object-cover rounded border shrink-0" />
                         <div className="truncate">
-                          <div className="font-medium text-neutral-800 dark:text-white text-xs truncate">{prod.name}</div>
+                          <div className="font-medium text-neutral-800 dark:text-white text-xs truncate">
+                            {prod.name} {lockDiscount && <span className="text-[10px] text-neutral-400 font-normal">(Đã có trong CT)</span>}
+                          </div>
                           <div className="text-[11px] text-neutral-400 font-mono">#{prod.code || 'N/A'} | Gốc: {(prod.price || 0).toLocaleString('vi-VN')} đ</div>
                         </div>
                       </div>
@@ -944,8 +1111,9 @@ export default function PromotionsPage() {
                       <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
                         <select
                           value={config.discount_type}
+                          disabled={lockDiscount}
                           onChange={(e) => handleModalConfigChange(prod, 'discount_type', e.target.value)}
-                          className="border dark:border-neutral-700 rounded px-2 py-1 text-xs bg-white dark:bg-neutral-900"
+                          className={`border dark:border-neutral-700 rounded px-2 py-1 text-xs bg-white dark:bg-neutral-900 ${lockDiscount ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
                           <option value="percent">Giảm %</option>
                           <option value="amount">Giảm VNĐ</option>
@@ -953,9 +1121,10 @@ export default function PromotionsPage() {
                         <input
                           type="number"
                           value={config.discount_value}
+                          disabled={lockDiscount}
                           onChange={(e) => handleModalConfigChange(prod, 'discount_value', e.target.value)}
                           placeholder="Nhập mức giảm"
-                          className="w-28 border dark:border-neutral-700 rounded px-2 py-1 text-xs bg-white dark:bg-neutral-900 font-semibold text-blue-600 text-right"
+                          className={`w-28 border dark:border-neutral-700 rounded px-2 py-1 text-xs bg-white dark:bg-neutral-900 font-semibold text-blue-600 text-right ${lockDiscount ? 'opacity-50 cursor-not-allowed' : ''}`}
                         />
                       </div>
                     </div>

@@ -48,9 +48,29 @@ export async function POST(request: Request) {
     });
 
     for (const prod of items) {
+      const dtype = prod.discount_type || 'percent';
+      const dval = Number(prod.discount_value) || 0;
+
+      // Chỉ chọn min_price từ bảng products
+      const prodRes = await db.execute({
+        sql: `SELECT min_price FROM products WHERE id = ?`,
+        args: [prod.id],
+      });
+      const dbProduct = prodRes.rows[0];
+      const realBasePrice = Number(dbProduct?.min_price ?? prod.price ?? 0);
+
       if (prod.variants && prod.variants.length > 0) {
         for (const v of prod.variants) {
           const itemId = 'item_' + Math.random().toString(36).substring(2, 9) + Date.now();
+          
+          const vPrice = Number(v.price || realBasePrice);
+          let calculatedPromoPrice = 0;
+          if (dtype === 'percent') {
+            calculatedPromoPrice = vPrice * (1 - dval / 100);
+          } else {
+            calculatedPromoPrice = vPrice - dval;
+          }
+
           await db.execute({
             sql: `INSERT INTO promotion_items (id, promotion_id, product_id, variant_id, discount_type, discount_value, promo_price, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
             args: [
@@ -58,15 +78,22 @@ export async function POST(request: Request) {
               promotionId,
               prod.id,
               v.id,
-              v.discount_type || prod.discount_type || 'percent',
-              v.discount_value || prod.discount_value || 0,
-              v.promo_price || 0,
+              dtype,
+              dval,
+              Math.max(0, Math.round(calculatedPromoPrice)),
               now,
             ],
           });
         }
       } else {
         const itemId = 'item_' + Math.random().toString(36).substring(2, 9) + Date.now();
+        let calculatedPromoPrice = 0;
+        if (dtype === 'percent') {
+          calculatedPromoPrice = realBasePrice * (1 - dval / 100);
+        } else {
+          calculatedPromoPrice = realBasePrice - dval;
+        }
+
         await db.execute({
           sql: `INSERT INTO promotion_items (id, promotion_id, product_id, variant_id, discount_type, discount_value, promo_price, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
           args: [
@@ -74,9 +101,9 @@ export async function POST(request: Request) {
             promotionId,
             prod.id,
             null,
-            prod.discount_type || 'percent',
-            prod.discount_value || 0,
-            prod.promo_price || 0,
+            dtype,
+            dval,
+            Math.max(0, Math.round(calculatedPromoPrice)),
             now,
           ],
         });
@@ -90,33 +117,118 @@ export async function POST(request: Request) {
   } catch (error: any) {
     console.error('Lỗi khi lưu promotion:', error);
     return NextResponse.json(
-      { success: false, error: error.message || 'Lỗi server nội bộ' },
+      { success: error.message || 'Lỗi server nội bộ' },
       { status: 500 }
     );
   }
 }
 
-// 3. HÀM PUT: Cập nhật / Gia hạn thời gian hoặc Dừng chương trình khuyến mãi sớm
+// 3. HÀM PUT: Cập nhật tên, thời gian, danh sách sản phẩm hoặc Dừng chương trình
 export async function PUT(request: Request) {
   try {
     const body = await request.json();
-    const { id, end_date, status } = body;
+    const { id, name, start_date, end_date, status, items } = body;
 
     if (!id) {
       return NextResponse.json({ success: false, error: 'Thiếu ID chương trình khuyến mãi!' }, { status: 400 });
     }
 
+    // Trường hợp bấm nút Dừng ngay lập tức
     if (status === 'stop') {
       const now = new Date().toISOString();
       await db.execute({
         sql: `UPDATE promotions SET end_date = ?, status = 'expired' WHERE id = ?`,
         args: [now, id],
       });
-    } else if (end_date) {
+      return NextResponse.json({ success: true, message: 'Đã dừng chương trình thành công!' });
+    }
+
+    // Trường hợp cập nhật thông tin chung (Tên, start_date, end_date)
+    if (name !== undefined || end_date !== undefined) {
+      if (start_date !== undefined) {
+        await db.execute({
+          sql: `UPDATE promotions SET name = ?, start_date = ?, end_date = ?, status = 'active' WHERE id = ?`,
+          args: [name, start_date, end_date, id],
+        });
+      } else {
+        await db.execute({
+          sql: `UPDATE promotions SET name = ?, end_date = ?, status = 'active' WHERE id = ?`,
+          args: [name, end_date, id],
+        });
+      }
+    }
+
+    // Trường hợp có cập nhật lại danh sách sản phẩm (thêm/bớt)
+    if (items && Array.isArray(items)) {
       await db.execute({
-        sql: `UPDATE promotions SET end_date = ?, status = 'active' WHERE id = ?`,
-        args: [end_date, id],
+        sql: `DELETE FROM promotion_items WHERE promotion_id = ?`,
+        args: [id],
       });
+
+      const now = new Date().toISOString();
+
+      for (const prod of items) {
+        const dtype = prod.discount_type || 'percent';
+        const dval = Number(prod.discount_value) || 0;
+
+        // Chỉ chọn min_price từ bảng products
+        const prodRes = await db.execute({
+          sql: `SELECT min_price FROM products WHERE id = ?`,
+          args: [prod.id],
+        });
+        const dbProduct = prodRes.rows[0];
+        const realBasePrice = Number(dbProduct?.min_price ?? prod.price ?? 0);
+
+        if (prod.variants && prod.variants.length > 0) {
+          for (const v of prod.variants) {
+            const itemId = 'item_' + Math.random().toString(36).substring(2, 9) + Date.now();
+            
+            const vPrice = Number(v.price || realBasePrice);
+            let calculatedPromoPrice = 0;
+            if (dtype === 'percent') {
+              calculatedPromoPrice = vPrice * (1 - dval / 100);
+            } else {
+              calculatedPromoPrice = vPrice - dval;
+            }
+
+            await db.execute({
+              sql: `INSERT INTO promotion_items (id, promotion_id, product_id, variant_id, discount_type, discount_value, promo_price, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+              args: [
+                itemId,
+                id,
+                prod.id,
+                v.id,
+                dtype,
+                dval,
+                Math.max(0, Math.round(calculatedPromoPrice)),
+                now,
+              ],
+            });
+          }
+        } else {
+          const itemId = 'item_' + Math.random().toString(36).substring(2, 9) + Date.now();
+          let calculatedPromoPrice = 0;
+          if (dtype === 'percent') {
+            calculatedPromoPrice = realBasePrice * (1 - dval / 100);
+          } else {
+            calculatedPromoPrice = realBasePrice - dval;
+          }
+
+          await db.execute({
+            sql: `INSERT INTO promotion_items (id, promotion_id, product_id, variant_id, discount_type, discount_value, promo_price, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            args: [
+              itemId,
+              id,
+              prod.id,
+              null,
+              dtype,
+              dval,
+              Math.max(0, Math.round(calculatedPromoPrice)),
+              now,
+            ],
+          });
+        }
+      }
     }
 
     return NextResponse.json({ success: true, message: 'Cập nhật chương trình thành công!' });
