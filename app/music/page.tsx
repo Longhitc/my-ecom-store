@@ -54,13 +54,19 @@ export default function MusicPage() {
     new Map(tracks.map(t => [t.album_title || 'Tuyển tập', { title: t.album_title || 'Tuyển tập', cover: t.cover_image || albumCover }])).values()
   );
 
+  // LỌC DANH SÁCH BÀI HÁT CHỈ THUỘC ALBUM CỦA BÀI ĐANG PHÁT
+  const currentAlbumTracks = currentTrack 
+    ? tracks.filter(t => t.album_title === currentTrack.album_title) 
+    : tracks;
+
+  // SẮP XẾP ĐỀ XUẤT GẦN ĐÂY THEO THỨ TỰ GIẢM DẦN (MỚI NHẤT LÊN ĐẦU)
+  const sortedTracksDesc = [...tracks].sort((a, b) => (b.track_order || 0) - (a.track_order || 0));
+
   return (
     <div className="container mx-auto px-3 py-2 min-h-[80vh] flex flex-col items-center justify-start">
       
-      {/* Khung tổng giữ nguyên chiều cao chuẩn: Mobile h-[495px], PC (sm:) h-[630px] */}
       <div className="w-full max-w-xl h-[495px] sm:h-[630px] bg-neutral-900 border border-neutral-800 rounded-3xl p-3 sm:p-7 shadow-2xl flex flex-col items-center relative overflow-hidden transition-all duration-300">
         
-        {/* NỘI DUNG BÊN TRONG KHUNG ĐEN */}
         <div className="w-full h-full flex flex-col relative overflow-hidden">
           
           {/* 1. GIAO DIỆN PLAYER */}
@@ -68,7 +74,6 @@ export default function MusicPage() {
             <div className="w-full h-full flex flex-col items-center animate-fadeIn justify-between">
               <div className="w-full flex flex-col items-center">
                 
-                {/* Thanh "Đang phát từ Album" và nút mũi tên quay về trang chủ */}
                 <div className="flex items-center justify-between mb-2 sm:mb-3 w-full px-1">
                   <button 
                     onClick={() => setCurrentTab('home')}
@@ -92,7 +97,6 @@ export default function MusicPage() {
                   <div className="w-5"></div>
                 </div>
 
-                {/* Tiêu đề VINTAGE VINYL EXPERIENCE */}
                 <div className="flex items-center gap-2 mb-2 sm:mb-3.5 w-full justify-center">
                   <span className="text-emerald-400 text-sm">🎵</span>
                   <span className="text-[10px] sm:text-[11px] uppercase tracking-[0.2em] sm:tracking-[0.25em] text-emerald-400 font-semibold">
@@ -100,7 +104,6 @@ export default function MusicPage() {
                   </span>
                 </div>
 
-                {/* Bố cục 2 cột Trái/Phải */}
                 <div className="grid grid-cols-2 gap-3 sm:gap-5 items-center w-full px-1">
                   <div className="w-full aspect-square rounded-2xl overflow-hidden shadow-lg border border-neutral-800 bg-neutral-950 relative max-h-[145px] sm:max-h-[185px] mx-auto">
                     <img 
@@ -131,7 +134,6 @@ export default function MusicPage() {
                   </div>
                 </div>
 
-                {/* Thông tin bài hát & Tên ca sĩ */}
                 <div className="text-center mt-2.5 sm:mt-4 mb-2 sm:mb-2 w-full px-4">
                   <h1 className="text-xs sm:text-base font-bold text-white px-2 tracking-wide leading-snug break-words">
                     {currentTrack?.title}
@@ -144,7 +146,6 @@ export default function MusicPage() {
                   </div>
                 </div>
 
-                {/* Thanh tiến trình chuẩn Spotify */}
                 <div className="w-full px-3 mt-1.5 sm:mt-2 mb-2 sm:mb-2">
                   <div 
                     onClick={handleProgressBarClick}
@@ -164,7 +165,6 @@ export default function MusicPage() {
                   </div>
                 </div>
 
-                {/* Bộ điều khiển */}
                 <div className="flex items-center justify-center gap-4 sm:gap-5 my-1.5 sm:my-2">
                   <button 
                     onClick={handlePrev}
@@ -196,7 +196,7 @@ export default function MusicPage() {
               <div className="w-full mt-auto border-t border-neutral-800/80 pt-2 sm:pt-3 pb-1">
                 <div className="flex items-center justify-between w-full mb-1.5 sm:mb-2.5 px-1">
                   <h3 className="text-[10px] sm:text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">
-                    Danh sách phát tuần tự trong Album
+                    Danh sách phát tuần tự trong Album ({currentAlbumTracks.length} bài)
                   </h3>
                   
                   <button
@@ -215,7 +215,9 @@ export default function MusicPage() {
                 {currentTrack && (
                   <div className="text-xs p-2 sm:p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-3">
                     <span className="text-[10px] sm:text-[11px] text-neutral-500 font-mono shrink-0 font-bold">
-                      {currentIndex < 9 ? `0${currentIndex + 1}` : currentIndex + 1}
+                      {currentAlbumTracks.findIndex(t => t.id === currentTrack.id) !== -1 
+                        ? String(currentAlbumTracks.findIndex(t => t.id === currentTrack.id) + 1).padStart(2, '0') 
+                        : '01'}
                     </span>
                     <div className="flex flex-col flex-1 min-w-0">
                       <span className="font-semibold text-xs tracking-wide leading-snug break-words text-emerald-400">
@@ -229,14 +231,14 @@ export default function MusicPage() {
                 )}
               </div>
 
-              {/* Popup Playlist */}
+              {/* Popup Playlist: CHỈ HIỆN CÁC BÀI TRONG CÙNG ALBUM */}
               {showPlaylist && (
                 <div className="absolute inset-0 bg-neutral-950/95 backdrop-blur-md z-20 p-4 sm:p-6 flex flex-col rounded-3xl animate-fadeIn">
                   <div className="flex items-center justify-between pb-3 border-b border-neutral-800 mb-3">
                     <div className="flex items-center gap-2">
                       <span className="text-emerald-400">📋</span>
                       <h3 className="text-xs sm:text-sm font-bold text-white uppercase tracking-wider">
-                        Danh sách bài hát
+                        Danh sách bài trong Album ({currentAlbumTracks.length})
                       </h3>
                     </div>
                     <button
@@ -248,44 +250,49 @@ export default function MusicPage() {
                   </div>
 
                   <ul className="space-y-2 overflow-y-auto flex-1 pr-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-                    {tracks.map((t, idx) => (
-                      <li 
-                        key={t.id}
-                        onClick={() => {
-                          playTrack(idx);
-                          setShowPlaylist(false);
-                        }}
-                        className={`text-xs p-3 rounded-xl cursor-pointer transition-colors flex items-center gap-3 ${
-                          currentIndex === idx 
-                            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-semibold' 
-                            : 'hover:bg-neutral-800/80 text-neutral-300 border border-transparent'
-                        }`}
-                      >
-                        <span className="text-[11px] text-neutral-500 font-mono shrink-0 font-bold">
-                          {idx < 9 ? `0${idx + 1}` : idx + 1}
-                        </span>
-                        
-                        <div className="flex flex-col flex-1 min-w-0">
-                          <span className={`font-semibold text-xs tracking-wide leading-snug break-words ${currentIndex === idx ? 'text-emerald-400' : 'text-white'}`}>
-                            {t.title}
-                          </span>
-                          <span className="text-[10px] text-neutral-400 mt-0.5 truncate">
-                            {t.artist}
-                          </span>
-                        </div>
+                    {currentAlbumTracks.map((t, idx) => {
+                      const isCurrent = currentTrack?.id === t.id;
+                      const originalIndex = tracks.findIndex(item => item.id === t.id);
 
-                        {currentIndex === idx && (
-                          <span className="text-xs text-emerald-400 font-bold shrink-0">▶</span>
-                        )}
-                      </li>
-                    ))}
+                      return (
+                        <li 
+                          key={t.id}
+                          onClick={() => {
+                            if (originalIndex !== -1) playTrack(originalIndex);
+                            setShowPlaylist(false);
+                          }}
+                          className={`text-xs p-3 rounded-xl cursor-pointer transition-colors flex items-center gap-3 ${
+                            isCurrent 
+                              ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-semibold' 
+                              : 'hover:bg-neutral-800/80 text-neutral-300 border border-transparent'
+                          }`}
+                        >
+                          <span className="text-[11px] text-neutral-500 font-mono shrink-0 font-bold">
+                            {idx < 9 ? `0${idx + 1}` : idx + 1}
+                          </span>
+                          
+                          <div className="flex flex-col flex-1 min-w-0">
+                            <span className={`font-semibold text-xs tracking-wide leading-snug break-words ${isCurrent ? 'text-emerald-400' : 'text-white'}`}>
+                              {t.title}
+                            </span>
+                            <span className="text-[10px] text-neutral-400 mt-0.5 truncate">
+                              {t.artist}
+                            </span>
+                          </div>
+
+                          {isCurrent && (
+                            <span className="text-xs text-emerald-400 font-bold shrink-0">▶</span>
+                          )}
+                        </li>
+                      );
+                    })}
                   </ul>
                 </div>
               )}
             </div>
           )}
 
-          {/* 2. MÀN HÌNH TRANG CHỦ (HOME) - Đã cho phép tên album hiển thị trọn vẹn cả dòng / xuống dòng */}
+          {/* 2. MÀN HÌNH TRANG CHỦ (HOME) - ĐÃ SẮP XẾP GIẢM DẦN (MỚI NHẤT LÊN ĐẦU) */}
           {currentTab === 'home' && (
             <div className="w-full h-full flex flex-col animate-fadeIn p-1 text-white pb-16 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               <div className="flex items-center justify-between w-full mb-3 px-1 sticky top-0 bg-neutral-900/95 backdrop-blur py-1 z-10">
@@ -301,7 +308,7 @@ export default function MusicPage() {
                   <div 
                     key={idx}
                     onClick={() => {
-                      const firstTrackIdx = tracks.findIndex(t => t.album_title === album.title);
+                      const firstTrackIdx = tracks.findIndex(t => (t.album_title || 'Tuyển tập') === album.title);
                       if (firstTrackIdx !== -1) playTrack(firstTrackIdx);
                       setCurrentTab('player');
                     }}
@@ -320,22 +327,28 @@ export default function MusicPage() {
 
               <h3 className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider w-full text-left mb-1.5 px-1">Đề xuất gần đây</h3>
               <div className="w-full space-y-1.5 pr-1">
-                {tracks.map((t, idx) => (
-                  <div 
-                    key={t.id}
-                    onClick={() => { playTrack(idx); setCurrentTab('player'); }}
-                    className="flex items-center justify-between p-1.5 rounded-xl hover:bg-neutral-800 cursor-pointer text-xs"
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <span className="text-neutral-500 font-mono text-[10px]">{idx + 1}</span>
-                      <div className="truncate">
-                        <p className="font-semibold text-white text-[11px] truncate">{t.title}</p>
-                        <p className="text-[9px] text-neutral-400">{t.artist}</p>
+                {sortedTracksDesc.map((t, idx) => {
+                  const originalIndex = tracks.findIndex(item => item.id === t.id);
+                  return (
+                    <div 
+                      key={t.id}
+                      onClick={() => { 
+                        if (originalIndex !== -1) playTrack(originalIndex); 
+                        setCurrentTab('player'); 
+                      }}
+                      className="flex items-center justify-between p-1.5 rounded-xl hover:bg-neutral-800 cursor-pointer text-xs"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span className="text-neutral-500 font-mono text-[10px]">{idx + 1}</span>
+                        <div className="truncate">
+                          <p className="font-semibold text-white text-[11px] truncate">{t.title}</p>
+                          <p className="text-[9px] text-neutral-400">{t.artist}</p>
+                        </div>
                       </div>
+                      <span className="text-emerald-400 text-[10px]">Phát ▶</span>
                     </div>
-                    <span className="text-emerald-400 text-[10px]">Phát ▶</span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
@@ -372,7 +385,7 @@ export default function MusicPage() {
                   <div 
                     key={idx}
                     onClick={() => {
-                      const firstTrackIdx = tracks.findIndex(t => t.album_title === album.title);
+                      const firstTrackIdx = tracks.findIndex(t => (t.album_title || 'Tuyển tập') === album.title);
                       if (firstTrackIdx !== -1) playTrack(firstTrackIdx);
                       setCurrentTab('player');
                     }}
@@ -413,7 +426,7 @@ export default function MusicPage() {
 
         </div>
 
-        {/* THANH MENU DƯỚI CÙNG: NẰM GỌN TRONG ĐÁY KHUNG ĐEN KHI KHÔNG Ở PLAYER */}
+        {/* THANH MENU DƯỚI CÙNG */}
         {currentTab !== 'player' && (
           <div className="absolute bottom-0 left-0 right-0 bg-neutral-950/95 backdrop-blur-md border-t border-neutral-800/80 py-2.5 px-6 z-30 flex justify-around items-center rounded-b-3xl">
             <button 

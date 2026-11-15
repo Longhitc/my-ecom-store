@@ -149,8 +149,6 @@ export default function AdminMusicPage() {
         id: `album-${now}`,
         album_title: newAlbumTitle.trim(),
         cover_image: newAlbumCover.trim(),
-        created_at: now,
-        updated_at: now,
       };
 
       const res = await fetch('/api/admin/music/albums', {
@@ -159,9 +157,11 @@ export default function AdminMusicPage() {
         body: JSON.stringify(newAlbumPayload),
       });
 
-      if (!res.ok) throw new Error('Không thể tạo album mới');
-
       const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Không thể tạo album mới');
+      }
+
       const createdAlbum = data.album || newAlbumPayload;
 
       setAlbums((prev: Album[]) => [...prev, createdAlbum]);
@@ -171,23 +171,10 @@ export default function AdminMusicPage() {
       setNewAlbumTitle('');
       setNewAlbumCover('');
       setShowNewAlbumModal(false);
-      alert('Tạo album thành công! 🎉');
+      alert('Tạo album và lưu database thành công! 🎉');
     } catch (error: any) {
       console.error(error);
-      const now = Date.now();
-      const fallbackAlbum: Album = {
-        id: `album-${now}`,
-        album_title: newAlbumTitle.trim(),
-        cover_image: newAlbumCover.trim(),
-        created_at: now,
-        updated_at: now,
-      };
-      setAlbums((prev: Album[]) => [...prev, fallbackAlbum]);
-      setAlbumId(fallbackAlbum.id);
-      if (editingTrack) setEditAlbumId(fallbackAlbum.id);
-      setNewAlbumTitle('');
-      setNewAlbumCover('');
-      setShowNewAlbumModal(false);
+      alert(`Đã xảy ra lỗi khi tạo album: ${error.message}`);
     } finally {
       setCreatingAlbum(false);
     }
@@ -671,7 +658,6 @@ export default function AdminMusicPage() {
                 );
               })}
             </div>
-
             {totalPages > 1 && (
               <div className="flex items-center justify-center gap-1.5 pt-2">
                 <button

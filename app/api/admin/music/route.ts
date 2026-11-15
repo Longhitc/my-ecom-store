@@ -112,3 +112,25 @@ export async function PUT(request: Request) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
+
+// 4. DELETE: Xóa bài hát
+export async function DELETE(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+
+    if (!id) {
+      return NextResponse.json({ success: false, error: 'Thiếu ID bài hát cần xóa!' }, { status: 400 });
+    }
+
+    await db.execute({
+      sql: `DELETE FROM tracks WHERE id = ?`,
+      args: [id],
+    });
+
+    return NextResponse.json({ success: true, message: 'Xóa bài hát thành công!' });
+  } catch (error: any) {
+    console.error('Lỗi API xóa bài hát:', error);
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}
