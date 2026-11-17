@@ -58,6 +58,9 @@ export default function AdminProductsPage() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  // State trạng thái ẩn/hiện danh sách biến thể để tối ưu cuộn mượt
+  const [isVariantsExpanded, setIsVariantsExpanded] = useState(true);
+
   // State quản lý trạng thái upload ảnh
   const [uploadingFeatured, setUploadingFeatured] = useState(false);
   const [uploadingImages, setUploadingImages] = useState<{ [key: number]: boolean }>({});
@@ -92,7 +95,6 @@ export default function AdminProductsPage() {
         const rawMenus = data.data;
         const optionsMap: CategoryOption[] = [];
 
-        // Lọc các menu cấp 1 (parent_id === null) và menu con (parent_id !== null)
         const parentMenus = rawMenus.filter((m: any) => m.parent_id === null);
 
         parentMenus.forEach((parent: any) => {
@@ -101,7 +103,6 @@ export default function AdminProductsPage() {
             optionsMap.push({ title: parent.title, slug: parentSlug });
           }
 
-          // Tìm các menu con thuộc menu cha này
           const subMenus = rawMenus.filter((m: any) => m.parent_id === parent.id);
           subMenus.forEach((sub: any) => {
             const subSlug = sub.path ? sub.path.replace('/search/', '').replace('/search', '') : '';
@@ -267,6 +268,7 @@ export default function AdminProductsPage() {
     ]);
     setDefaultPrice(200000);
     setDefaultStock(10);
+    setIsVariantsExpanded(true);
 
     setFormData({
       title: '',
@@ -283,6 +285,7 @@ export default function AdminProductsPage() {
 
   const handleOpenEdit = async (product: Product) => {
     setEditingProduct(product);
+    setIsVariantsExpanded(true);
     setIsModalOpen(true);
 
     try {
@@ -441,6 +444,7 @@ export default function AdminProductsPage() {
     });
 
     setFormData((prev) => ({ ...prev, variants: generated }));
+    setIsVariantsExpanded(true);
   };
 
   const handleDelete = async (id: string) => {
@@ -587,7 +591,6 @@ export default function AdminProductsPage() {
   const startIndex = (currentPage - 1) * pageSize;
   const currentProducts = filteredProducts.slice(startIndex, startIndex + pageSize);
 
-  // Reset về trang 1 khi gõ tìm kiếm hoặc đổi danh mục
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, categoryFilter]);
@@ -887,13 +890,13 @@ export default function AdminProductsPage() {
           </>
         )}
 
-        {/* Modal Thêm / Sửa Sản Phẩm */}
+        {/* Modal Thêm / Sửa Sản Phẩm (Đã loại bỏ backdrop-blur để cuộn mượt không giựt lag) */}
         {isModalOpen && (
-          <div className="fixed inset-0 z-[9999] flex items-start sm:items-center justify-center bg-black/80 p-2 sm:p-4 pt-12 sm:pt-4 backdrop-blur-sm">
+          <div className="fixed inset-0 z-[9999] flex items-start sm:items-center justify-center bg-black/90 p-2 sm:p-4 pt-12 sm:pt-4">
             <div className="max-h-[85dvh] sm:max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-xl border border-neutral-800 bg-neutral-900 text-white shadow-2xl">
 
               {/* Header Modal */}
-              <div className="sticky top-0 z-20 flex items-center justify-between border-b border-neutral-800 bg-neutral-900 px-4 py-3 backdrop-blur">
+              <div className="sticky top-0 z-20 flex items-center justify-between border-b border-neutral-800 bg-neutral-900 px-4 py-3">
                 <h2 className="text-base sm:text-lg font-bold text-amber-400 truncate">
                   {editingProduct ? `Sửa sản phẩm #${editingProduct.id}` : 'Thêm sản phẩm mới'}
                 </h2>
@@ -978,17 +981,15 @@ export default function AdminProductsPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-1 sm:gap-4">
-                    <div>
-                      <label className="mb-1 block text-xs text-neutral-400">Mô tả Alt Ảnh Đại Diện</label>
-                      <input
-                        type="text"
-                        value={formData.featured_image_alt}
-                        onChange={(e) => setFormData({ ...formData, featured_image_alt: e.target.value })}
-                        className="w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-white focus:border-amber-500 focus:outline-none"
-                        placeholder="Mô tả thẻ alt..."
-                      />
-                    </div>
+                  <div>
+                    <label className="mb-1 block text-xs text-neutral-400">Mô tả Alt Ảnh Đại Diện</label>
+                    <input
+                      type="text"
+                      value={formData.featured_image_alt}
+                      onChange={(e) => setFormData({ ...formData, featured_image_alt: e.target.value })}
+                      className="w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-white focus:border-amber-500 focus:outline-none"
+                      placeholder="Mô tả thẻ alt..."
+                    />
                   </div>
 
                   {/* UPLOAD ẢNH ĐẠI DIỆN */}
@@ -1138,7 +1139,7 @@ export default function AdminProductsPage() {
                             type="text"
                             value={opt.name}
                             onChange={(e) => handleOptionNameChange(optIdx, e.target.value)}
-                            placeholder="Nhập tên thuộc tính (VD: Màu sắc, Size, Loại...)"
+                            placeholder="Nhập tên thuộc tính (VD: Màu sắc, Size...)"
                             className="w-full max-w-xs rounded border border-neutral-800 bg-neutral-900 px-2.5 py-1 text-xs font-bold text-amber-400 focus:border-amber-500 focus:outline-none"
                           />
                         </div>
@@ -1214,83 +1215,104 @@ export default function AdminProductsPage() {
                   </div>
                 </div>
 
-                {/* 5. DANH SÁCH BIẾN THỂ */}
+                {/* 5. DANH SÁCH BIẾN THỂ (CÓ NÚT THU GỌN ĐỂ CHỐNG GIỰT LAG) */}
                 <div className="space-y-2 border-t border-neutral-800 pt-4">
-                  <h3 className="font-semibold text-amber-500 text-xs sm:text-sm">
-                    5. Biến thể đã sinh ({formData.variants.length})
-                  </h3>
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold text-amber-500 text-xs sm:text-sm">
+                      5. Biến thể đã sinh ({formData.variants.length})
+                    </h3>
+                    {formData.variants.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setIsVariantsExpanded(!isVariantsExpanded)}
+                        className="text-xs text-amber-400 hover:underline font-medium"
+                      >
+                        {isVariantsExpanded ? '🔽 Thu gọn danh sách' : '▶️ Mở rộng danh sách'}
+                      </button>
+                    )}
+                  </div>
 
                   {formData.variants.length === 0 ? (
                     <div className="rounded-lg border border-dashed border-neutral-800 p-6 text-center text-xs text-neutral-500">
                       Chưa có biến thể nào. Khai báo thuộc tính ở mục 3 và bấm "⚡ Áp dụng & Tạo toàn bộ biến thể" ở mục 4!
                     </div>
-                  ) : (
-                    formData.variants.map((variant, vIdx) => (
-                      <div
-                        key={vIdx}
-                        className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-xs"
-                      >
-                        <span className="font-bold text-amber-400 shrink-0 min-w-[120px]">
-                          #{vIdx + 1}: {variant.title || `Biến thể ${vIdx + 1}`}
-                        </span>
+                  ) : isVariantsExpanded ? (
+                    <div className="space-y-2" style={{ contentVisibility: 'auto' }}>
+                      {formData.variants.map((variant, vIdx) => (
+                        <div
+                          key={vIdx}
+                          className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-xs"
+                        >
+                          <span className="font-bold text-amber-400 shrink-0 min-w-[120px]">
+                            #{vIdx + 1}: {variant.title || `Biến thể ${vIdx + 1}`}
+                          </span>
 
-                        <div className="flex items-center gap-2 shrink-0">
-                          <div className="flex items-center gap-1">
-                            <span className="text-[11px] text-neutral-400">Giá:</span>
-                            <input
-                              type="number"
-                              value={variant.amount}
-                              onChange={(e) => updateVariant(vIdx, 'amount', Number(e.target.value))}
-                              className="w-20 rounded border border-neutral-800 bg-neutral-900 px-2 py-1 text-xs text-white focus:border-amber-500 focus:outline-none"
-                            />
-                          </div>
-
-                          <div className="flex items-center gap-1">
-                            <span className="text-[11px] text-neutral-400">Kho:</span>
-                            <input
-                              type="number"
-                              value={variant.quantity_available}
-                              onChange={(e) => updateVariant(vIdx, 'quantity_available', Number(e.target.value))}
-                              className="w-14 rounded border border-neutral-800 bg-neutral-900 px-2 py-1 text-xs text-white focus:border-amber-500 focus:outline-none"
-                            />
-                          </div>
-                        </div>
-
-                        <div className="flex flex-wrap items-center gap-1.5 flex-1">
-                          {(variant.attributes || []).map((attr, aIdx) => (
-                            <div key={aIdx} className="flex items-center gap-1 rounded bg-neutral-900 border border-neutral-800 px-1.5 py-0.5">
-                              <span className="text-[10px] font-bold text-neutral-400">{attr.name}:</span>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <div className="flex items-center gap-1">
+                              <span className="text-[11px] text-neutral-400">Giá:</span>
                               <input
-                                type="text"
-                                value={attr.value}
-                                onChange={(e) => updateVariantAttribute(vIdx, aIdx, e.target.value)}
-                                className="w-16 rounded border border-neutral-800 bg-neutral-950 px-1 py-0.5 text-[11px] text-white focus:border-amber-500 focus:outline-none"
+                                type="number"
+                                value={variant.amount}
+                                onChange={(e) => updateVariant(vIdx, 'amount', Number(e.target.value))}
+                                className="w-20 rounded border border-neutral-800 bg-neutral-900 px-2 py-1 text-xs text-white focus:border-amber-500 focus:outline-none"
                               />
                             </div>
-                          ))}
-                        </div>
 
-                        <button
-                          type="button"
-                          onClick={() => removeVariant(vIdx)}
-                          className="text-xs text-red-400 hover:underline shrink-0"
-                        >
-                          Xóa
-                        </button>
-                      </div>
-                    ))
+                            <div className="flex items-center gap-1">
+                              <span className="text-[11px] text-neutral-400">Kho:</span>
+                              <input
+                                type="number"
+                                value={variant.quantity_available}
+                                onChange={(e) => updateVariant(vIdx, 'quantity_available', Number(e.target.value))}
+                                className="w-14 rounded border border-neutral-800 bg-neutral-900 px-2 py-1 text-xs text-white focus:border-amber-500 focus:outline-none"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-1.5 flex-1">
+                            {(variant.attributes || []).map((attr, aIdx) => (
+                              <div key={aIdx} className="flex items-center gap-1 rounded bg-neutral-900 border border-neutral-800 px-1.5 py-0.5">
+                                <span className="text-[10px] font-bold text-neutral-400">{attr.name}:</span>
+                                <input
+                                  type="text"
+                                  value={attr.value}
+                                  onChange={(e) => updateVariantAttribute(vIdx, aIdx, e.target.value)}
+                                  className="w-16 rounded border border-neutral-800 bg-neutral-950 px-1 py-0.5 text-[11px] text-white focus:border-amber-500 focus:outline-none"
+                                />
+                              </div>
+                            ))}
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => removeVariant(vIdx)}
+                            className="text-xs text-red-400 hover:underline shrink-0"
+                          >
+                            Xóa
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="rounded-lg border border-neutral-800 bg-neutral-950 p-3 text-xs text-neutral-400 text-center">
+                      Danh sách biến thể đang được thu gọn để cuộn mượt mà ({formData.variants.length} biến thể). Bấm "Mở rộng danh sách" để xem chi tiết.
+                    </div>
                   )}
 
                   <div className="pt-1">
                     <button
                       type="button"
-                      onClick={addVariantManually}
+                      onClick={() => {
+                        addVariantManually();
+                        setIsVariantsExpanded(true);
+                      }}
                       className="inline-flex items-center gap-1 rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-xs font-semibold text-amber-400 hover:bg-neutral-800 transition"
                     >
                       + Thêm biến thể thủ công
                     </button>
                   </div>
                 </div>
+
                 {/* Footer Buttons */}
                 <div className="flex justify-end gap-2 border-t border-neutral-800 pt-3">
                   <button

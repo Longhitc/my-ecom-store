@@ -45,48 +45,48 @@ export async function GET(req: Request) {
 
       const p = productRes.rows[0] as Record<string, any>;
 
-      // Lấy danh sách các danh mục thuộc sản phẩm này từ bảng product_categories
-      const categoriesRes = await db.execute(
-        'SELECT category_code FROM product_categories WHERE product_id = ?',
-        [id]
-      );
+      // Chạy song song các truy vấn lấy dữ liệu phụ để tối ưu tốc độ và giảm rows read
+      const [categoriesRes, imagesRes, variantsRes] = await Promise.all([
+        db.execute('SELECT category_code FROM product_categories WHERE product_id = ?', [id]),
+        db.execute('SELECT url FROM product_images WHERE product_id = ? ORDER BY position ASC, id ASC', [id]),
+        db.execute('SELECT id, title, amount, quantity_available FROM product_variants WHERE product_id = ?', [id])
+      ]);
+
       const categories = categoriesRes.rows.map((r) => String(r.category_code || ''));
-
-      // Lấy danh sách ảnh phụ
-      const imagesRes = await db.execute(
-        'SELECT url FROM product_images WHERE product_id = ? ORDER BY position ASC, id ASC',
-        [id]
-      );
       const images = imagesRes.rows.map((r) => String(r.url || ''));
+      const variantIds = variantsRes.rows.map((v) => (v as any).id);
 
-      // Lấy danh sách biến thể
-      const variantsRes = await db.execute(
-        'SELECT id, title, amount, quantity_available FROM product_variants WHERE product_id = ?',
-        [id]
-      );
+      // Lấy toàn bộ attributes của các variants trong 1 câu lệnh duy nhất (tránh N+1 query)
+      let allAttrsMap: Record<string, { name: string; value: string }[]> = {};
+      if (variantIds.length > 0) {
+        // Tạo chuỗi dấu hỏi chấm tương ứng với số lượng variantIds để dùng trong mệnh đề IN
+        const placeholders = variantIds.map(() => '?').join(', ');
+        const attrsRes = await db.execute(
+          `SELECT variant_id, name, value FROM variant_attributes WHERE variant_id IN (${placeholders})`,
+          variantIds
+        );
+        attrsRes.rows.forEach((row) => {
+          const a = row as Record<string, any>;
+          const vId = String(a.variant_id);
+          if (!allAttrsMap[vId]) allAttrsMap[vId] = [];
+          allAttrsMap[vId].push({
+            name: String(a.name || ''),
+            value: String(a.value || ''),
+          });
+        });
+      }
 
-      const variants = await Promise.all(
-        variantsRes.rows.map(async (row) => {
-          const v = row as Record<string, any>;
-          const attrsRes = await db.execute(
-            'SELECT name, value FROM variant_attributes WHERE variant_id = ?',
-            [v.id]
-          );
-          return {
-            id: String(v.id),
-            title: String(v.title || 'Mặc định'),
-            amount: Number(v.amount || 0),
-            quantity_available: Number(v.quantity_available || 0),
-            attributes: attrsRes.rows.map((attrRow) => {
-              const a = attrRow as Record<string, any>;
-              return {
-                name: String(a.name || ''),
-                value: String(a.value || ''),
-              };
-            }),
-          };
-        })
-      );
+      const variants = variantsRes.rows.map((row) => {
+        const v = row as Record<string, any>;
+        const vId = String(v.id);
+        return {
+          id: vId,
+          title: String(v.title || 'Mặc định'),
+          amount: Number(v.amount || 0),
+          quantity_available: Number(v.quantity_available || 0),
+          attributes: allAttrsMap[vId] || [],
+        };
+      });
 
       return NextResponse.json({
         product: {
@@ -94,8 +94,8 @@ export async function GET(req: Request) {
           handle: String(p.handle || ''),
           title: String(p.title || ''),
           description: String(p.description || ''),
-          categories: categories, // Trả về mảng nhiều danh mục
-          category: categories[0] || '', // Hỗ trợ tương thích ngược nếu giao diện cũ gọi lẻ 1 category
+          categories: categories,
+          category: categories[0] || '',
           featured_image_url: String(p.featured_image_url || ''),
           featured_image_alt: String(p.featured_image_alt || ''),
           is_active: p.is_active === 1 || p.is_active === true,
@@ -116,24 +116,25 @@ export async function GET(req: Request) {
     }
 
     // === TRƯỜNG HỢP 2: LẤY DANH SÁCH TẤT CẢ SẢN PHẨM ===
-    const result = await db.execute(`
-      SELECT 
-        p.id, 
-        p.handle,
-        p.title, 
-        p.description, 
-        p.featured_image_url, 
-        p.is_active,
-        COALESCE(p.min_price, MIN(v.amount), 0) as price,
-        COALESCE(SUM(v.quantity_available), 0) as stock
-      FROM products p
-      LEFT JOIN product_variants v ON p.id = v.product_id
-      GROUP BY p.id
-      ORDER BY p.id DESC
-    `);
+    const [result, allCategoriesRes] = await Promise.all([
+      db.execute(`
+        SELECT 
+          p.id, 
+          p.handle,
+          p.title, 
+          p.description, 
+          p.featured_image_url, 
+          p.is_active,
+          COALESCE(p.min_price, MIN(v.amount), 0) as price,
+          COALESCE(SUM(v.quantity_available), 0) as stock
+        FROM products p
+        LEFT JOIN product_variants v ON p.id = v.product_id
+        GROUP BY p.id
+        ORDER BY p.id DESC
+      `),
+      db.execute('SELECT product_id, category_code FROM product_categories')
+    ]);
 
-    // Lấy trước toàn bộ danh mục của các sản phẩm để gộp nhanh
-    const allCategoriesRes = await db.execute('SELECT product_id, category_code FROM product_categories');
     const categoriesMap: Record<string, string[]> = {};
     allCategoriesRes.rows.forEach((row) => {
       const r = row as Record<string, any>;
@@ -154,7 +155,7 @@ export async function GET(req: Request) {
         price: Number(r.price || 0),
         stock: Number(r.stock || 0),
         categories: productCategories,
-        category: productCategories[0] || '', // Tương thích ngược
+        category: productCategories[0] || '',
         image_url: String(r.featured_image_url || ''),
         is_active: r.is_active === 1 || r.is_active === true,
       };
@@ -183,7 +184,6 @@ export async function POST(req: Request) {
     const productId = `prod-${Date.now()}`;
     const { minPrice, maxPrice } = calculatePrices(variants);
 
-    // Lưu bảng products (không còn cột category đơn lẻ)
     await db.execute(
       `INSERT INTO products (id, handle, title, description, min_price, max_price, featured_image_url, featured_image_alt, is_active) 
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)`,
@@ -199,7 +199,6 @@ export async function POST(req: Request) {
       ]
     );
 
-    // Xử lý lưu danh sách nhiều danh mục vào bảng product_categories (hỗ trợ cả mảng `categories` hoặc chuỗi đơn `category`)
     let listCategories: string[] = [];
     if (Array.isArray(categories)) {
       listCategories = categories;
@@ -271,7 +270,6 @@ export async function PUT(req: Request) {
 
     const { minPrice, maxPrice } = calculatePrices(variants);
 
-    // Cập nhật thông tin chính của sản phẩm
     await db.execute(
       `UPDATE products 
        SET title = ?, handle = ?, description = ?, min_price = ?, max_price = ?, featured_image_url = ?, featured_image_alt = ?
@@ -279,9 +277,16 @@ export async function PUT(req: Request) {
       [title, handle || '', description || '', minPrice, maxPrice, featured_image_url || '', featured_image_alt || '', id]
     );
 
-    // Xóa danh mục cũ trong bảng trung gian & chèn lại danh sách mới
+    // Xóa dữ liệu cũ liên quan bằng các câu lệnh hàng loạt (bulk delete) để tiết kiệm rows read tối đa
     await db.execute('DELETE FROM product_categories WHERE product_id = ?', [id]);
+    await db.execute('DELETE FROM product_images WHERE product_id = ?', [id]);
     
+    await db.execute(
+      'DELETE FROM variant_attributes WHERE variant_id IN (SELECT id FROM product_variants WHERE product_id = ?)',
+      [id]
+    );
+    await db.execute('DELETE FROM product_variants WHERE product_id = ?', [id]);
+
     let listCategories: string[] = [];
     if (Array.isArray(categories)) {
       listCategories = categories;
@@ -298,8 +303,7 @@ export async function PUT(req: Request) {
         );
       }
     }
-    // Xóa ảnh phụ cũ & chèn mới
-    await db.execute('DELETE FROM product_images WHERE product_id = ?', [id]);
+
     if (Array.isArray(images)) {
       for (let i = 0; i < images.length; i++) {
         if (images[i] && images[i].trim() !== '') {
@@ -310,14 +314,6 @@ export async function PUT(req: Request) {
         }
       }
     }
-
-    // Xóa biến thể cũ & chèn mới
-    const oldVariants = await db.execute('SELECT id FROM product_variants WHERE product_id = ?', [id]);
-    for (const row of oldVariants.rows) {
-      const v = row as Record<string, any>;
-      await db.execute('DELETE FROM variant_attributes WHERE variant_id = ?', [v.id]);
-    }
-    await db.execute('DELETE FROM product_variants WHERE product_id = ?', [id]);
 
     if (Array.isArray(variants)) {
       for (let i = 0; i < variants.length; i++) {
@@ -358,7 +354,7 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ error: 'Thiếu ID sản phẩm cần xóa' }, { status: 400 });
     }
 
-    // Xóa dữ liệu liên quan ở các bảng phụ trước khi xóa sản phẩm
+    // Xóa toàn bộ dữ liệu liên quan bằng câu lệnh tối ưu (không dùng vòng lặp)
     await db.execute('DELETE FROM product_categories WHERE product_id = ?', [id]);
     await db.execute(
       'DELETE FROM variant_attributes WHERE variant_id IN (SELECT id FROM product_variants WHERE product_id = ?)',
