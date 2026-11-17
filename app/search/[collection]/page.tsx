@@ -120,7 +120,6 @@ async function getCollectionProducts(collection: string, sort?: string, page: nu
       const originalPriceFormatted = `${rawPrice.toLocaleString('vi-VN')} đ`;
       const promoPriceFormatted = hasPromo ? `${roundedPromoPrice.toLocaleString('vi-VN')} đ` : originalPriceFormatted;
 
-      // Sử dụng đúng chuẩn công thức từ trang chủ
       const discountText = row.discount_type === 'percent' 
         ? `-${row.discount_value}%` 
         : `-${Number(row.discount_value || 0).toLocaleString('vi-VN')}đ`;
@@ -175,6 +174,42 @@ async function getCollectionProducts(collection: string, sort?: string, page: nu
   }
 }
 
+// Hàm hỗ trợ tính toán dãy số trang thông minh (có dấu ... và giữ lại trang đầu/cuối)
+function getPaginationNumbers(currentPage: number, totalPages: number) {
+  const delta = 1;
+  const range: (number | string)[] = [];
+  const rangeWithDots: (number | string)[] = [];
+
+  range.push(1);
+
+  for (let i = currentPage - delta; i <= currentPage + delta; i++) {
+    if (i < totalPages && i > 1) {
+      range.push(i);
+    }
+  }
+
+  if (totalPages > 1) {
+    range.push(totalPages);
+  }
+
+  let l: number | undefined;
+  for (let i of range) {
+    if (typeof i === 'number') {
+      if (l) {
+        if (i - l === 2) {
+          rangeWithDots.push(l + 1);
+        } else if (i - l > 2) {
+          rangeWithDots.push('...');
+        }
+      }
+      rangeWithDots.push(i);
+      l = i;
+    }
+  }
+
+  return rangeWithDots;
+}
+
 export default async function CategoryPage(props: {
   params: Promise<{ collection: string }>;
   searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -192,6 +227,8 @@ export default async function CategoryPage(props: {
     paramsObj.set('page', pageNumber.toString());
     return `?${paramsObj.toString()}`;
   };
+
+  const paginationPages = getPaginationNumbers(currentPage, totalPages);
 
   return (
     <section className="pt-6 pb-12">
@@ -256,36 +293,60 @@ export default async function CategoryPage(props: {
             ))}
           </Grid>
 
-          {/* Thanh phân trang chuyển trang */}
+          {/* Thanh phân trang số thông minh */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2 mt-10">
+            <div className="flex items-center justify-center gap-1.5 mt-10">
+              {/* Nút Trang trước */}
               {currentPage > 1 ? (
                 <Link
                   href={createPageUrl(currentPage - 1)}
-                  className="px-4 py-2 text-sm font-medium bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-200"
+                  className="px-3.5 py-2 text-xs font-medium bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-200 transition"
                 >
-                  Trang trước
+                  ← Trang trước
                 </Link>
               ) : (
-                <span className="px-4 py-2 text-sm font-medium bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg text-neutral-400 cursor-not-allowed">
-                  Trang trước
+                <span className="px-3.5 py-2 text-xs font-medium bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg text-neutral-400 cursor-not-allowed">
+                  ← Trang trước
                 </span>
               )}
 
-              <span className="px-4 py-2 text-sm font-semibold text-neutral-700 dark:text-neutral-300">
-                Trang {currentPage} / {totalPages}
-              </span>
+              {/* Các nút số trang và dấu ... */}
+              {paginationPages.map((page, index) => {
+                if (page === '...') {
+                  return (
+                    <span key={`dots-${index}`} className="px-2 py-2 text-xs text-neutral-400">
+                      ...
+                    </span>
+                  );
+                }
 
+                const isCurrent = page === currentPage;
+                return (
+                  <Link
+                    key={page}
+                    href={createPageUrl(Number(page))}
+                    className={`min-w-[36px] h-[36px] flex items-center justify-center rounded-lg border text-xs font-semibold transition ${
+                      isCurrent
+                        ? 'bg-blue-600 border-blue-600 text-white shadow-sm'
+                        : 'border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-800 dark:text-neutral-200'
+                    }`}
+                  >
+                    {page}
+                  </Link>
+                );
+              })}
+
+              {/* Nút Trang sau */}
               {currentPage < totalPages ? (
                 <Link
                   href={createPageUrl(currentPage + 1)}
-                  className="px-4 py-2 text-sm font-medium bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-200"
+                  className="px-3.5 py-2 text-xs font-medium bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-200 transition"
                 >
-                  Trang sau
+                  Trang sau →
                 </Link>
               ) : (
-                <span className="px-4 py-2 text-sm font-medium bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg text-neutral-400 cursor-not-allowed">
-                  Trang sau
+                <span className="px-3.5 py-2 text-xs font-medium bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg text-neutral-400 cursor-not-allowed">
+                  Trang sau →
                 </span>
               )}
             </div>

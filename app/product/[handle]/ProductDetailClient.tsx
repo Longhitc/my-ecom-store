@@ -229,7 +229,10 @@ export default function ProductDetailClient({ handle }: { handle: string }) {
     }
   }
 
-  const promoPrice = activePromoItem?.promo_price ? Number(activePromoItem.promo_price) : null;
+  // ĐÃ SỬA: Thêm hàm làm tròn tương tự như trang chủ (Math.ceil(rawPromoPrice / 1000) * 1000)
+  const rawPromoPrice = activePromoItem?.promo_price ? Number(activePromoItem.promo_price) : null;
+  const promoPrice = rawPromoPrice !== null ? Math.ceil(rawPromoPrice / 1000) * 1000 : null;
+
   const finalPrice = promoPrice !== null && promoPrice < originalPrice ? promoPrice : originalPrice;
   const hasDiscount = promoPrice !== null && promoPrice < originalPrice;
 
@@ -564,7 +567,6 @@ export default function ProductDetailClient({ handle }: { handle: string }) {
             <p>{selectedVariant?.description || product.description}</p>
           </div>
         </div>
-
         <div className="block md:hidden order-3 mt-6">
           {reviewsSectionContent}
         </div>
