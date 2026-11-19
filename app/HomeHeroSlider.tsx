@@ -9,6 +9,7 @@ interface SlideItem {
   image?: string;
   link: string;
   isGuideCard?: boolean;
+  overlayLabel?: string;
 }
 
 const slides: SlideItem[] = [
@@ -19,9 +20,10 @@ const slides: SlideItem[] = [
     isGuideCard: true,
   },
   {
-    title: 'Hàng Có Sẵn - Giao Ngay Lập Tức',
+    title: 'Nghe nhạc khi mua sắm',
     image: 'https://res.cloudinary.com/dpsejpp2/image/upload/v1786934595/H%C3%ACnh_N%E1%BB%81n_Shop_1.jpg',
-    link: '/search/co-san',
+    link: '/music',
+    overlayLabel: 'Nghe nhạc khi mua sắm',
   },
   {
     title: 'Bộ Sưu Tập Mới Nhất 2026',
@@ -78,12 +80,19 @@ export default function HomeHeroSlider() {
             )}
           </Link>
         ) : (
-          <Link href={currentSlide.link} className="flex h-full w-full items-center justify-center">
+          <Link href={currentSlide.link} className="relative flex h-full w-full items-center justify-center">
             <img
               src={currentSlide.image}
               alt={currentSlide.title}
               className="h-full w-full object-contain transition-all duration-500"
             />
+            {currentSlide.overlayLabel && (
+              <div className="pointer-events-none absolute top-2 left-1/2 -translate-x-1/2 z-10">
+                <span className="inline-flex items-center gap-1 rounded-lg bg-black/70 px-3 py-1 text-[11px] sm:text-xs font-bold tracking-wide text-white shadow-md backdrop-blur-[2px] whitespace-nowrap">
+                  🎵 {currentSlide.overlayLabel}
+                </span>
+              </div>
+            )}
           </Link>
         )}
 

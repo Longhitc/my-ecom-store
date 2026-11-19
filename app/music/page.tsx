@@ -18,7 +18,7 @@ export default function MusicPage() {
     seekTo,
   } = useAudio();
 
-  const [currentTab, setCurrentTab] = useState<'player' | 'home' | 'search' | 'library' | 'create'>('player');
+  const [currentTab, setCurrentTab] = useState<'player' | 'home' | 'search' | 'library' | 'create'>('home');
   const [showPlaylist, setShowPlaylist] = useState(false);
 
   const formatTime = (timeInSeconds: number) => {
