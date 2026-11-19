@@ -14,8 +14,8 @@ interface SlideItem {
 
 const slides: SlideItem[] = [
   {
-    title: 'Hướng dẫn đăng ký tài khoản',
-    subtitle: 'Tạo tài khoản nhanh chóng để theo dõi đơn hàng và nhận ưu đãi thành viên.',
+    title: 'Hướng dẫn đăng ký tài khoản và cài app',
+    subtitle: 'Tạo tài khoản nhanh chóng để theo dõi đơn hàng và cài đặt ứng dụng.',
     link: '/guides',
     isGuideCard: true,
   },
