@@ -5,11 +5,19 @@ import { useEffect, useState } from 'react';
 
 interface SlideItem {
   title: string;
-  image: string;
+  subtitle?: string;
+  image?: string;
   link: string;
+  isGuideCard?: boolean;
 }
 
 const slides: SlideItem[] = [
+  {
+    title: 'Hướng dẫn đăng ký tài khoản',
+    subtitle: 'Tạo tài khoản nhanh chóng để theo dõi đơn hàng và nhận ưu đãi thành viên.',
+    link: '/guides',
+    isGuideCard: true,
+  },
   {
     title: 'Hàng Có Sẵn - Giao Ngay Lập Tức',
     image: 'https://res.cloudinary.com/dpsejpp2/image/upload/v1786934595/H%C3%ACnh_N%E1%BB%81n_Shop_1.jpg',
@@ -52,11 +60,32 @@ export default function HomeHeroSlider() {
 
       {/* Dùng object-contain để hiện trọn vẹn bức ảnh không bị cắt góc */}
       <div className="relative aspect-[21/9] w-full overflow-hidden rounded-lg bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center">
-        <img
-          src={currentSlide.image}
-          alt={currentSlide.title}
-          className="h-full w-full object-contain transition-all duration-500"
-        />
+        {currentSlide.isGuideCard ? (
+          <Link
+            href={currentSlide.link}
+            className="flex h-full w-full flex-col justify-center bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-700 px-5 py-3 text-white transition hover:brightness-105"
+          >
+            <span className="inline-flex w-fit items-center rounded-full bg-white/20 px-2.5 py-0.5 text-[10px] font-semibold">
+              Hỗ trợ khách hàng
+            </span>
+            <h2 className="mt-1 text-sm sm:text-lg font-bold leading-snug tracking-tight">
+              {currentSlide.title}
+            </h2>
+            {currentSlide.subtitle && (
+              <p className="mt-0.5 text-[11px] sm:text-xs text-white/90 line-clamp-1">
+                {currentSlide.subtitle}
+              </p>
+            )}
+          </Link>
+        ) : (
+          <Link href={currentSlide.link} className="flex h-full w-full items-center justify-center">
+            <img
+              src={currentSlide.image}
+              alt={currentSlide.title}
+              className="h-full w-full object-contain transition-all duration-500"
+            />
+          </Link>
+        )}
 
         <button
           onClick={prevSlide}
