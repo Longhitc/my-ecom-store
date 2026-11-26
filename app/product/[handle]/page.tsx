@@ -45,7 +45,7 @@ export async function generateMetadata({
     }
   }
 
-  const baseUrl = 'https://depvaxinhshop.vercel.app';
+  const baseUrl = 'https://depvaxinhshop.com';
   if (imageUrl && !imageUrl.startsWith('http')) {
     imageUrl = `${baseUrl}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
   }
