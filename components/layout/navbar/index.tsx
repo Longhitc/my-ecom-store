@@ -17,11 +17,11 @@ interface MenuItem {
 
 function AdminMenu({ user, isMounted }: { user: any; isMounted: boolean }) {
   const pathname = usePathname();
-  
+
   if (!isMounted) return null;
 
   const isAdmin = user?.is_admin === true || Number(user?.is_admin) === 1;
-  
+
   if (!isAdmin) return null;
 
   const allowedMenus = user?.admin?.allowed_menus || user?.admin?.allowedMenus || [];
@@ -31,19 +31,19 @@ function AdminMenu({ user, isMounted }: { user: any; isMounted: boolean }) {
   return (
     <div className="w-full border-b border-neutral-800 bg-neutral-900 px-2 py-1.5 text-xs text-white">
       <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-1.5 sm:flex-row">
-        
-        <div className="flex shrink-0 items-center gap-1 font-bold text-amber-400 text-[11px] sm:text-xs">
+
+        <div className="flex shrink-0 items-center gap-1 text-[11px] font-bold text-amber-400 sm:text-xs">
           <span>🛠️</span>
           <span>Quản trị : {user?.admin?.role_name || user?.admin?.roleName || 'Admin'}</span>
         </div>
 
-        <div className="grid w-full grid-cols-4 sm:flex sm:flex-wrap items-center justify-end gap-1 rounded-lg bg-neutral-800/60 p-1 text-[10px] sm:text-xs font-medium sm:w-auto">
-          
-          <Link 
-            href="/admin/dashboard" 
-            className={`flex items-center justify-center gap-0.5 sm:gap-1 rounded px-1.5 py-1 transition-colors whitespace-nowrap ${
+        <div className="grid w-full grid-cols-4 items-center justify-end gap-1 rounded-lg bg-neutral-800/60 p-1 text-[10px] font-medium sm:flex sm:w-auto sm:flex-wrap sm:text-xs">
+
+          <Link
+            href="/admin/dashboard"
+            className={`flex items-center justify-center gap-0.5 whitespace-nowrap rounded px-1.5 py-1 transition-colors sm:gap-1 ${
               pathname === '/admin/dashboard'
-                ? 'bg-neutral-700 text-amber-400 font-bold'
+                ? 'bg-neutral-700 font-bold text-amber-400'
                 : 'text-neutral-300 hover:bg-neutral-700/50 hover:text-white'
             }`}
           >
@@ -52,11 +52,11 @@ function AdminMenu({ user, isMounted }: { user: any; isMounted: boolean }) {
           </Link>
 
           {allowedMenus.includes('orders') && (
-            <Link 
-              href="/admin/orders" 
-              className={`flex items-center justify-center gap-0.5 sm:gap-1 rounded px-1.5 py-1 transition-colors whitespace-nowrap ${
+            <Link
+              href="/admin/orders"
+              className={`flex items-center justify-center gap-0.5 whitespace-nowrap rounded px-1.5 py-1 transition-colors sm:gap-1 ${
                 pathname === '/admin/orders'
-                  ? 'bg-neutral-700 text-amber-400 font-bold'
+                  ? 'bg-neutral-700 font-bold text-amber-400'
                   : 'text-neutral-300 hover:bg-neutral-700/50 hover:text-white'
               }`}
             >
@@ -66,11 +66,11 @@ function AdminMenu({ user, isMounted }: { user: any; isMounted: boolean }) {
           )}
 
           {allowedMenus.includes('products') && (
-            <Link 
-              href="/admin/products" 
-              className={`flex items-center justify-center gap-0.5 sm:gap-1 rounded px-1.5 py-1 transition-colors whitespace-nowrap ${
+            <Link
+              href="/admin/products"
+              className={`flex items-center justify-center gap-0.5 whitespace-nowrap rounded px-1.5 py-1 transition-colors sm:gap-1 ${
                 pathname === '/admin/products'
-                  ? 'bg-neutral-700 text-amber-400 font-bold'
+                  ? 'bg-neutral-700 font-bold text-amber-400'
                   : 'text-neutral-300 hover:bg-neutral-700/50 hover:text-white'
               }`}
             >
@@ -80,11 +80,11 @@ function AdminMenu({ user, isMounted }: { user: any; isMounted: boolean }) {
           )}
 
           {allowedMenus.includes('promotions') && (
-            <Link 
-              href="/admin/promotions" 
-              className={`flex items-center justify-center gap-0.5 sm:gap-1 rounded px-1.5 py-1 transition-colors whitespace-nowrap ${
+            <Link
+              href="/admin/promotions"
+              className={`flex items-center justify-center gap-0.5 whitespace-nowrap rounded px-1.5 py-1 transition-colors sm:gap-1 ${
                 pathname?.startsWith('/admin/promotions')
-                  ? 'bg-neutral-700 text-amber-400 font-bold'
+                  ? 'bg-neutral-700 font-bold text-amber-400'
                   : 'text-neutral-300 hover:bg-neutral-700/50 hover:text-white'
               }`}
             >
@@ -94,11 +94,11 @@ function AdminMenu({ user, isMounted }: { user: any; isMounted: boolean }) {
           )}
 
           {allowedMenus.includes('customers') && (
-            <Link 
-              href="/admin/customers" 
-              className={`flex items-center justify-center gap-0.5 sm:gap-1 rounded px-1.5 py-1 transition-colors whitespace-nowrap ${
+            <Link
+              href="/admin/customers"
+              className={`flex items-center justify-center gap-0.5 whitespace-nowrap rounded px-1.5 py-1 transition-colors sm:gap-1 ${
                 pathname === '/admin/customers'
-                  ? 'bg-neutral-700 text-amber-400 font-bold'
+                  ? 'bg-neutral-700 font-bold text-amber-400'
                   : 'text-neutral-300 hover:bg-neutral-700/50 hover:text-white'
               }`}
             >
@@ -108,11 +108,11 @@ function AdminMenu({ user, isMounted }: { user: any; isMounted: boolean }) {
           )}
 
           {allowedMenus.includes('roles') && (
-            <Link 
-              href="/admin/roles" 
-              className={`flex items-center justify-center gap-0.5 sm:gap-1 rounded px-1.5 py-1 transition-colors whitespace-nowrap ${
+            <Link
+              href="/admin/roles"
+              className={`flex items-center justify-center gap-0.5 whitespace-nowrap rounded px-1.5 py-1 transition-colors sm:gap-1 ${
                 pathname === '/admin/roles'
-                  ? 'bg-neutral-700 text-amber-400 font-bold'
+                  ? 'bg-neutral-700 font-bold text-amber-400'
                   : 'text-neutral-300 hover:bg-neutral-700/50 hover:text-white'
               }`}
             >
@@ -121,11 +121,11 @@ function AdminMenu({ user, isMounted }: { user: any; isMounted: boolean }) {
             </Link>
           )}
 
-          <Link 
-            href="/admin/store-menus" 
-            className={`flex items-center justify-center gap-0.5 sm:gap-1 rounded px-1.5 py-1 transition-colors whitespace-nowrap ${
+          <Link
+            href="/admin/store-menus"
+            className={`flex items-center justify-center gap-0.5 whitespace-nowrap rounded px-1.5 py-1 transition-colors sm:gap-1 ${
               pathname === '/admin/store-menus'
-                ? 'bg-neutral-700 text-amber-400 font-bold'
+                ? 'bg-neutral-700 font-bold text-amber-400'
                 : 'text-neutral-300 hover:bg-neutral-700/50 hover:text-white'
             }`}
           >
@@ -133,11 +133,11 @@ function AdminMenu({ user, isMounted }: { user: any; isMounted: boolean }) {
             <span>Menu Shop</span>
           </Link>
 
-          <Link 
-            href="/admin/chats" 
-            className={`flex items-center justify-center gap-0.5 sm:gap-1 rounded px-1.5 py-1 transition-colors whitespace-nowrap ${
+          <Link
+            href="/admin/chats"
+            className={`flex items-center justify-center gap-0.5 whitespace-nowrap rounded px-1.5 py-1 transition-colors sm:gap-1 ${
               pathname === '/admin/chats'
-                ? 'bg-neutral-700 text-amber-400 font-bold'
+                ? 'bg-neutral-700 font-bold text-amber-400'
                 : 'text-neutral-300 hover:bg-neutral-700/50 hover:text-white'
             }`}
           >
@@ -162,8 +162,8 @@ function SubMenuItem({ subItem, onClose }: { subItem: MenuItem; onClose: () => v
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         className={`flex w-full items-center gap-2.5 rounded-md px-3 py-2.5 text-xs font-semibold transition-all ${
-          isHovered 
-            ? 'bg-neutral-200 text-amber-600 dark:bg-neutral-800 dark:text-amber-400' 
+          isHovered
+            ? 'bg-neutral-200 text-amber-600 dark:bg-neutral-800 dark:text-amber-400'
             : 'text-neutral-700 dark:text-neutral-300'
         }`}
       >
@@ -190,26 +190,26 @@ export default function Navbar({ menu = [] }: NavbarProps) {
   }, []);
 
   return (
-    <header suppressHydrationWarning className="sticky top-0 z-[100] w-full shadow-sm bg-white dark:bg-black mb-2 sm:mb-3">
+    <header suppressHydrationWarning className="sticky top-0 z-[100] mb-2 w-full bg-white shadow-sm dark:bg-black sm:mb-3">
       <AdminMenu user={customer} isMounted={isMounted} />
 
-      <nav className="relative z-[100] flex items-center justify-between px-3 py-2.5 sm:px-4 w-full">
-        
+      <nav className="relative z-[100] flex w-full items-center justify-between px-3 py-2.5 sm:px-4">
+
         {/* Cột Trái: Logo + Tên + Menu */}
         <div className="flex shrink-0 items-center gap-2 lg:gap-4">
           <div className="block flex-none md:hidden">
             <Suspense fallback={null}>
-              <MobileMenu 
+              <MobileMenu
                 isAdmin={Boolean(
-                  isMounted && 
-                  customer && 
-                  ((customer as any)?.is_admin === true || Number((customer as any)?.is_admin) === 1) && 
+                  isMounted &&
+                  customer &&
+                  ((customer as any)?.is_admin === true || Number((customer as any)?.is_admin) === 1) &&
                   ((customer as any)?.admin?.allowed_menus || (customer as any)?.admin?.allowedMenus || []).length > 0
                 )}
                 menu={[
                   { title: 'Trang Chủ', path: '/search' },
                   ...menu.filter(item => item.path !== '/search')
-                ] as any} 
+                ] as any}
               />
             </Suspense>
           </div>
@@ -232,8 +232,8 @@ export default function Navbar({ menu = [] }: NavbarProps) {
                 const isOpen = openMenu === item.title;
 
                 return (
-                  <li 
-                    key={item.title} 
+                  <li
+                    key={item.title}
                     className="relative py-2"
                     onMouseEnter={() => hasChildren && setOpenMenu(item.title)}
                     onMouseLeave={() => hasChildren && setOpenMenu(null)}
@@ -242,7 +242,7 @@ export default function Navbar({ menu = [] }: NavbarProps) {
                       href={item.path}
                       prefetch={true}
                       onClick={() => setOpenMenu(null)}
-                      className="flex items-center gap-1 whitespace-nowrap text-neutral-700 transition-colors hover:text-black dark:text-neutral-400 dark:hover:text-white text-xs lg:text-sm font-medium"
+                      className="flex items-center gap-1 whitespace-nowrap text-xs font-medium text-neutral-700 transition-colors hover:text-black dark:text-neutral-400 dark:hover:text-white lg:text-sm"
                     >
                       {item.title}
                       {hasChildren && (
@@ -264,10 +264,10 @@ export default function Navbar({ menu = [] }: NavbarProps) {
                         <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white p-1.5 shadow-2xl dark:border-neutral-700 dark:bg-neutral-900">
                           <ul className="flex flex-col gap-1">
                             {item.items!.map((subItem) => (
-                              <SubMenuItem 
-                                key={subItem.title} 
-                                subItem={subItem} 
-                                onClose={() => setOpenMenu(null)} 
+                              <SubMenuItem
+                                key={subItem.title}
+                                subItem={subItem}
+                                onClose={() => setOpenMenu(null)}
                               />
                             ))}
                           </ul>
@@ -282,8 +282,8 @@ export default function Navbar({ menu = [] }: NavbarProps) {
         </div>
 
         {/* Khu vực giữa: MiniPlayer */}
-        <div className="hidden md:flex items-center justify-center shrink-0 px-1">
-          <MiniPlayer />
+        <div className="hidden shrink-0 items-center justify-center px-1 md:flex">
+          <MiniPlayer variant="desktop" />
         </div>
 
         {/* Khu vực Mobile User */}
@@ -300,14 +300,14 @@ export default function Navbar({ menu = [] }: NavbarProps) {
         </div>
 
         {/* Cột Phải: Giỏ hàng hiển thị trọn vẹn */}
-        <div className="flex shrink-0 items-center justify-end gap-1.5 sm:gap-2 text-xs">
+        <div className="flex shrink-0 items-center justify-end gap-1.5 text-xs sm:gap-2">
           {!isMounted ? (
             <div className="h-6 w-20" />
           ) : customer ? (
             <div className="flex items-center gap-1.5">
               <Link
                 href="/account"
-                className="hidden md:inline-block max-w-[90px] truncate whitespace-nowrap font-medium text-neutral-800 transition-colors hover:text-amber-500 dark:text-neutral-200 text-xs"
+                className="hidden max-w-[90px] truncate whitespace-nowrap text-xs font-medium text-neutral-800 transition-colors hover:text-amber-500 dark:text-neutral-200 md:inline-block"
                 title={customer.name}
               >
                 {customer.name}
@@ -321,11 +321,11 @@ export default function Navbar({ menu = [] }: NavbarProps) {
             </div>
           ) : (
             <>
-              <Link href="/register" className="whitespace-nowrap text-neutral-700 hover:text-black dark:text-neutral-300 dark:hover:text-white text-xs">
+              <Link href="/register" className="whitespace-nowrap text-xs text-neutral-700 hover:text-black dark:text-neutral-300 dark:hover:text-white">
                 Đăng ký
               </Link>
               <span className="text-neutral-300 dark:text-neutral-700">|</span>
-              <Link href="/login" className="whitespace-nowrap text-neutral-700 hover:text-black dark:text-neutral-300 dark:hover:text-white text-xs">
+              <Link href="/login" className="whitespace-nowrap text-xs text-neutral-700 hover:text-black dark:text-neutral-300 dark:hover:text-white">
                 Đăng nhập
               </Link>
             </>
@@ -344,6 +344,13 @@ export default function Navbar({ menu = [] }: NavbarProps) {
           </div>
         </div>
       </nav>
+
+      {/* Dải MiniPlayer dưới thanh điều hướng trên Mobile khi đang phát nhạc */}
+      {isMounted && (
+        <div className="border-t border-neutral-100 px-3 py-1.5 dark:border-neutral-900 md:hidden">
+          <MiniPlayer variant="mobile" />
+        </div>
+      )}
     </header>
   );
 }

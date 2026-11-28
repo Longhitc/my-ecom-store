@@ -11,7 +11,7 @@ import { Menu } from "lib/shopify/types";
 function getMenuIcon(path: string, title: string) {
   const p = path.toLowerCase();
   const t = title.toLowerCase();
-  
+
   if (p.includes('trang-chu') || t.includes('trang chủ') || p === '/search') return '🏠';
   if (p.includes('nam') && p.includes('nu')) return '👫';
   if (p.includes('nam')) return '👔';
@@ -35,19 +35,41 @@ export default function MobileMenu({ menu, isAdmin = false }: MobileMenuProps) {
   const searchParams = useSearchParams();
   const [isOpen, setIsOpen] = useState(false);
   const [openSubMenus, setOpenSubMenus] = useState<Record<string, boolean>>({});
+  const [headerBottom, setHeaderBottom] = useState<number>(isAdmin ? 145 : 64);
 
-  const openMobileMenu = () => setIsOpen(true);
+  const syncHeaderOffset = () => {
+    const headerEl = document.querySelector("header");
+    if (headerEl) {
+      const rect = headerEl.getBoundingClientRect();
+      const bottom = Math.max(56, Math.round(rect.bottom));
+      setHeaderBottom(bottom);
+      return;
+    }
+    setHeaderBottom(isAdmin ? 145 : 64);
+  };
+
+  const openMobileMenu = () => {
+    syncHeaderOffset();
+    setIsOpen(true);
+  };
+
   const closeMobileMenu = () => setIsOpen(false);
 
   useEffect(() => {
+    if (!isOpen) return;
+    syncHeaderOffset();
+
     const handleResize = () => {
       if (window.innerWidth > 768) {
         setIsOpen(false);
+        return;
       }
+      syncHeaderOffset();
     };
+
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
-  }, [isOpen]);
+  }, [isOpen, isAdmin]);
 
   useEffect(() => {
     setIsOpen(false);
@@ -57,15 +79,13 @@ export default function MobileMenu({ menu, isAdmin = false }: MobileMenuProps) {
     setOpenSubMenus(prev => ({ ...prev, [title]: !prev[title] }));
   };
 
-  // ĐÚNG LOGIC: Có admin thì thụt xuống 145px, không có admin (khách) thì đẩy lên 64px để lấp lỗ thủng
-  const topClass = isAdmin ? "top-[145px] h-[calc(100%-145px)]" : "top-[64px] h-[calc(100%-64px)]";
-
   return (
     <>
       <button
+        type="button"
         onClick={openMobileMenu}
         aria-label="Open mobile menu"
-        className="flex h-11 w-11 items-center justify-center rounded-xl border border-neutral-200 text-black transition-colors md:hidden dark:border-neutral-700 dark:text-white bg-neutral-50 dark:bg-neutral-900 shadow-sm"
+        className="flex h-11 w-11 items-center justify-center rounded-xl border border-neutral-200 bg-neutral-50 text-black shadow-sm transition-colors dark:border-neutral-700 dark:bg-neutral-900 dark:text-white md:hidden"
       >
         <Bars3Icon className="h-5 w-5" />
       </button>
@@ -91,8 +111,13 @@ export default function MobileMenu({ menu, isAdmin = false }: MobileMenuProps) {
             leaveFrom="translate-x-0"
             leaveTo="translate-x-[-100%]"
           >
-            <Dialog.Panel className={`fixed bottom-0 left-0 right-0 ${topClass} flex w-full flex-col bg-white dark:bg-neutral-950 shadow-2xl overflow-y-auto border-t border-neutral-200 dark:border-neutral-800`}>
-              
+            <Dialog.Panel
+              style={{
+                top: `${headerBottom}px`,
+                height: `calc(100dvh - ${headerBottom}px)`,
+              }}
+              className="fixed bottom-0 left-0 right-0 flex w-full flex-col overflow-y-auto border-t border-neutral-200 bg-white shadow-2xl dark:border-neutral-800 dark:bg-neutral-950"
+            >
               <div className="p-4 pt-4 pb-12">
                 <ul className="flex w-full flex-col gap-2.5">
                   {menu.map((item: any) => {
@@ -103,16 +128,16 @@ export default function MobileMenu({ menu, isAdmin = false }: MobileMenuProps) {
                     return (
                       <li
                         key={item.title}
-                        className="rounded-2xl border border-neutral-100 dark:border-neutral-900 bg-neutral-50/60 dark:bg-neutral-900/40 overflow-hidden transition-all shadow-sm"
+                        className="overflow-hidden rounded-2xl border border-neutral-100 bg-neutral-50/60 shadow-sm transition-all dark:border-neutral-900 dark:bg-neutral-900/40"
                       >
                         <div className="flex items-center justify-between p-3.5">
                           <Link
                             href={item.path}
                             prefetch={true}
                             onClick={closeMobileMenu}
-                            className="flex items-center gap-3.5 text-sm font-semibold text-neutral-800 dark:text-neutral-100 transition-colors hover:text-amber-500 flex-1"
+                            className="flex flex-1 items-center gap-3.5 text-sm font-semibold text-neutral-800 transition-colors hover:text-amber-500 dark:text-neutral-100"
                           >
-                            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 text-lg shadow-inner">
+                            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/10 text-lg text-amber-600 shadow-inner dark:text-amber-400">
                               {iconSymbol}
                             </span>
                             <span className="truncate">{item.title}</span>
@@ -120,8 +145,9 @@ export default function MobileMenu({ menu, isAdmin = false }: MobileMenuProps) {
 
                           {hasChildren && (
                             <button
+                              type="button"
                               onClick={() => toggleSubMenu(item.title)}
-                              className="p-2 rounded-lg text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors"
+                              className="rounded-lg p-2 text-neutral-400 transition-colors hover:text-neutral-700 dark:hover:text-neutral-200"
                             >
                               <svg
                                 xmlns="http://www.w3.org/2000/svg"
@@ -138,14 +164,14 @@ export default function MobileMenu({ menu, isAdmin = false }: MobileMenuProps) {
                         </div>
 
                         {hasChildren && isSubOpen && (
-                          <ul className="flex flex-col gap-1 px-3.5 pb-3.5 pt-1 border-t border-neutral-100 dark:border-neutral-900/80 bg-white dark:bg-black/40">
+                          <ul className="flex flex-col gap-1 border-t border-neutral-100 bg-white px-3.5 pb-3.5 pt-1 dark:border-neutral-900/80 dark:bg-black/40">
                             {item.items.map((subItem: any) => (
                               <li key={subItem.title}>
                                 <Link
                                   href={subItem.path}
                                   prefetch={true}
                                   onClick={closeMobileMenu}
-                                  className="flex items-center gap-2.5 text-xs font-medium text-neutral-600 dark:text-neutral-400 hover:text-amber-500 dark:hover:text-amber-400 transition-colors py-2 px-3 rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800/60"
+                                  className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-medium text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-amber-500 dark:text-neutral-400 dark:hover:bg-neutral-800/60 dark:hover:text-amber-400"
                                 >
                                   <span className="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
                                   <span className="truncate">{subItem.title}</span>
@@ -159,7 +185,6 @@ export default function MobileMenu({ menu, isAdmin = false }: MobileMenuProps) {
                   })}
                 </ul>
               </div>
-
             </Dialog.Panel>
           </Transition.Child>
         </Dialog>
@@ -167,3 +192,4 @@ export default function MobileMenu({ menu, isAdmin = false }: MobileMenuProps) {
     </>
   );
 }
+
