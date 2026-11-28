@@ -24,44 +24,55 @@ export default function GuidesPage() {
           </Link>
         </div>
 
-        <div className="space-y-5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4 sm:p-6 text-sm leading-relaxed text-neutral-700 dark:text-neutral-300 shadow-sm">
+        <div className="space-y-6 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4 sm:p-6 text-sm leading-relaxed text-neutral-700 dark:text-neutral-300 shadow-sm">
           <p>
             Chào mừng bạn đến với <strong>Đẹp Và Xinh Shop</strong>. Việc đăng ký tài khoản giúp bạn theo dõi đơn hàng nhanh chóng, lưu địa chỉ giao hàng mặc định và nhận các chương trình ưu đãi dành riêng cho thành viên.
           </p>
 
-          <section className="space-y-2">
+          <section className="space-y-3">
             <h2 className="text-base font-bold text-neutral-900 dark:text-white">
               Bước 1: Truy cập trang đăng ký
             </h2>
             <p>
-              Trên thanh điều hướng phía trên cùng của website, nhấn vào biểu tượng tài khoản (hình người) hoặc chọn mục <strong>Đăng ký</strong> để mở biểu mẫu tạo tài khoản mới.
+              Trên thanh điều hướng phía trên cùng của website, nhấn vào chữ <strong>Đăng ký</strong> ở góc phải bên cạnh biểu tượng tài khoản để mở biểu mẫu tạo tài khoản mới.
             </p>
+            <div className="relative my-4 overflow-hidden rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950">
+              <img
+                src="https://res.cloudinary.com/dpsejpp2/image/upload/v1795854035/Gemini_Generated_Image_oekl6toekl6toekl.png"
+                alt="Hướng dẫn click đăng ký"
+                className="w-full object-cover"
+              />
+            </div>
           </section>
 
-          <section className="space-y-2">
+          <section className="space-y-3">
             <h2 className="text-base font-bold text-neutral-900 dark:text-white">
-              Bước 2: Nhập thông tin cá nhân
+              Bước 2: Nhập thông tin cá nhân & Bước 3: Hoàn tất
             </h2>
             <ul className="list-disc pl-5 space-y-1">
               <li>
                 <strong>Họ và tên:</strong> Nhập đầy đủ họ tên người nhận hàng để thuận tiện khi giao nhận.
               </li>
               <li>
-                <strong>Email / Số điện thoại:</strong> Dùng để đăng nhập và nhận thông báo cập nhật trạng thái đơn hàng.
+                <strong>Số điện thoại:</strong> Dùng để đăng nhập và nhận liên hệ khi giao hàng.
               </li>
               <li>
-                <strong>Mật khẩu:</strong> Đặt mật khẩu đủ mạnh (nên có cả chữ và số) và xác nhận lại mật khẩu.
+                <strong>Email:</strong> Nhận thông báo cập nhật trạng thái đơn hàng.
+              </li>
+              <li>
+                <strong>Mật khẩu:</strong> Đặt mật khẩu đủ mạnh và dễ nhớ.
+              </li>
+              <li>
+                Kiểm tra kỹ thông tin đã điền, sau đó nhấn nút <strong>Đăng ký</strong> màu xanh để hoàn tất.
               </li>
             </ul>
-          </section>
-
-          <section className="space-y-2">
-            <h2 className="text-base font-bold text-neutral-900 dark:text-white">
-              Bước 3: Hoàn tất tạo tài khoản
-            </h2>
-            <p>
-              Kiểm tra kỹ thông tin đã điền, nhấn nút <strong>Đăng ký</strong>. Sau khi hệ thống xác nhận thành công, bạn có thể đăng nhập ngay và bắt đầu mua sắm.
-            </p>
+            <div className="relative my-4 overflow-hidden rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950">
+              <img
+                src="https://res.cloudinary.com/dpsejpp2/image/upload/v1795854047/Gemini_Generated_Image_tg9qcitg9qcitg9q.png"
+                alt="Hướng dẫn nhập thông tin đăng ký"
+                className="w-full object-cover"
+              />
+            </div>
           </section>
 
           <section className="rounded-xl bg-neutral-50 dark:bg-neutral-800/60 p-4 border border-neutral-200/70 dark:border-neutral-700/70 space-y-1.5">
@@ -69,7 +80,7 @@ export default function GuidesPage() {
               Lưu ý & Hỗ trợ
             </h2>
             <p className="text-xs sm:text-sm">
-              Nếu gặp sự cố khi tạo tài khoản hoặc quên mật khẩu, vui lòng liên hệ trực tiếp với đội ngũ hỗ trợ của shop qua mục <strong>Chat</strong> trên website để được hỗ trợ kịp thời.
+              Nếu gặp sự cố khi tạo tài khoản hoặc quên mật khẩu, vui lòng liên hệ trực tiếp với đội ngũ hỗ trợ của shop qua mục <strong>Chat</strong> (nút màu xanh dương ở góc dưới bên phải màn hình) để được hỗ trợ kịp thời.
             </p>
           </section>
         </div>
@@ -85,7 +96,7 @@ export default function GuidesPage() {
 
         <div className="space-y-6 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4 sm:p-6 text-sm leading-relaxed text-neutral-700 dark:text-neutral-300 shadow-sm">
           <p>
-            Bạn có thể cài trực tiếp ứng dụng <strong>Đẹp Và Xinh Shop</strong> ra màn hình chính điện thoại để mở nhanh như app native, tiết kiệm thao tác và nhận bản cập nhật mới tự động.
+            Bạn có thể cài trực tiếp ứng dụng <strong>Đẹp Và Xinh Shop</strong> ra màn hình chính điện thoại để mở nhanh như app, tiết kiệm thao tác và nhận bản cập nhật mới tự động.
           </p>
 
           {/* ANDROID */}
