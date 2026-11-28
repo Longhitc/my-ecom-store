@@ -15,9 +15,11 @@ interface SlideItem {
 
 const slides: SlideItem[] = [
   {
-    title: 'Hướng dẫn đăng ký tài khoản và cài app',
+    title: 'Hướng dẫn đăng ký tài khoản.',
     subtitle: 'Tạo tài khoản nhanh chóng để theo dõi đơn hàng và cài đặt ứng dụng.',
     badgeText: 'Hỗ trợ khách hàng',
+    bgGradient: 'from-[#fde4cf] via-[#fff1e4] to-neutral-100 dark:to-neutral-800',
+    image: 'https://res.cloudinary.com/r9iziwqa/image/upload/v1795839580/LogoRegister.png',
     link: '/guides',
     isGuideCard: true,
   },
@@ -72,21 +74,32 @@ export default function HomeHeroSlider() {
         {currentSlide.isGuideCard ? (
           <Link
             href={currentSlide.link}
-            className="flex h-full w-full flex-col justify-center bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-700 px-10 sm:px-14 py-3 text-white transition hover:brightness-105"
+            className={`flex h-full w-full items-center justify-center gap-3 sm:gap-6 bg-gradient-to-r ${
+              currentSlide.bgGradient || 'from-[#fde4cf] via-[#fff1e4] to-neutral-100 dark:to-neutral-800'
+            } pl-8 pr-8 sm:px-14 text-neutral-900 transition hover:brightness-[0.99]`}
           >
-            {currentSlide.badgeText && (
-              <span className="inline-flex w-fit items-center rounded-full bg-white/20 px-2.5 py-0.5 text-[10px] font-semibold">
-                {currentSlide.badgeText}
-              </span>
+            {currentSlide.image && (
+              <img
+                src={currentSlide.image}
+                alt={currentSlide.title}
+                className="h-[84%] w-auto max-w-[38%] sm:max-w-[45%] rounded-md object-contain transition-all duration-500"
+              />
             )}
-            <h2 className="mt-1 text-sm sm:text-lg font-bold leading-snug tracking-tight">
-              {currentSlide.title}
-            </h2>
-            {currentSlide.subtitle && (
-              <p className="mt-0.5 text-[11px] sm:text-xs text-white/90 line-clamp-1">
-                {currentSlide.subtitle}
-              </p>
-            )}
+            <div className="flex flex-col items-start justify-center text-left min-w-0">
+              {currentSlide.badgeText && (
+                <span className="inline-flex w-fit items-center rounded-full bg-neutral-900/10 px-2 py-0.5 text-[9px] sm:text-[10px] font-semibold text-neutral-800 whitespace-nowrap">
+                  {currentSlide.badgeText}
+                </span>
+              )}
+              <h2 className="mt-1 text-xs sm:text-lg font-bold leading-snug tracking-tight text-neutral-900 whitespace-nowrap">
+                {currentSlide.title}
+              </h2>
+              {currentSlide.subtitle && (
+                <p className="mt-0.5 hidden sm:block text-xs text-neutral-600 line-clamp-1">
+                  {currentSlide.subtitle}
+                </p>
+              )}
+            </div>
           </Link>
         ) : (
           <Link
